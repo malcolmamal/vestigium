@@ -1,0 +1,45 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:./data/vestigium.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      connection-init-sql: PRAGMA foreign_keys = ON
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+vestigium:
+  storage:
+    root-dir: ./data
+    attachments-subdir: files
+    thumbnails-subdir: thumbnails
+  llm:
+    model: gemini-2.5-flash
+  jobs:
+    poll-delay-ms: 2000
+    max-attempts: 3
+
+error:
+  handling:
+    http-status-in-json-response: true
+    exception-logging: NO_LOGGING
+    full-stacktrace-http-statuses: 5xx
+    log-levels:
+      5xx: ERROR
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+  api-docs:
+    path: /v3/api-docs
+  pathsToMatch: /api/**
+
+server:
+  port: 8008
+  address: 0.0.0.0
+
+
