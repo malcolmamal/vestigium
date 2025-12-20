@@ -69,7 +69,11 @@ public class GeminiClient {
 
         var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-            throw new IllegalStateException("Gemini error: HTTP " + resp.statusCode());
+            var bodySnippet = resp.body() == null ? "" : resp.body();
+            if (bodySnippet.length() > 400) {
+                bodySnippet = bodySnippet.substring(0, 400);
+            }
+            throw new IllegalStateException("Gemini error: HTTP " + resp.statusCode() + " body=" + bodySnippet);
         }
 
         JsonNode root = objectMapper.readTree(resp.body());

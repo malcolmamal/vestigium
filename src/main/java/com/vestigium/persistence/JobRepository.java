@@ -3,6 +3,7 @@ package com.vestigium.persistence;
 import com.vestigium.domain.Job;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -97,6 +98,71 @@ public class JobRepository {
                 WHERE id = :id
                 """,
                 Map.of("id", jobId, "err", errorMessage, "finishedAt", InstantSql.nowIso())
+        );
+    }
+
+    public Optional<Job> getById(String id) {
+        var rows = jdbc.query(
+                """
+                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at
+                FROM jobs
+                WHERE id = :id
+                """,
+                Map.of("id", id),
+                JOB_ROW_MAPPER
+        );
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.getFirst());
+    }
+
+    public List<Job> list(String entryId, List<String> statuses, int limit) {
+        var where = new ArrayList<String>();
+        var params = new HashMap<String, Object>();
+
+        if (entryId != null && !entryId.isBlank()) {
+            where.add("entry_id = :entryId");
+            params.put("entryId", entryId);
+        }
+        if (statuses != null && !statuses.isEmpty()) {
+            where.add("status IN (:statuses)");
+            params.put("statuses", statuses);
+        }
+        var whereSql = where.isEmpty() ? "" : "WHERE " + String.join(" AND ", where);
+        params.put("limit", Math.max(limit, 1));
+
+        return jdbc.query(
+                """
+                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at
+                FROM jobs
+                %s
+                ORDER BY created_at ASC
+                LIMIT :limit
+                """.formatted(whereSql),
+                params,
+                JOB_ROW_MAPPER
+        );
+    }
+
+    /**
+     * Cancels a job only if it's still pending. Returns number of affected rows (0 if not pending / not found).
+     */
+    public int cancelPending(String id) {
+        return jdbc.update(
+                """
+                UPDATE jobs
+                SET status = 'CANCELLED', finished_at = :finishedAt, locked_at = NULL, last_error = NULL
+                WHERE id = :id AND status = 'PENDING'
+                """,
+                Map.of("id", id, "finishedAt", InstantSql.nowIso())
+        );
+    }
+
+    /**
+     * Deletes a job if it's not currently running. Returns number of deleted rows.
+     */
+    public int deleteIfNotRunning(String id) {
+        return jdbc.update(
+                "DELETE FROM jobs WHERE id = :id AND status != 'RUNNING'",
+                Map.of("id", id)
         );
     }
 

@@ -13,7 +13,8 @@ public record EntryResponse(
         String visitedAt,
         String createdAt,
         String updatedAt,
-        String thumbnailUrl
+        String thumbnailUrl,
+        String thumbnailLargeUrl
 ) {
     public static EntryResponse from(Entry e) {
         return new EntryResponse(
@@ -26,7 +27,8 @@ public record EntryResponse(
                 e.visitedAt(),
                 e.createdAt(),
                 e.updatedAt(),
-                "/api/entries/" + e.id() + "/thumbnail"
+                "/api/entries/" + e.id() + "/thumbnail",
+                "/api/entries/" + e.id() + "/thumbnail?size=large"
         );
     }
 }

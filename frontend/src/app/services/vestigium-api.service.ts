@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
 import type { EntryDetailsResponse, EntryListResponse, PatchEntryRequest } from '../models/entry.model';
+import type { JobResponse } from '../models/job.model';
 
 @Injectable({ providedIn: 'root' })
 export class VestigiumApiService {
@@ -50,6 +51,28 @@ export class VestigiumApiService {
 
   enqueueThumbnail(id: string) {
     return this.http.post<void>(`/api/entries/${encodeURIComponent(id)}/enqueue-thumbnail`, {});
+  }
+
+  listJobs(params: { entryId?: string; status?: string[]; limit?: number }) {
+    let httpParams = new HttpParams();
+    if (params.entryId) httpParams = httpParams.set('entryId', params.entryId);
+    if (params.status && params.status.length > 0) {
+      for (const s of params.status) httpParams = httpParams.append('status', s);
+    }
+    if (params.limit !== undefined) httpParams = httpParams.set('limit', String(params.limit));
+    return this.http.get<JobResponse[]>('/api/jobs', { params: httpParams });
+  }
+
+  cancelJob(id: string) {
+    return this.http.post<void>(`/api/jobs/${encodeURIComponent(id)}/cancel`, {});
+  }
+
+  deleteJob(id: string) {
+    return this.http.delete<void>(`/api/jobs/${encodeURIComponent(id)}`);
+  }
+
+  deleteEntry(id: string) {
+    return this.http.delete<void>(`/api/entries/${encodeURIComponent(id)}`);
   }
 
   searchTags(prefix: string, limit = 20) {

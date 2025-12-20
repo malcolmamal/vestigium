@@ -42,9 +42,12 @@ public class RegenerateThumbnailJobProcessor implements JobProcessor {
                 .or(() -> tryGetOgImage(entry.url()))
                 .orElseGet(() -> screenshotter.screenshotPng(entry.url()));
 
-        var jpegThumb = ImageThumbs.toJpegThumbnail(sourceImage, 360);
-        var stored = fileStorage.saveThumbnailJpeg(entry.id(), jpegThumb);
-        entries.updateThumbnailPath(entry.id(), stored.storagePath());
+        var jpegSmall = ImageThumbs.toJpegThumbnail(sourceImage, 360);
+        var jpegLarge = ImageThumbs.toJpegThumbnail(sourceImage, 1280);
+
+        var storedSmall = fileStorage.saveThumbnailJpeg(entry.id(), jpegSmall);
+        var storedLarge = fileStorage.saveThumbnailJpeg(entry.id(), "large", jpegLarge);
+        entries.updateThumbnailPaths(entry.id(), storedSmall.storagePath(), storedLarge.storagePath());
     }
 
     private Optional<byte[]> tryGetYouTubeThumb(String url) {

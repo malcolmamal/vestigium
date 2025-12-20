@@ -7,6 +7,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/entries/entries.page').then((m) => m.EntriesPage)
   },
   {
+    path: 'queue',
+    loadComponent: () => import('./pages/queue/queue.page').then((m) => m.QueuePage)
+  },
+  {
     path: 'entries/new',
     loadComponent: () => import('./pages/create-entry/create-entry.page').then((m) => m.CreateEntryPage)
   },

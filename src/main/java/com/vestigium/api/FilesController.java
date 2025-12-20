@@ -44,12 +44,22 @@ public class FilesController {
     }
 
     @GetMapping("/api/entries/{entryId}/thumbnail")
-    public ResponseEntity<Resource> entryThumbnail(@PathVariable String entryId) {
+    public ResponseEntity<Resource> entryThumbnail(
+            @PathVariable String entryId,
+            @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false) String size
+    ) {
         var entry = entries.getById(entryId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        if (entry.thumbnailPath() == null || entry.thumbnailPath().isBlank()) {
+        var wantLarge = size != null && size.equalsIgnoreCase("large");
+        var path = wantLarge ? entry.thumbnailLargePath() : entry.thumbnailPath();
+        if (path == null || path.isBlank()) {
+            // Fallback: if large requested but not available, try small.
+            if (wantLarge && entry.thumbnailPath() != null && !entry.thumbnailPath().isBlank()) {
+                path = entry.thumbnailPath();
+            } else {
             throw new ResponseStatusException(NOT_FOUND);
+            }
         }
-        var resource = fileStorage.loadAsResource(entry.thumbnailPath());
+        var resource = fileStorage.loadAsResource(path);
         if (!resource.exists()) {
             throw new ResponseStatusException(NOT_FOUND);
         }

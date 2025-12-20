@@ -1,12 +1,16 @@
 package com.vestigium.jobs;
 
 import com.vestigium.persistence.JobRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 public class JobWorker {
+
+    private static final Logger log = LoggerFactory.getLogger(JobWorker.class);
 
     private final JobRepository jobs;
     private final JobDispatcher dispatcher;
@@ -31,12 +35,26 @@ public class JobWorker {
 
         var job = claimed.get();
         try {
+            log.info("Processing job id={} type={} entryId={} attempt={}", job.id(), job.type(), job.entryId(), job.attempts());
             dispatcher.dispatch(job);
             jobs.markSucceeded(job.id());
+            log.info("Job succeeded id={} type={} entryId={}", job.id(), job.type(), job.entryId());
         } catch (Exception e) {
-            var retry = job.attempts() < maxAttempts;
             var msg = e.getClass().getSimpleName() + ": " + (e.getMessage() == null ? "" : e.getMessage());
+            var retry = job.attempts() < maxAttempts;
+            // Don't endlessly retry configuration/logic errors.
+            if (msg.contains("Missing GOOGLE_API_KEY")) {
+                retry = false;
+            }
+            if (e instanceof IllegalArgumentException) {
+                retry = false;
+            }
             jobs.markFailed(job.id(), msg, retry);
+            log.error(
+                    "Job failed id={} type={} entryId={} retry={} attempts={}/{} msg={}",
+                    job.id(), job.type(), job.entryId(), retry, job.attempts(), maxAttempts, msg,
+                    e
+            );
         }
     }
 }

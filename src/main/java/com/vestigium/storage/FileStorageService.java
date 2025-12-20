@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -46,7 +47,16 @@ public class FileStorageService {
     }
 
     public StoredFile saveThumbnailJpeg(String entryId, byte[] jpegBytes) throws IOException {
-        var fileName = entryId + ".jpg";
+        return saveThumbnailJpeg(entryId, null, jpegBytes);
+    }
+
+    /**
+     * Stores a thumbnail JPEG for an entry. Variant is optional (e.g. "large").
+     * If variant is null/blank, file name is "{entryId}.jpg". Otherwise "{entryId}-{variant}.jpg".
+     */
+    public StoredFile saveThumbnailJpeg(String entryId, String variant, byte[] jpegBytes) throws IOException {
+        var suffix = (variant == null || variant.isBlank()) ? "" : ("-" + variant.trim().toLowerCase(Locale.ROOT));
+        var fileName = entryId + suffix + ".jpg";
         var absolutePath = paths.thumbnailsRoot().resolve(fileName).normalize();
         ensureUnderRoot(paths.thumbnailsRoot(), absolutePath);
         Files.createDirectories(paths.thumbnailsRoot());
@@ -59,6 +69,54 @@ public class FileStorageService {
         var absolute = paths.root().resolve(relativePath).normalize();
         ensureUnderRoot(paths.root(), absolute);
         return new FileSystemResource(absolute);
+    }
+
+    public void deleteEntryData(String entryId) throws IOException {
+        if (entryId == null || entryId.isBlank()) {
+            return;
+        }
+
+        // Attachments directory: files/{entryId}
+        var entryDir = paths.attachmentsRoot().resolve(entryId).normalize();
+        ensureUnderRoot(paths.attachmentsRoot(), entryDir);
+        deleteRecursivelyIfExists(entryDir);
+
+        // Thumbnails: thumbnails/{entryId}.jpg and thumbnails/{entryId}-*.jpg
+        var thumbsDir = paths.thumbnailsRoot().normalize();
+        ensureUnderRoot(paths.thumbnailsRoot(), thumbsDir);
+        if (Files.exists(thumbsDir) && Files.isDirectory(thumbsDir)) {
+            try (Stream<Path> stream = Files.list(thumbsDir)) {
+                stream.forEach(p -> {
+                    try {
+                        var name = p.getFileName() == null ? "" : p.getFileName().toString();
+                        if (name.startsWith(entryId) && name.endsWith(".jpg")) {
+                            Files.deleteIfExists(p);
+                        }
+                    } catch (IOException ignored) {
+                        // ignore best-effort cleanup
+                    }
+                });
+            }
+        }
+    }
+
+    private static void deleteRecursivelyIfExists(Path p) throws IOException {
+        if (!Files.exists(p)) {
+            return;
+        }
+        if (!Files.isDirectory(p)) {
+            Files.deleteIfExists(p);
+            return;
+        }
+        try (Stream<Path> walk = Files.walk(p)) {
+            walk.sorted((a, b) -> b.compareTo(a)).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                    // ignore best-effort cleanup
+                }
+            });
+        }
     }
 
     private static String sanitizeFileName(String name) {

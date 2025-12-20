@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
 import type { EntryDetailsResponse } from '../../models/entry.model';
+import type { JobResponse } from '../../models/job.model';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 
 @Component({
@@ -18,6 +19,18 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
         <h1>{{ data()?.entry?.title || 'Entry' }}</h1>
       </header>
 
+      @if (showThumbModal() && thumbModalUrl()) {
+        <div class="modalBackdrop" (click)="closeThumbModal()">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <img [src]="thumbModalUrl()!" alt="" />
+            <div class="modalActions">
+              <a class="button" [href]="thumbModalUrl()!" target="_blank" rel="noreferrer">Open</a>
+              <button class="button secondary" type="button" (click)="closeThumbModal()">Close</button>
+            </div>
+          </div>
+        </div>
+      }
+
       @if (error()) {
         <div class="errorBox">{{ error() }}</div>
       }
@@ -30,7 +43,13 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
         <div class="content">
           <div class="topRow">
             <div class="thumb">
-              <img [src]="data()!.entry.thumbnailUrl" alt="" (error)="onImgError($event)" />
+              <img
+                class="clickable"
+                [src]="data()!.entry.thumbnailUrl"
+                alt=""
+                (error)="onImgError($event)"
+                (click)="openThumbModal()"
+              />
             </div>
             <div class="meta">
               <a class="url" [href]="data()!.entry.url" target="_blank" rel="noreferrer">
@@ -49,12 +68,64 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
                 </button>
                 <button class="button" type="button" (click)="enqueueEnrich()">Update via LLM</button>
                 <button class="button" type="button" (click)="enqueueThumbnail()">Regenerate thumbnail</button>
+                <button class="button danger" type="button" (click)="deleteEntry()">Delete entry</button>
               </div>
               @if (actionHint()) {
                 <div class="muted">{{ actionHint() }}</div>
               }
             </div>
           </div>
+
+          <section class="jobs">
+            <h2>Jobs</h2>
+            @if (jobActionError()) {
+              <div class="errorBox">{{ jobActionError() }}</div>
+            }
+            @if (jobsError()) {
+              <div class="errorBox">{{ jobsError() }}</div>
+            } @else if (jobsLoading() && jobs().length === 0) {
+              <div class="muted">Loading…</div>
+            } @else if (jobs().length === 0) {
+              <div class="muted">No jobs yet.</div>
+            } @else {
+              <div class="jobsList">
+                @for (j of jobs(); track j.id) {
+                  <div class="jobRow" [class.running]="j.status === 'RUNNING'">
+                    <div class="jobMain">
+                      <div class="jobTop">
+                        <span class="jobType">{{ j.type }}</span>
+                        <span class="jobStatus">{{ j.status }}</span>
+                        <span class="jobMeta">attempt {{ j.attempts }}</span>
+                      </div>
+                      @if (j.lastError) {
+                        <div class="jobErr">{{ j.lastError }}</div>
+                      }
+                    </div>
+                    <div class="jobActions">
+                      @if (j.status === 'PENDING') {
+                        <button
+                          class="button small"
+                          type="button"
+                          (click)="cancelJob(j)"
+                          [disabled]="jobActionBusy() === j.id"
+                        >
+                          Cancel
+                        </button>
+                      }
+                      <button
+                        class="button small secondary"
+                        type="button"
+                        (click)="removeJob(j)"
+                        [disabled]="jobActionBusy() === j.id || j.status === 'RUNNING'"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
 
           <form class="form" [formGroup]="form" (ngSubmit)="save()">
             <label class="field">
@@ -158,6 +229,41 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
       object-fit: cover;
       display: block;
     }
+    .thumb img.clickable {
+      cursor: zoom-in;
+    }
+    .modalBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal {
+      width: min(1100px, 100%);
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(20, 20, 24, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .modal img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .modalActions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+    .button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.14);
+    }
     .meta {
       display: flex;
       flex-direction: column;
@@ -210,6 +316,10 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
       opacity: 0.55;
       cursor: not-allowed;
     }
+    .button.danger {
+      background: rgba(255, 80, 80, 0.16);
+      border-color: rgba(255, 80, 80, 0.28);
+    }
     .form {
       display: grid;
       gap: 14px;
@@ -242,6 +352,64 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.10);
     }
+    .jobs {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .jobsList {
+      display: grid;
+      gap: 10px;
+    }
+    .jobRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .jobRow.running {
+      border-color: rgba(90, 97, 255, 0.30);
+      background: rgba(90, 97, 255, 0.08);
+    }
+    .jobTop {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .jobType {
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .jobStatus {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .jobMeta {
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 12px;
+    }
+    .jobErr {
+      margin-top: 6px;
+      color: rgba(255, 200, 200, 0.9);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .jobActions {
+      display: flex;
+      gap: 8px;
+      align-items: start;
+    }
     h2 {
       margin: 0 0 10px 0;
       font-size: 16px;
@@ -257,15 +425,23 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
 export class EntryDetailsPage {
   private readonly api = inject(VestigiumApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly id = signal<string | null>(null);
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly actionHint = signal<string | null>(null);
+  readonly showThumbModal = signal(false);
 
   readonly data = signal<EntryDetailsResponse | null>(null);
   readonly tags = signal<string[]>([]);
+
+  readonly jobsLoading = signal(false);
+  readonly jobsError = signal<string | null>(null);
+  readonly jobs = signal<JobResponse[]>([]);
+  readonly jobActionBusy = signal<string | null>(null);
+  readonly jobActionError = signal<string | null>(null);
 
   readonly form = new FormGroup({
     title: new FormControl<string>('', { nonNullable: true }),
@@ -273,6 +449,11 @@ export class EntryDetailsPage {
   });
 
   readonly entry = computed(() => this.data()?.entry ?? null);
+  readonly thumbModalUrl = computed(() => {
+    const d = this.data();
+    if (!d) return null;
+    return d.entry.thumbnailLargeUrl || d.entry.thumbnailUrl;
+  });
 
   constructor() {
     effect(
@@ -280,6 +461,17 @@ export class EntryDetailsPage {
         const id = this.route.snapshot.paramMap.get('id');
         this.id.set(id);
         if (id) this.refresh(id);
+      },
+      { allowSignalWrites: true }
+    );
+
+    effect(
+      (onCleanup) => {
+        const id = this.id();
+        if (!id) return;
+        this.loadJobs(id);
+        const t = setInterval(() => this.loadJobs(id), 2000);
+        onCleanup(() => clearInterval(t));
       },
       { allowSignalWrites: true }
     );
@@ -360,6 +552,67 @@ export class EntryDetailsPage {
 
   onImgError(evt: Event) {
     (evt.target as HTMLImageElement).style.display = 'none';
+  }
+
+  openThumbModal() {
+    this.showThumbModal.set(true);
+  }
+
+  closeThumbModal() {
+    this.showThumbModal.set(false);
+  }
+
+  loadJobs(entryId: string) {
+    this.jobsLoading.set(true);
+    this.jobsError.set(null);
+    this.api
+      .listJobs({ entryId, limit: 50 })
+      .pipe(finalize(() => this.jobsLoading.set(false)))
+      .subscribe({
+        next: (items) => this.jobs.set(items),
+        error: (e) => this.jobsError.set(e?.error?.detail ?? e?.message ?? 'Failed to load jobs')
+      });
+  }
+
+  cancelJob(job: JobResponse) {
+    this.jobActionError.set(null);
+    this.jobActionBusy.set(job.id);
+    this.api
+      .cancelJob(job.id)
+      .pipe(finalize(() => this.jobActionBusy.set(null)))
+      .subscribe({
+        next: () => {
+          const id = this.id();
+          if (id) this.loadJobs(id);
+        },
+        error: (e) => this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
+      });
+  }
+
+  removeJob(job: JobResponse) {
+    this.jobActionError.set(null);
+    this.jobActionBusy.set(job.id);
+    this.api
+      .deleteJob(job.id)
+      .pipe(finalize(() => this.jobActionBusy.set(null)))
+      .subscribe({
+        next: () => {
+          const id = this.id();
+          if (id) this.loadJobs(id);
+        },
+        error: (e) => this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
+      });
+  }
+
+  deleteEntry() {
+    const id = this.id();
+    if (!id) return;
+    if (!confirm('Delete this entry? This will also remove its attachments and queued jobs.')) return;
+
+    this.api.deleteEntry(id).subscribe({
+      next: () => void this.router.navigate(['/entries']),
+      error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to delete entry')
+    });
   }
 }
 

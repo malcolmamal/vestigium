@@ -5,6 +5,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.function.Supplier;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Component;
@@ -27,13 +28,47 @@ public class UrlContentFetcher {
             throw new IllegalStateException("Fetch failed: HTTP " + resp.statusCode());
         }
 
-        Document doc = Jsoup.parse(resp.body());
-        var title = doc.title();
-        var metaDescription = doc.select("meta[name=description]").attr("content");
+        Document doc = Jsoup.parse(resp.body(), url);
+        var title = firstNonBlank(
+                () -> attr(doc, "meta[property=og:title]", "content"),
+                () -> attr(doc, "meta[name=twitter:title]", "content"),
+                doc::title
+        );
+        var metaDescription = firstNonBlank(
+                () -> attr(doc, "meta[property=og:description]", "content"),
+                () -> attr(doc, "meta[name=twitter:description]", "content"),
+                () -> attr(doc, "meta[name=description]", "content")
+        );
         doc.select("script,style,noscript").remove();
         var text = doc.body() == null ? "" : doc.body().text();
 
         return new PageContent(truncate(title, 300), truncate(metaDescription, 1000), truncate(text, 15000));
+    }
+
+    private static String attr(Document doc, String selector, String attr) {
+        var el = doc.selectFirst(selector);
+        if (el == null) {
+            return null;
+        }
+        var v = el.attr(attr);
+        return v == null || v.isBlank() ? null : v;
+    }
+
+    @SafeVarargs
+    private static String firstNonBlank(Supplier<String>... suppliers) {
+        if (suppliers == null) {
+            return null;
+        }
+        for (var s : suppliers) {
+            if (s == null) {
+                continue;
+            }
+            var v = s.get();
+            if (v != null && !v.isBlank()) {
+                return v;
+            }
+        }
+        return null;
     }
 
     private static String truncate(String s, int max) {

@@ -48,7 +48,7 @@ public class EntryRepository {
     public Optional<Entry> getById(String id) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 WHERE id = :id
                 """,
@@ -67,7 +67,7 @@ public class EntryRepository {
     public Optional<Entry> getByUrl(String url) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 WHERE url = :url
                 """,
@@ -123,7 +123,7 @@ public class EntryRepository {
 
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 %s
                 ORDER BY updated_at DESC
@@ -188,6 +188,28 @@ public class EntryRepository {
         );
     }
 
+    public void updateThumbnailPaths(String id, String thumbnailPath, String thumbnailLargePath) {
+        var sets = new ArrayList<String>();
+        var params = new java.util.HashMap<String, Object>();
+        params.put("id", id);
+
+        if (thumbnailPath != null) {
+            sets.add("thumbnail_path = :thumbnailPath");
+            params.put("thumbnailPath", thumbnailPath);
+        }
+        if (thumbnailLargePath != null) {
+            sets.add("thumbnail_large_path = :thumbnailLargePath");
+            params.put("thumbnailLargePath", thumbnailLargePath);
+        }
+        sets.add("updated_at = :updatedAt");
+        params.put("updatedAt", InstantSql.nowIso());
+
+        jdbc.update(
+                "UPDATE entries SET " + String.join(", ", sets) + " WHERE id = :id",
+                params
+        );
+    }
+
     public List<String> getTagsForEntry(String entryId) {
         return jdbc.query(
                 """
@@ -222,19 +244,24 @@ public class EntryRepository {
         );
     }
 
+    public int deleteById(String id) {
+        return jdbc.update("DELETE FROM entries WHERE id = :id", Map.of("id", id));
+    }
+
     private record EntryRow(
             String id,
             String url,
             String title,
             String description,
             String thumbnailPath,
+            String thumbnailLargePath,
             String visitedAt,
             boolean important,
             String createdAt,
             String updatedAt
     ) {
         Entry toEntry(List<String> tags) {
-            return new Entry(id, url, title, description, thumbnailPath, visitedAt, important, createdAt, updatedAt, tags);
+            return new Entry(id, url, title, description, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, tags);
         }
     }
 
@@ -247,6 +274,7 @@ public class EntryRepository {
                     rs.getString("title"),
                     rs.getString("description"),
                     rs.getString("thumbnail_path"),
+                    rs.getString("thumbnail_large_path"),
                     rs.getString("visited_at"),
                     rs.getInt("important") != 0,
                     rs.getString("created_at"),

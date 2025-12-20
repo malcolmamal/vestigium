@@ -8,6 +8,7 @@ public record Entry(
         String title,
         String description,
         String thumbnailPath,
+        String thumbnailLargePath,
         String visitedAt,
         boolean important,
         String createdAt,

@@ -2,11 +2,14 @@ package com.vestigium.service;
 
 import com.vestigium.domain.Attachment;
 import com.vestigium.domain.Entry;
+import com.vestigium.enrich.UrlContentFetcher;
+import com.vestigium.enrich.YouTubeMetadataFetcher;
 import com.vestigium.persistence.AttachmentRepository;
 import com.vestigium.persistence.EntryRepository;
 import com.vestigium.persistence.JobRepository;
 import com.vestigium.persistence.TagRepository;
 import com.vestigium.storage.FileStorageService;
+import com.vestigium.thumb.YouTube;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -22,19 +25,25 @@ public class EntryService {
     private final AttachmentRepository attachments;
     private final JobRepository jobs;
     private final FileStorageService fileStorage;
+    private final UrlContentFetcher urlFetcher;
+    private final YouTubeMetadataFetcher youtubeMetadata;
 
     public EntryService(
             EntryRepository entries,
             TagRepository tags,
             AttachmentRepository attachments,
             JobRepository jobs,
-            FileStorageService fileStorage
+            FileStorageService fileStorage,
+            UrlContentFetcher urlFetcher,
+            YouTubeMetadataFetcher youtubeMetadata
     ) {
         this.entries = entries;
         this.tags = tags;
         this.attachments = attachments;
         this.jobs = jobs;
         this.fileStorage = fileStorage;
+        this.urlFetcher = urlFetcher;
+        this.youtubeMetadata = youtubeMetadata;
     }
 
     public CreatedEntry create(
@@ -51,9 +60,10 @@ public class EntryService {
             throw new VestigiumException("ENTRY_URL_ALREADY_EXISTS", HttpStatus.CONFLICT, "URL already exists.");
         }
 
-        var entry = entries.create(normalizedUrl, title, description, important);
+        var inferred = inferMetadata(normalizedUrl, title, description, rawTags);
+        var entry = entries.create(normalizedUrl, inferred.title(), inferred.description(), important);
 
-        var normalizedTags = TagNormalizer.normalize(rawTags);
+        var normalizedTags = TagNormalizer.normalize(inferred.tags());
         if (!normalizedTags.isEmpty()) {
             entries.replaceTags(entry.id(), normalizedTags, tags);
             entry = entries.getById(entry.id()).orElseThrow();
@@ -67,6 +77,48 @@ public class EntryService {
 
         return new CreatedEntry(entry, createdAttachments);
     }
+
+    private InferredMetadata inferMetadata(String url, String title, String description, List<String> rawTags) {
+        var outTitle = title;
+        var outDescription = description;
+        var outTags = rawTags;
+
+        // Add an obvious "youtube" tag when user didn't provide any tags.
+        if ((outTags == null || outTags.isEmpty()) && YouTube.extractVideoId(url).isPresent()) {
+            outTags = List.of("youtube");
+        }
+
+        boolean needTitle = outTitle == null || outTitle.isBlank();
+        boolean needDesc = outDescription == null || outDescription.isBlank();
+        if (!needTitle && !needDesc) {
+            return new InferredMetadata(outTitle, outDescription, outTags);
+        }
+
+        // Best-effort metadata fetch: never fail entry creation because of external fetch.
+        try {
+            if (needTitle) {
+                var yt = youtubeMetadata.fetch(url);
+                if (yt.isPresent() && yt.get().title() != null && !yt.get().title().isBlank()) {
+                    outTitle = yt.get().title();
+                    needTitle = false;
+                }
+            }
+            if (needTitle || needDesc) {
+                var page = urlFetcher.fetchReadableText(url);
+                if (needTitle && page.title() != null && !page.title().isBlank()) {
+                    outTitle = page.title();
+                }
+                if (needDesc && page.metaDescription() != null && !page.metaDescription().isBlank()) {
+                    outDescription = page.metaDescription();
+                }
+            }
+        } catch (Exception ignored) {
+            // ignore
+        }
+        return new InferredMetadata(outTitle, outDescription, outTags);
+    }
+
+    private record InferredMetadata(String title, String description, List<String> tags) {}
 
     public Entry update(String entryId, String title, String description, Boolean important, List<String> rawTags) {
         var existing = entries.getById(entryId)
@@ -98,6 +150,18 @@ public class EntryService {
             throw new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found.");
         }
         jobs.enqueue("REGENERATE_THUMBNAIL", entryId, null);
+    }
+
+    public void delete(String entryId) {
+        if (entries.getById(entryId).isEmpty()) {
+            throw new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found.");
+        }
+        entries.deleteById(entryId);
+        try {
+            fileStorage.deleteEntryData(entryId);
+        } catch (Exception ignored) {
+            // best-effort cleanup
+        }
     }
 
     public List<Entry> search(String q, List<String> tags, Boolean important, Boolean visited, int page, int pageSize) {

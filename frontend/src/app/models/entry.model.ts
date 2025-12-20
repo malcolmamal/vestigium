@@ -18,6 +18,7 @@ export interface EntryResponse {
   createdAt: string;
   updatedAt: string;
   thumbnailUrl: string;
+  thumbnailLargeUrl: string;
 }
 
 export interface EntryDetailsResponse {

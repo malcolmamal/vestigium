@@ -11,6 +11,7 @@ import com.vestigium.persistence.EntryRepository;
 import com.vestigium.persistence.TagRepository;
 import com.vestigium.service.TagNormalizer;
 import com.vestigium.storage.FileStorageService;
+import com.vestigium.thumb.YouTube;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -89,7 +90,23 @@ public class EnrichEntryJobProcessor implements JobProcessor {
                 }
             }
         } else {
-            var page = urlFetcher.fetchReadableText(entry.url());
+            UrlContentFetcher.PageContent page;
+            try {
+                page = urlFetcher.fetchReadableText(entry.url());
+            } catch (Exception e) {
+                // Some pages (or temporary test URLs) can fail; still allow LLM to work on URL-only context.
+                page = new UrlContentFetcher.PageContent(null, null, "");
+            }
+
+            // Even without LLM, we can often fill missing title/description from HTML metadata.
+            var metaTitle = page.title();
+            var metaDesc = page.metaDescription();
+            var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force) ? metaTitle : null;
+            var metaUpdateDesc = shouldUpdate(entry.description(), metaDesc, force) ? metaDesc : null;
+            if (metaUpdateTitle != null || metaUpdateDesc != null) {
+                entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null);
+            }
+
             contextText.append("Fetched page content:\n");
             if (page.title() != null && !page.title().isBlank()) {
                 contextText.append("Title: ").append(page.title()).append("\n");
@@ -97,7 +114,9 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             if (page.metaDescription() != null && !page.metaDescription().isBlank()) {
                 contextText.append("Meta description: ").append(page.metaDescription()).append("\n");
             }
-            contextText.append("\nText:\n").append(page.text()).append("\n");
+            if (page.text() != null && !page.text().isBlank()) {
+                contextText.append("\nText:\n").append(page.text()).append("\n");
+            }
         }
 
         var prompt = buildPrompt(contextText.toString());
@@ -110,6 +129,9 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         entries.updateCore(entry.id(), newTitle, newDescription, null);
 
         var normalizedTags = TagNormalizer.normalize(enrichment.tags());
+        if (normalizedTags.isEmpty() && YouTube.extractVideoId(entry.url()).isPresent()) {
+            normalizedTags = List.of("youtube");
+        }
         if (force || entry.tags() == null || entry.tags().isEmpty()) {
             entries.replaceTags(entry.id(), normalizedTags, tags);
         }
