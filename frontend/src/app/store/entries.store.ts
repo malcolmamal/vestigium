@@ -19,6 +19,7 @@ export class EntriesStore {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly items = signal<EntryResponse[]>([]);
+  readonly refreshToken = signal(0);
 
   readonly hasFilters = computed(() => {
     return (
@@ -39,6 +40,7 @@ export class EntriesStore {
         void this.visitedOnly();
         void this.page();
         void this.pageSize();
+        void this.refreshToken();
 
         this.load();
       },
@@ -69,6 +71,10 @@ export class EntriesStore {
   setTagFilter(tags: string[]) {
     this.tagFilter.set([...tags]);
     this.page.set(0);
+  }
+
+  refresh() {
+    this.refreshToken.update((x) => x + 1);
   }
 }
 

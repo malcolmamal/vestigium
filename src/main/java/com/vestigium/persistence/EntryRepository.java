@@ -82,6 +82,23 @@ public class EntryRepository {
         return Optional.of(row.toEntry(tags));
     }
 
+    public List<Entry> listAllForExport() {
+        var rows = jdbc.query(
+                """
+                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                FROM entries
+                ORDER BY created_at ASC
+                """,
+                Map.of(),
+                ENTRY_ROW_MAPPER
+        );
+        var out = new ArrayList<Entry>(rows.size());
+        for (var row : rows) {
+            out.add(row.toEntry(getTagsForEntry(row.id())));
+        }
+        return out;
+    }
+
     public List<Entry> search(String q, List<String> tags, Boolean important, Boolean visited, int page, int pageSize) {
         var where = new ArrayList<String>();
         var params = new java.util.HashMap<String, Object>();

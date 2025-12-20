@@ -16,7 +16,11 @@ import { EntriesStore } from '../../store/entries.store';
           <h1>Vestigium</h1>
           <p class="muted">Your repository of links.</p>
         </div>
-        <a class="button" routerLink="/entries/new">Add entry</a>
+        <div class="headerActions">
+          <a class="button secondary" routerLink="/entries/bulk">Bulk add</a>
+          <a class="button secondary" routerLink="/entries/import-export">Import/Export</a>
+          <a class="button" routerLink="/entries/new">Add entry</a>
+        </div>
       </header>
 
       <div class="filters">
@@ -91,6 +95,11 @@ import { EntriesStore } from '../../store/entries.store';
       justify-content: space-between;
       margin-bottom: 24px;
     }
+    .headerActions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
     .muted {
       color: rgba(255, 255, 255, 0.7);
       margin: 6px 0 0 0;
@@ -113,6 +122,10 @@ import { EntriesStore } from '../../store/entries.store';
     }
     .button:hover {
       background: rgba(255, 255, 255, 0.18);
+    }
+    .button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
     }
     .filters {
       display: grid;

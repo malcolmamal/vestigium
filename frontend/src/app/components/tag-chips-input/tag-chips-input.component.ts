@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { VestigiumApiService } from '../../services/vestigium-api.service';
+import type { TagSuggestionResponse } from '../../models/tag-suggestion.model';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-tag-chips-input',
@@ -23,6 +26,16 @@ import { CommonModule } from '@angular/common';
           (blur)="commitDraft()"
         />
       </div>
+      @if (showSuggestions() && suggestions().length > 0) {
+        <div class="suggestions" (mousedown)="$event.preventDefault()">
+          @for (s of suggestions(); track s.name) {
+            <button type="button" class="suggestion" (click)="pickSuggestion(s.name)">
+              <span class="sName">{{ s.name }}</span>
+              <span class="sCount">{{ s.count }}</span>
+            </button>
+          }
+        </div>
+      }
       @if (hint()) {
         <div class="hint">{{ hint() }}</div>
       }
@@ -81,10 +94,47 @@ import { CommonModule } from '@angular/common';
       color: rgba(255, 255, 255, 0.65);
       font-size: 12px;
     }
+    .suggestions {
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(12, 14, 18, 0.92);
+      backdrop-filter: blur(8px);
+    }
+    .suggestion {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.92);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .suggestion:hover {
+      background: rgba(255, 255, 255, 0.10);
+    }
+    .sName {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sCount {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TagChipsInputComponent {
+  private readonly api = inject(VestigiumApiService);
+
   readonly tags = input<string[]>([]);
   readonly placeholder = input<string>('Add tag and press Enter');
   readonly hint = input<string | null>(null);
@@ -94,9 +144,16 @@ export class TagChipsInputComponent {
   readonly draft = signal('');
   readonly draftTrimmed = computed(() => this.draft().trim());
 
+  readonly suggestionsLoading = signal(false);
+  readonly suggestions = signal<TagSuggestionResponse[]>([]);
+  readonly showSuggestions = computed(() => this.draftTrimmed().length >= 2);
+
+  private suggestTimer: any = null;
+
   onInput(evt: Event) {
     const value = (evt.target as HTMLInputElement).value;
     this.draft.set(value);
+    this.scheduleSuggest();
   }
 
   onKeydown(evt: KeyboardEvent) {
@@ -118,10 +175,47 @@ export class TagChipsInputComponent {
       this.tagsChange.emit([...this.tags(), normalized]);
     }
     this.draft.set('');
+    this.suggestions.set([]);
   }
 
   remove(tag: string) {
     this.tagsChange.emit(this.tags().filter((t) => t !== tag));
+  }
+
+  pickSuggestion(tag: string) {
+    const normalized = (tag ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!normalized) return;
+    if (!this.tags().includes(normalized)) {
+      this.tagsChange.emit([...this.tags(), normalized]);
+    }
+    this.draft.set('');
+    this.suggestions.set([]);
+  }
+
+  private scheduleSuggest() {
+    if (this.suggestTimer) {
+      clearTimeout(this.suggestTimer);
+    }
+
+    const q = this.draftTrimmed().toLowerCase();
+    if (q.length < 2) {
+      this.suggestions.set([]);
+      return;
+    }
+
+    this.suggestTimer = setTimeout(() => {
+      this.suggestionsLoading.set(true);
+      this.api
+        .suggestTags(q, 10)
+        .pipe(finalize(() => this.suggestionsLoading.set(false)))
+        .subscribe({
+          next: (items) => {
+            const selected = new Set(this.tags());
+            this.suggestions.set(items.filter((s) => !selected.has(s.name)));
+          },
+          error: () => this.suggestions.set([])
+        });
+    }, 200);
   }
 }
 

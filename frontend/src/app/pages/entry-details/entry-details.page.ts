@@ -7,6 +7,7 @@ import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chi
 import type { EntryDetailsResponse } from '../../models/entry.model';
 import type { JobResponse } from '../../models/job.model';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
+import { EntriesStore } from '../../store/entries.store';
 
 @Component({
   selector: 'app-entry-details-page',
@@ -426,6 +427,7 @@ export class EntryDetailsPage {
   private readonly api = inject(VestigiumApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly entriesStore = inject(EntriesStore);
 
   readonly id = signal<string | null>(null);
   readonly loading = signal(false);
@@ -610,7 +612,10 @@ export class EntryDetailsPage {
     if (!confirm('Delete this entry? This will also remove its attachments and queued jobs.')) return;
 
     this.api.deleteEntry(id).subscribe({
-      next: () => void this.router.navigate(['/entries']),
+      next: () => {
+        this.entriesStore.refresh();
+        void this.router.navigate(['/entries']);
+      },
       error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to delete entry')
     });
   }

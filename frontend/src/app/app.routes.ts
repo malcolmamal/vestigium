@@ -15,6 +15,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/create-entry/create-entry.page').then((m) => m.CreateEntryPage)
   },
   {
+    path: 'entries/bulk',
+    loadComponent: () => import('./pages/bulk-add/bulk-add.page').then((m) => m.BulkAddPage)
+  },
+  {
+    path: 'entries/import-export',
+    loadComponent: () => import('./pages/import-export/import-export.page').then((m) => m.ImportExportPage)
+  },
+  {
     path: 'entries/:id',
     loadComponent: () => import('./pages/entry-details/entry-details.page').then((m) => m.EntryDetailsPage)
   }

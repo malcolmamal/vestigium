@@ -4,6 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
+import { EntriesStore } from '../../store/entries.store';
 
 @Component({
   selector: 'app-create-entry-page',
@@ -148,6 +149,7 @@ import { VestigiumApiService } from '../../services/vestigium-api.service';
 export class CreateEntryPage {
   private readonly api = inject(VestigiumApiService);
   private readonly router = inject(Router);
+  private readonly entriesStore = inject(EntriesStore);
 
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -182,6 +184,7 @@ export class CreateEntryPage {
     this.api.createEntry(fd).subscribe({
       next: (res) => {
         this.saving.set(false);
+        this.entriesStore.refresh();
         void this.router.navigate(['/entries', res.entry.id]);
       },
       error: (e) => {

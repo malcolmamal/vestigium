@@ -1,6 +1,7 @@
 package com.vestigium.api;
 
 import com.vestigium.persistence.TagRepository;
+import com.vestigium.api.dto.TagSuggestionResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +25,14 @@ public class TagsController {
             @RequestParam(value = "limit", defaultValue = "20") @Min(1) @Max(100) int limit
     ) {
         return tags.searchByPrefix(prefix, limit);
+    }
+
+    @GetMapping("/api/tags/suggest")
+    public List<TagSuggestionResponse> suggest(
+            @RequestParam(value = "prefix", required = false) String prefix,
+            @RequestParam(value = "limit", defaultValue = "20") @Min(1) @Max(100) int limit
+    ) {
+        return tags.suggestByPrefix(prefix, limit).stream().map(TagSuggestionResponse::from).toList();
     }
 }
 

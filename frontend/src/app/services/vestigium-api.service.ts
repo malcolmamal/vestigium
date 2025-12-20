@@ -3,6 +3,8 @@ import { inject, Injectable } from '@angular/core';
 
 import type { EntryDetailsResponse, EntryListResponse, PatchEntryRequest } from '../models/entry.model';
 import type { JobResponse } from '../models/job.model';
+import type { EntryExportItem, ImportEntriesResponse } from '../models/import-export.model';
+import type { TagSuggestionResponse } from '../models/tag-suggestion.model';
 
 @Injectable({ providedIn: 'root' })
 export class VestigiumApiService {
@@ -10,6 +12,13 @@ export class VestigiumApiService {
 
   createEntry(formData: FormData) {
     return this.http.post<EntryDetailsResponse>('/api/entries', formData);
+  }
+
+  bulkCreateEntries(urls: string[]) {
+    return this.http.post<{ createdCount: number; skippedCount: number; errors: { url: string; error: string }[] }>(
+      '/api/entries/bulk',
+      { urls }
+    );
   }
 
   listEntries(params: {
@@ -75,9 +84,22 @@ export class VestigiumApiService {
     return this.http.delete<void>(`/api/entries/${encodeURIComponent(id)}`);
   }
 
+  exportEntries() {
+    return this.http.get<EntryExportItem[]>('/api/entries/export');
+  }
+
+  importEntries(mode: 'skip' | 'update', items: EntryExportItem[]) {
+    return this.http.post<ImportEntriesResponse>('/api/entries/import', { mode, items });
+  }
+
   searchTags(prefix: string, limit = 20) {
     const params = new HttpParams().set('prefix', prefix).set('limit', String(limit));
     return this.http.get<string[]>('/api/tags', { params });
+  }
+
+  suggestTags(prefix: string, limit = 20) {
+    const params = new HttpParams().set('prefix', prefix).set('limit', String(limit));
+    return this.http.get<TagSuggestionResponse[]>('/api/tags/suggest', { params });
   }
 }
 

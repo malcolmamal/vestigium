@@ -166,9 +166,13 @@ public class EnrichEntryJobProcessor implements JobProcessor {
                Output MUST be a single JSON object (no markdown), with this exact shape:
                {
                  "title": "optional short title",
-                 "description": "short paragraph, 1-4 sentences",
+                 "description": "useful description, 2-8 sentences (can be 1-2 short paragraphs)",
                  "tags": ["lowercase tag", "another tag"]
                }
+
+               Description rules:
+               - be informative (what it is, why it matters, key entities)
+               - aim for ~400-900 characters unless the page is very small
 
                Tag rules:
                - keep tags short, lowercase, and specific

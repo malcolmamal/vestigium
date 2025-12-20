@@ -13,6 +13,7 @@ import com.vestigium.thumb.YouTube;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -163,6 +164,101 @@ public class EntryService {
             // best-effort cleanup
         }
     }
+
+    public BulkCreateResult bulkCreate(List<String> urls) {
+        if (urls == null || urls.isEmpty()) {
+            return new BulkCreateResult(0, 0, List.of());
+        }
+
+        int created = 0;
+        int skipped = 0;
+        var errors = new java.util.ArrayList<BulkCreateError>();
+
+        // De-dupe within request (preserve order)
+        var unique = new java.util.LinkedHashSet<String>();
+        for (var u : urls) {
+            if (u == null) continue;
+            var t = u.trim();
+            if (!t.isBlank()) unique.add(t);
+        }
+
+        for (var rawUrl : unique) {
+            try {
+                var normalized = normalizeUrl(rawUrl);
+                if (entries.getByUrl(normalized).isPresent()) {
+                    skipped++;
+                    continue;
+                }
+                create(normalized, null, null, null, false, null);
+                created++;
+            } catch (Exception e) {
+                errors.add(new BulkCreateError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
+            }
+        }
+        return new BulkCreateResult(created, skipped, errors);
+    }
+
+    public record BulkCreateError(String url, String error) {}
+    public record BulkCreateResult(int createdCount, int skippedCount, List<BulkCreateError> errors) {}
+
+    public ExportResult exportAll() {
+        var items = entries.listAllForExport().stream()
+                .map(e -> new ExportItem(e.id(), e.url(), e.title(), e.description(), TagNormalizer.normalize(e.tags())))
+                .toList();
+        return new ExportResult(items);
+    }
+
+    public ImportResult importEntries(String mode, List<ExportItem> items) {
+        if (items == null || items.isEmpty()) {
+            return new ImportResult(0, 0, 0, List.of());
+        }
+
+        var m = mode == null ? "skip" : mode.trim().toLowerCase();
+        if (!m.equals("skip") && !m.equals("update")) {
+            throw new VestigiumException("IMPORT_MODE_INVALID", HttpStatus.BAD_REQUEST, "mode must be 'skip' or 'update'");
+        }
+
+        int created = 0;
+        int updated = 0;
+        int skipped = 0;
+        var errors = new java.util.ArrayList<ImportError>();
+
+        for (var item : items) {
+            if (item == null || item.url() == null || item.url().isBlank()) {
+                continue;
+            }
+            var rawUrl = item.url().trim();
+            try {
+                var normalized = normalizeUrl(rawUrl);
+                var existingOpt = entries.getByUrl(normalized);
+                if (existingOpt.isEmpty()) {
+                    create(normalized, item.title(), item.description(), item.tags(), false, null);
+                    created++;
+                    continue;
+                }
+                if (m.equals("skip")) {
+                    skipped++;
+                    continue;
+                }
+                var existing = existingOpt.get();
+                // Update core fields if present in import
+                entries.updateCore(existing.id(), item.title(), item.description(), null);
+                if (item.tags() != null) {
+                    entries.replaceTags(existing.id(), TagNormalizer.normalize(item.tags()), tags);
+                }
+                updated++;
+            } catch (Exception e) {
+                errors.add(new ImportError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
+            }
+        }
+
+        return new ImportResult(created, updated, skipped, errors);
+    }
+
+    public record ExportItem(String id, String url, String title, String description, List<String> tags) {}
+    public record ExportResult(List<ExportItem> items) {}
+    public record ImportError(String url, String error) {}
+    public record ImportResult(int createdCount, int updatedCount, int skippedCount, List<ImportError> errors) {}
 
     public List<Entry> search(String q, List<String> tags, Boolean important, Boolean visited, int page, int pageSize) {
         var normalizedTags = TagNormalizer.normalize(tags);

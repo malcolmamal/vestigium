@@ -39,6 +39,26 @@ public class TagRepository {
         );
     }
 
+    public List<TagSuggestion> suggestByPrefix(String prefix, int limit) {
+        if (prefix == null) {
+            prefix = "";
+        }
+        var p = prefix.toLowerCase();
+        return jdbc.query(
+                """
+                SELECT t.name AS name, COUNT(et.entry_id) AS usage_count
+                FROM tags t
+                LEFT JOIN entry_tags et ON et.tag_id = t.id
+                WHERE LOWER(t.name) LIKE :p
+                GROUP BY t.id, t.name
+                ORDER BY usage_count DESC, t.name ASC
+                LIMIT :limit
+                """,
+                Map.of("p", p + "%", "limit", Math.max(limit, 1)),
+                (rs, rowNum) -> new TagSuggestion(rs.getString("name"), rs.getInt("usage_count"))
+        );
+    }
+
     /**
      * Ensures tags exist and returns a map from name -> id. Names must already be normalized.
      */
@@ -67,6 +87,8 @@ public class TagRepository {
     }
 
     private record TagRow(String id, String name) {}
+
+    public record TagSuggestion(String name, int count) {}
 
     private static final class TagRowMapper implements RowMapper<TagRow> {
         @Override

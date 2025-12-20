@@ -1,9 +1,14 @@
 package com.vestigium.api;
 
 import com.vestigium.api.dto.AttachmentResponse;
+import com.vestigium.api.dto.BulkCreateEntriesRequest;
+import com.vestigium.api.dto.BulkCreateEntriesResponse;
 import com.vestigium.api.dto.EntryDetailsResponse;
+import com.vestigium.api.dto.EntryExportItem;
 import com.vestigium.api.dto.EntryListResponse;
 import com.vestigium.api.dto.EntryResponse;
+import com.vestigium.api.dto.ImportEntriesRequest;
+import com.vestigium.api.dto.ImportEntriesResponse;
 import com.vestigium.api.dto.PatchEntryRequest;
 import com.vestigium.service.EntryService;
 import jakarta.validation.constraints.NotBlank;
@@ -66,6 +71,35 @@ public class EntriesController {
                 .map(EntryResponse::from)
                 .toList();
         return new EntryListResponse(page, pageSize, items);
+    }
+
+    @PostMapping(value = "/api/entries/bulk", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public BulkCreateEntriesResponse bulkCreate(@RequestBody BulkCreateEntriesRequest req) {
+        var result = entryService.bulkCreate(req == null ? null : req.urls());
+        var errors = result.errors().stream()
+                .map(e -> new BulkCreateEntriesResponse.ErrorItem(e.url(), e.error()))
+                .toList();
+        return new BulkCreateEntriesResponse(result.createdCount(), result.skippedCount(), errors);
+    }
+
+    @GetMapping(value = "/api/entries/export", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<EntryExportItem> exportEntries() {
+        return entryService.exportAll().items().stream()
+                .map(i -> new EntryExportItem(i.id(), i.url(), i.title(), i.description(), i.tags()))
+                .toList();
+    }
+
+    @PostMapping(value = "/api/entries/import", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ImportEntriesResponse importEntries(@RequestBody ImportEntriesRequest req) {
+        var in = req == null ? List.<EntryExportItem>of() : (req.items() == null ? List.<EntryExportItem>of() : req.items());
+        var items = in.stream()
+                .map(i -> new EntryService.ExportItem(i.id(), i.url(), i.title(), i.description(), i.tags()))
+                .toList();
+        var result = entryService.importEntries(req == null ? null : req.mode(), items);
+        var errors = result.errors().stream()
+                .map(e -> new ImportEntriesResponse.ErrorItem(e.url(), e.error()))
+                .toList();
+        return new ImportEntriesResponse(result.createdCount(), result.updatedCount(), result.skippedCount(), errors);
     }
 
     @GetMapping("/api/entries/{id}")
