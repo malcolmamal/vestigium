@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
@@ -26,12 +26,23 @@ export class EntriesPage {
 
   readonly popularTags = signal<TagSuggestionResponse[]>([]);
   readonly popularTagsError = signal<string | null>(null);
-
-  readonly listCreateName = signal('');
-  readonly listError = signal<string | null>(null);
+  readonly filtersCollapsed = signal(true);
+  readonly filterSummary = computed(() => {
+    const parts: string[] = [];
+    const q = this.store.query().trim();
+    if (q) parts.push(`q="${q}"`);
+    if (this.store.tagFilter().length > 0) parts.push(`${this.store.tagFilter().length} tag(s)`);
+    if (this.store.listFilter().length > 0) parts.push(`${this.store.listFilter().length} list(s)`);
+    if (this.store.addedFrom()) parts.push(`from ${this.store.addedFrom()}`);
+    if (this.store.addedTo()) parts.push(`to ${this.store.addedTo()}`);
+    if (this.store.importantOnly() !== null) parts.push(this.store.importantOnly() ? 'important' : 'not important');
+    if (this.store.visitedOnly() !== null) parts.push(this.store.visitedOnly() ? 'visited' : 'not visited');
+    if (this.store.sort() !== 'updated_desc') parts.push(`sort=${this.store.sort()}`);
+    return parts.length > 0 ? parts.join(' · ') : 'No filters';
+  });
 
   constructor() {
-    this.api.suggestTags('', 20).subscribe({
+    this.api.suggestTags('', 15).subscribe({
       next: (items) => this.popularTags.set(items),
       error: () => this.popularTagsError.set('Failed to load tags')
     });
@@ -63,41 +74,6 @@ export class EntriesPage {
     this.store.setListFilter(next);
   }
 
-  createList() {
-    const name = this.listCreateName().trim();
-    if (!name) return;
-    this.listError.set(null);
-    this.api.createList(name).subscribe({
-      next: () => {
-        this.listCreateName.set('');
-        this.lists.load();
-      },
-      error: (e) => this.listError.set(e?.error?.detail ?? e?.message ?? 'Failed to create list')
-    });
-  }
-
-  deleteList(list: ListResponse) {
-    this.listError.set(null);
-    this.api.deleteList(list.id, false).subscribe({
-      next: () => this.lists.load(),
-      error: (e) => {
-        const detail = e?.error?.detail ?? e?.message ?? 'Failed to delete list';
-        // If non-empty, ask for confirmation and retry with force.
-        if (String(e?.error?.title ?? '').includes('LIST_NOT_EMPTY') || String(detail).includes('linked entries')) {
-          if (confirm(`Delete list \"${list.name}\"? It has ${list.entryCount} linked entries.`)) {
-            this.api.deleteList(list.id, true).subscribe({
-              next: () => this.lists.load(),
-              error: (e2) => this.listError.set(e2?.error?.detail ?? e2?.message ?? 'Failed to delete list')
-            });
-            return;
-          }
-          return;
-        }
-        this.listError.set(detail);
-      }
-    });
-  }
-
   nextPage() {
     if (this.store.items().length < this.store.pageSize()) return;
     this.store.page.set(this.store.page() + 1);
@@ -109,7 +85,7 @@ export class EntriesPage {
 
   setPageSize(evt: Event) {
     const v = Number((evt.target as HTMLSelectElement).value || '20');
-    this.store.pageSize.set([20, 50, 100].includes(v) ? v : 20);
+    this.store.pageSize.set([10, 20, 50, 100].includes(v) ? v : 20);
     this.store.page.set(0);
   }
 

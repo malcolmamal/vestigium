@@ -15,7 +15,7 @@
     <div class="tagsHeader">
       <span class="tagsTitle">Tags</span>
       <div class="tagsHeaderRight">
-        <span class="muted">Top 20</span>
+        <span class="muted">Top 15</span>
         <a class="mutedLink" routerLink="/tags">All</a>
       </div>
     </div>
@@ -37,24 +37,11 @@
   <section class="listsSection">
     <div class="listsHeader">
       <span class="listsTitle">Lists</span>
-      <span class="muted">Filter + manage</span>
+      <div class="tagsHeaderRight">
+        <span class="muted">Filter</span>
+        <a class="mutedLink" routerLink="/lists">Manage</a>
+      </div>
     </div>
-
-    <div class="listCreate">
-      <input
-        class="textInput"
-        type="text"
-        placeholder="New list name…"
-        [value]="listCreateName()"
-        (input)="listCreateName.set(($any($event.target).value ?? '').toString())"
-        (keydown.enter)="createList()"
-      />
-      <button class="button secondary" type="button" (click)="createList()">Add list</button>
-    </div>
-
-    @if (listError()) {
-      <div class="muted">{{ listError() }}</div>
-    }
 
     @if (lists.error()) {
       <div class="muted">{{ lists.error() }}</div>
@@ -65,106 +52,129 @@
     } @else {
       <div class="listPills">
         @for (l of lists.items(); track l.id) {
-          <div class="listPillWrap">
-            <button class="pill" type="button" [class.on]="store.listFilter().includes(l.id)" (click)="toggleList(l)">
-              {{ l.name }} <span class="count">{{ l.entryCount }}</span>
-            </button>
-            <button class="x" type="button" title="Delete list" (click)="deleteList(l)">×</button>
-          </div>
+          <button class="pill" type="button" [class.on]="store.listFilter().includes(l.id)" (click)="toggleList(l)">
+            {{ l.name }} <span class="count">{{ l.entryCount }}</span>
+          </button>
         }
       </div>
     }
   </section>
 
-  <div class="filters">
-    <label class="field">
-      <span class="label">Search</span>
-      <input
-        class="textInput"
-        type="text"
-        [value]="store.query()"
-        (input)="store.query.set(($any($event.target).value ?? '').toString())"
-        placeholder="Search title/description…"
-      />
-    </label>
-
-    <label class="field">
-      <span class="label">Tags</span>
-      <app-tag-chips-input
-        [tags]="store.tagFilter()"
-        placeholder="Type tag and press Enter"
-        [hint]="'Filter requires ALL selected tags'"
-        (tagsChange)="store.setTagFilter($event)"
-      />
-    </label>
-
-    <div class="row">
-      <label class="field">
-        <span class="label">Added from</span>
-        <input
-          class="textInput"
-          type="date"
-          [value]="store.addedFrom() ?? ''"
-          (input)="store.addedFrom.set(($any($event.target).value ?? '').toString() || null)"
-        />
-      </label>
-      <label class="field">
-        <span class="label">Added to</span>
-        <input
-          class="textInput"
-          type="date"
-          [value]="store.addedTo() ?? ''"
-          (input)="store.addedTo.set(($any($event.target).value ?? '').toString() || null)"
-        />
-      </label>
+  <section class="filtersCard">
+    <div class="filtersHeader">
+      <span class="filtersTitle">Search</span>
+      <div class="filtersHeaderRight">
+        @if (filtersCollapsed() && store.hasFilters()) {
+          <span class="muted">{{ filterSummary() }}</span>
+        }
+        <button class="button secondary" type="button" (click)="filtersCollapsed.set(!filtersCollapsed())">
+          {{ filtersCollapsed() ? 'Show' : 'Hide' }}
+        </button>
+      </div>
     </div>
 
-    <div class="row">
-      <label class="field">
-        <span class="label">Important</span>
-        <select class="select" [value]="importantValue()" (change)="onImportantChange($event)">
-          <option value="any">Any</option>
-          <option value="true">Important only</option>
-          <option value="false">Not important</option>
-        </select>
-      </label>
-      <label class="field">
-        <span class="label">Visited</span>
-        <select class="select" [value]="visitedValue()" (change)="onVisitedChange($event)">
-          <option value="any">Any</option>
-          <option value="true">Visited only</option>
-          <option value="false">Not visited</option>
-        </select>
-      </label>
-    </div>
+    @if (!filtersCollapsed()) {
+      <div class="filters">
+        <label class="field">
+          <span class="label">Search</span>
+          <input
+            class="textInput"
+            type="text"
+            [value]="store.query()"
+            (input)="store.query.set(($any($event.target).value ?? '').toString())"
+            placeholder="Search title/description…"
+          />
+        </label>
 
-    <label class="field">
-      <span class="label">Sort</span>
-      <select class="select" [value]="store.sort()" (change)="store.sort.set(($any($event.target).value ?? 'updated_desc').toString())">
-        <option value="updated_desc">Updated (newest)</option>
-        <option value="updated_asc">Updated (oldest)</option>
-        <option value="added_desc">Added (newest)</option>
-        <option value="added_asc">Added (oldest)</option>
-      </select>
-    </label>
+        <label class="field">
+          <span class="label">Tags</span>
+          <app-tag-chips-input
+            [tags]="store.tagFilter()"
+            placeholder="Type tag and press Enter"
+            [hint]="'Filter requires ALL selected tags'"
+            (tagsChange)="store.setTagFilter($event)"
+          />
+        </label>
 
-    <div class="pager">
-      <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
-      <div class="muted">Page {{ store.page() + 1 }}</div>
-      <button class="button secondary" type="button" (click)="nextPage()" [disabled]="store.items().length < store.pageSize()">
-        Next
-      </button>
-      <div class="spacer"></div>
-      <label class="field inline">
-        <span class="label">Per page</span>
-        <select class="select" [value]="store.pageSize()" (change)="setPageSize($event)">
-          <option [value]="20">20</option>
-          <option [value]="50">50</option>
-          <option [value]="100">100</option>
-        </select>
-      </label>
-    </div>
-  </div>
+        <div class="row">
+          <label class="field">
+            <span class="label">Added from</span>
+            <input
+              class="textInput"
+              type="date"
+              [value]="store.addedFrom() ?? ''"
+              (input)="store.addedFrom.set(($any($event.target).value ?? '').toString() || null)"
+            />
+          </label>
+          <label class="field">
+            <span class="label">Added to</span>
+            <input
+              class="textInput"
+              type="date"
+              [value]="store.addedTo() ?? ''"
+              (input)="store.addedTo.set(($any($event.target).value ?? '').toString() || null)"
+            />
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span class="label">Important</span>
+            <select class="select" [value]="importantValue()" (change)="onImportantChange($event)">
+              <option value="any">Any</option>
+              <option value="true">Important only</option>
+              <option value="false">Not important</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Visited</span>
+            <select class="select" [value]="visitedValue()" (change)="onVisitedChange($event)">
+              <option value="any">Any</option>
+              <option value="true">Visited only</option>
+              <option value="false">Not visited</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="label">Sort</span>
+          <select
+            class="select"
+            [value]="store.sort()"
+            (change)="store.sort.set(($any($event.target).value ?? 'updated_desc').toString())"
+          >
+            <option value="updated_desc">Updated (newest)</option>
+            <option value="updated_asc">Updated (oldest)</option>
+            <option value="added_desc">Added (newest)</option>
+            <option value="added_asc">Added (oldest)</option>
+          </select>
+        </label>
+
+        <div class="pager">
+          <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
+          <div class="muted">Page {{ store.page() + 1 }}</div>
+          <button
+            class="button secondary"
+            type="button"
+            (click)="nextPage()"
+            [disabled]="store.items().length < store.pageSize()"
+          >
+            Next
+          </button>
+          <div class="spacer"></div>
+          <label class="field inline">
+            <span class="label">Per page</span>
+            <select class="select" [value]="store.pageSize()" (change)="setPageSize($event)">
+              <option [value]="10">10</option>
+              <option [value]="20">20</option>
+              <option [value]="50">50</option>
+              <option [value]="100">100</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    }
+  </section>
 
   @if (store.error()) {
     <div class="error">{{ store.error() }}</div>
@@ -179,6 +189,13 @@
       @for (e of store.items(); track e.id) {
         <app-entry-card [entry]="e" />
       }
+    </div>
+    <div class="pager bottom">
+      <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
+      <div class="muted">Page {{ store.page() + 1 }}</div>
+      <button class="button secondary" type="button" (click)="nextPage()" [disabled]="store.items().length < store.pageSize()">
+        Next
+      </button>
     </div>
   }
 </section>

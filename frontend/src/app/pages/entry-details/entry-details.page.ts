@@ -65,33 +65,24 @@ export class EntryDetailsPage {
   });
 
   constructor() {
-    effect(
-      () => {
-        const id = this.route.snapshot.paramMap.get('id');
-        this.id.set(id);
-        if (id) this.refresh(id);
-      },
-      { allowSignalWrites: true }
-    );
+    effect(() => {
+      const id = this.route.snapshot.paramMap.get('id');
+      this.id.set(id);
+      if (id) this.refresh(id);
+    });
 
-    effect(
-      (onCleanup) => {
-        const id = this.id();
-        if (!id) return;
-        this.loadJobs(id);
-        const t = setInterval(() => this.loadJobs(id), 2000);
-        onCleanup(() => clearInterval(t));
-      },
-      { allowSignalWrites: true }
-    );
+    effect((onCleanup) => {
+      const id = this.id();
+      if (!id) return;
+      this.loadJobs(id);
+      const t = setInterval(() => this.loadJobs(id), 2000);
+      onCleanup(() => clearInterval(t));
+    });
 
-    effect(
-      () => {
-        // Collapsed by default; auto-expand while something is RUNNING; auto-collapse once nothing is running.
-        this.jobsCollapsed.set(this.runningJobsCount() === 0);
-      },
-      { allowSignalWrites: true }
-    );
+    effect(() => {
+      // Collapsed by default; auto-expand while something is RUNNING; auto-collapse once nothing is running.
+      this.jobsCollapsed.set(this.runningJobsCount() === 0);
+    });
   }
 
   refresh(id: string) {

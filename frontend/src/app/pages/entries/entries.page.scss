@@ -140,41 +140,40 @@ h1 {
   letter-spacing: -0.01em;
 }
 
-.listCreate {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
 .listPills {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.listPillWrap {
-  display: inline-flex;
-  gap: 6px;
+.filtersCard {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  margin-bottom: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.filtersHeader {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
-.x {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  line-height: 1;
-  font-size: 16px;
+.filtersTitle {
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
-.x:hover {
-  background: rgba(255, 80, 80, 0.12);
-  border-color: rgba(255, 80, 80, 0.22);
-  color: rgba(255, 220, 220, 0.95);
+.filtersHeaderRight {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .pager {
@@ -182,6 +181,11 @@ h1 {
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.pager.bottom {
+  margin-top: 14px;
+  justify-content: center;
 }
 
 .spacer {
@@ -197,11 +201,6 @@ h1 {
 .filters {
   display: grid;
   gap: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  margin-bottom: 18px;
 }
 
 .field {

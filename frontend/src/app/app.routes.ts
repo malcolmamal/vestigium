@@ -11,6 +11,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/tags/tags.page').then((m) => m.TagsPage)
   },
   {
+    path: 'lists',
+    loadComponent: () => import('./pages/lists/lists.page').then((m) => m.ListsPage)
+  },
+  {
     path: 'queue',
     loadComponent: () => import('./pages/queue/queue.page').then((m) => m.QueuePage)
   },

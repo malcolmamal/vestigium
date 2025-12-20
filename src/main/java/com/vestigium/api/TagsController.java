@@ -22,7 +22,7 @@ public class TagsController {
     @GetMapping("/api/tags")
     public List<String> search(
             @RequestParam(value = "prefix", required = false) String prefix,
-            @RequestParam(value = "limit", defaultValue = "20") @Min(1) @Max(100) int limit
+            @RequestParam(value = "limit", defaultValue = "20") @Min(1) @Max(500) int limit
     ) {
         return tags.searchByPrefix(prefix, limit);
     }
@@ -30,7 +30,7 @@ public class TagsController {
     @GetMapping("/api/tags/suggest")
     public List<TagSuggestionResponse> suggest(
             @RequestParam(value = "prefix", required = false) String prefix,
-            @RequestParam(value = "limit", defaultValue = "20") @Min(1) @Max(100) int limit
+            @RequestParam(value = "limit", defaultValue = "20") @Min(1) @Max(500) int limit
     ) {
         return tags.suggestByPrefix(prefix, limit).stream().map(TagSuggestionResponse::from).toList();
     }

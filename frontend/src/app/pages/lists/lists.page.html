@@ -1,0 +1,50 @@
+<section class="page">
+  <header class="pageHeader">
+    <h1>Lists</h1>
+    <a class="button secondary" routerLink="/entries">Back to entries</a>
+  </header>
+
+  <section class="card">
+    <div class="cardHeader">
+      <span class="title">Manage</span>
+      <button class="button" type="button" (click)="lists.load()">Refresh</button>
+    </div>
+
+    <div class="createRow">
+      <input
+        class="textInput"
+        type="text"
+        placeholder="New list name…"
+        [value]="createName()"
+        (input)="createName.set(($any($event.target).value ?? '').toString())"
+        (keydown.enter)="create()"
+      />
+      <button class="button secondary" type="button" (click)="create()">Add list</button>
+    </div>
+
+    @if (error()) {
+      <div class="errorBox">{{ error() }}</div>
+    }
+  </section>
+
+  @if (lists.error()) {
+    <div class="errorBox">{{ lists.error() }}</div>
+  } @else if (lists.loading() && lists.items().length === 0) {
+    <div class="muted">Loading…</div>
+  } @else if (lists.items().length === 0) {
+    <div class="muted">No lists yet.</div>
+  } @else {
+    <div class="grid">
+      @for (l of lists.items(); track l.id) {
+        <div class="row">
+          <button class="pill" type="button" (click)="addToEntriesFilter(l)">
+            {{ l.name }} <span class="count">{{ l.entryCount }}</span>
+          </button>
+          <button class="button danger" type="button" (click)="delete(l)">Delete</button>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+

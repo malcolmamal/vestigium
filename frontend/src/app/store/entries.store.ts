@@ -29,31 +29,32 @@ export class EntriesStore {
     return (
       this.query().trim().length > 0 ||
       this.tagFilter().length > 0 ||
+      this.listFilter().length > 0 ||
       this.importantOnly() !== null ||
-      this.visitedOnly() !== null
+      this.visitedOnly() !== null ||
+      this.addedFrom() !== null ||
+      this.addedTo() !== null ||
+      this.sort() !== 'updated_desc'
     );
   });
 
   constructor() {
-    effect(
-      () => {
-        // Re-load when filters change (simple v1 approach).
-        void this.query();
-        void this.tagFilter();
-        void this.listFilter();
-        void this.importantOnly();
-        void this.visitedOnly();
-        void this.addedFrom();
-        void this.addedTo();
-        void this.sort();
-        void this.page();
-        void this.pageSize();
-        void this.refreshToken();
+    effect(() => {
+      // Re-load when filters change (simple v1 approach).
+      void this.query();
+      void this.tagFilter();
+      void this.listFilter();
+      void this.importantOnly();
+      void this.visitedOnly();
+      void this.addedFrom();
+      void this.addedTo();
+      void this.sort();
+      void this.page();
+      void this.pageSize();
+      void this.refreshToken();
 
-        this.load();
-      },
-      { allowSignalWrites: true }
-    );
+      this.load();
+    });
   }
 
   private toIsoStartOfDay(dateYmd: string | null) {
