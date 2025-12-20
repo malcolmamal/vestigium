@@ -26,7 +26,7 @@
     } @else {
       <div class="tagPills">
         @for (t of popularTags(); track t.name) {
-          <button class="pill" type="button" (click)="applyPopularTag(t.name)">
+          <button class="pill" type="button" [class.on]="store.tagFilter().includes(t.name)" (click)="applyPopularTag(t.name)">
             {{ t.name }} <span class="count">{{ t.count }}</span>
           </button>
         }

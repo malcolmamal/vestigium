@@ -2,6 +2,8 @@ export interface EntryExportItem {
   id: string;
   url: string;
   addedAt: string | null;
+  thumbnailPath?: string | null;
+  thumbnailLargePath?: string | null;
   title: string | null;
   description: string | null;
   tags: string[];

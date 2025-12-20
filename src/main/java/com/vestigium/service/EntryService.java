@@ -206,7 +206,16 @@ public class EntryService {
 
     public ExportResult exportAll() {
         var items = entries.listAllForExport().stream()
-                .map(e -> new ExportItem(e.id(), e.url(), e.createdAt(), e.title(), e.description(), TagNormalizer.normalize(e.tags())))
+                .map(e -> new ExportItem(
+                        e.id(),
+                        e.url(),
+                        e.createdAt(),
+                        e.thumbnailPath(),
+                        e.thumbnailLargePath(),
+                        e.title(),
+                        e.description(),
+                        TagNormalizer.normalize(e.tags())
+                ))
                 .toList();
         return new ExportResult(items);
     }
@@ -235,7 +244,15 @@ public class EntryService {
                 var normalized = normalizeUrl(rawUrl);
                 var existingOpt = entries.getByUrl(normalized);
                 if (existingOpt.isEmpty()) {
-                    createImported(normalized, item.addedAt(), item.title(), item.description(), item.tags());
+                    createImported(
+                            normalized,
+                            item.addedAt(),
+                            item.thumbnailPath(),
+                            item.thumbnailLargePath(),
+                            item.title(),
+                            item.description(),
+                            item.tags()
+                    );
                     created++;
                     continue;
                 }
@@ -249,6 +266,14 @@ public class EntryService {
                 if (item.tags() != null) {
                     entries.replaceTags(existing.id(), TagNormalizer.normalize(item.tags()), tags);
                 }
+                if ((item.thumbnailPath() != null && !item.thumbnailPath().isBlank())
+                        || (item.thumbnailLargePath() != null && !item.thumbnailLargePath().isBlank())) {
+                    entries.updateThumbnailPaths(
+                            existing.id(),
+                            item.thumbnailPath() == null ? null : item.thumbnailPath().trim(),
+                            item.thumbnailLargePath() == null ? null : item.thumbnailLargePath().trim()
+                    );
+                }
                 updated++;
             } catch (Exception e) {
                 errors.add(new ImportError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
@@ -258,13 +283,31 @@ public class EntryService {
         return new ImportResult(created, updated, skipped, errors);
     }
 
-    private void createImported(String normalizedUrl, String addedAt, String title, String description, List<String> tags) {
+    private void createImported(
+            String normalizedUrl,
+            String addedAt,
+            String thumbnailPath,
+            String thumbnailLargePath,
+            String title,
+            String description,
+            List<String> tags
+    ) {
         if (entries.getByUrl(normalizedUrl).isPresent()) {
             throw new VestigiumException("ENTRY_URL_ALREADY_EXISTS", HttpStatus.CONFLICT, "URL already exists.");
         }
         var now = com.vestigium.persistence.InstantSql.nowIso();
         var createdAt = (addedAt == null || addedAt.isBlank()) ? now : addedAt.trim();
         var entry = entries.createWithTimestamps(normalizedUrl, title, description, false, createdAt, createdAt);
+
+        if ((thumbnailPath != null && !thumbnailPath.isBlank())
+                || (thumbnailLargePath != null && !thumbnailLargePath.isBlank())) {
+            entries.updateThumbnailPaths(
+                    entry.id(),
+                    thumbnailPath == null ? null : thumbnailPath.trim(),
+                    thumbnailLargePath == null ? null : thumbnailLargePath.trim()
+            );
+            entry = entries.getById(entry.id()).orElseThrow();
+        }
 
         var normalizedTags = TagNormalizer.normalize(tags);
         if (!normalizedTags.isEmpty()) {
@@ -276,7 +319,16 @@ public class EntryService {
         jobs.enqueue("REGENERATE_THUMBNAIL", entry.id(), null);
     }
 
-    public record ExportItem(String id, String url, String addedAt, String title, String description, List<String> tags) {}
+    public record ExportItem(
+            String id,
+            String url,
+            String addedAt,
+            String thumbnailPath,
+            String thumbnailLargePath,
+            String title,
+            String description,
+            List<String> tags
+    ) {}
     public record ExportResult(List<ExportItem> items) {}
     public record ImportError(String url, String error) {}
     public record ImportResult(int createdCount, int updatedCount, int skippedCount, List<ImportError> errors) {}

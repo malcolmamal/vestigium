@@ -91,7 +91,7 @@ public class EntriesController {
     @GetMapping(value = "/api/entries/export", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<EntryExportItem> exportEntries() {
         return entryService.exportAll().items().stream()
-                .map(i -> new EntryExportItem(i.id(), i.url(), i.addedAt(), i.title(), i.description(), i.tags()))
+                .map(i -> new EntryExportItem(i.id(), i.url(), i.addedAt(), i.thumbnailPath(), i.thumbnailLargePath(), i.title(), i.description(), i.tags()))
                 .toList();
     }
 
@@ -99,7 +99,7 @@ public class EntriesController {
     public ImportEntriesResponse importEntries(@RequestBody ImportEntriesRequest req) {
         var in = req == null ? List.<EntryExportItem>of() : (req.items() == null ? List.<EntryExportItem>of() : req.items());
         var items = in.stream()
-                .map(i -> new EntryService.ExportItem(i.id(), i.url(), i.addedAt(), i.title(), i.description(), i.tags()))
+                .map(i -> new EntryService.ExportItem(i.id(), i.url(), i.addedAt(), i.thumbnailPath(), i.thumbnailLargePath(), i.title(), i.description(), i.tags()))
                 .toList();
         var result = entryService.importEntries(req == null ? null : req.mode(), items);
         var errors = result.errors().stream()

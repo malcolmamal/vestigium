@@ -62,7 +62,8 @@ export class EntriesPage {
   applyPopularTag(tag: string) {
     const t = tag.trim().toLowerCase();
     if (!t) return;
-    const next = Array.from(new Set([...this.store.tagFilter(), t]));
+    const current = this.store.tagFilter();
+    const next = current.includes(t) ? current.filter((x) => x !== t) : Array.from(new Set([...current, t]));
     this.store.setTagFilter(next);
     void this.router.navigate(['/entries'], { queryParams: { tags: next } });
   }
