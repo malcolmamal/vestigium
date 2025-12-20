@@ -28,6 +28,7 @@ public class EntryService {
     private final FileStorageService fileStorage;
     private final UrlContentFetcher urlFetcher;
     private final YouTubeMetadataFetcher youtubeMetadata;
+    private final com.vestigium.persistence.ListRepository lists;
 
     public EntryService(
             EntryRepository entries,
@@ -36,7 +37,8 @@ public class EntryService {
             JobRepository jobs,
             FileStorageService fileStorage,
             UrlContentFetcher urlFetcher,
-            YouTubeMetadataFetcher youtubeMetadata
+            YouTubeMetadataFetcher youtubeMetadata,
+            com.vestigium.persistence.ListRepository lists
     ) {
         this.entries = entries;
         this.tags = tags;
@@ -45,6 +47,7 @@ public class EntryService {
         this.fileStorage = fileStorage;
         this.urlFetcher = urlFetcher;
         this.youtubeMetadata = youtubeMetadata;
+        this.lists = lists;
     }
 
     public CreatedEntry create(
@@ -286,11 +289,52 @@ public class EntryService {
             String addedFrom,
             String addedTo,
             String sort,
+            List<String> listIds,
             int page,
             int pageSize
     ) {
         var normalizedTags = TagNormalizer.normalize(tags);
-        return entries.search(q, normalizedTags, important, visited, addedFrom, addedTo, sort, page, pageSize);
+        return entries.search(q, normalizedTags, important, visited, addedFrom, addedTo, sort, listIds, page, pageSize);
+    }
+
+    public List<com.vestigium.persistence.ListRepository.ListItem> listAllLists() {
+        return lists.listAllWithCounts();
+    }
+
+    public com.vestigium.persistence.ListRepository.ListItem createList(String name) {
+        if (name == null || name.trim().isBlank()) {
+            throw new VestigiumException("LIST_NAME_REQUIRED", HttpStatus.BAD_REQUEST, "name is required");
+        }
+        var normalized = name.trim();
+        return lists.create(normalized);
+    }
+
+    public void deleteList(String listId, boolean force) {
+        if (listId == null || listId.isBlank()) {
+            throw new VestigiumException("LIST_ID_REQUIRED", HttpStatus.BAD_REQUEST, "id is required");
+        }
+        var count = lists.countEntriesForList(listId);
+        if (count > 0 && !force) {
+            throw new VestigiumException("LIST_NOT_EMPTY", HttpStatus.CONFLICT, "List has linked entries.");
+        }
+        var deleted = lists.deleteById(listId);
+        if (deleted == 0) {
+            throw new VestigiumException("LIST_NOT_FOUND", HttpStatus.NOT_FOUND, "List not found.");
+        }
+    }
+
+    public List<com.vestigium.persistence.ListRepository.ListItem> listListsForEntry(String entryId) {
+        if (entries.getById(entryId).isEmpty()) {
+            throw new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found.");
+        }
+        return lists.listForEntry(entryId);
+    }
+
+    public void replaceEntryLists(String entryId, List<String> listIds) {
+        if (entries.getById(entryId).isEmpty()) {
+            throw new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found.");
+        }
+        lists.replaceEntryLists(entryId, listIds);
     }
 
     public Entry getById(String id) {

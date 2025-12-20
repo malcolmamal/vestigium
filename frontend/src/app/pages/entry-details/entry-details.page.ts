@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
 import type { EntryDetailsResponse } from '../../models/entry.model';
 import type { JobResponse } from '../../models/job.model';
+import type { ListResponse } from '../../models/list.model';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 
@@ -160,7 +161,7 @@ import { EntriesStore } from '../../store/entries.store';
 
             <label class="field">
               <span class="label">Tags</span>
-              <app-tag-chips-input [tags]="tags()" (tagsChange)="tags.set($event)" />
+              <app-tag-chips-input [tags]="tags()" (tagsChange)="onTagsChange($event)" />
             </label>
 
             <div class="actions">
@@ -170,6 +171,31 @@ import { EntriesStore } from '../../store/entries.store';
               }
             </div>
           </form>
+
+          <section class="lists">
+            <div class="listsHeader">
+              <h2>Lists</h2>
+              <a class="link" routerLink="/entries">Manage in Entries</a>
+            </div>
+            @if (listsError()) {
+              <div class="muted">{{ listsError() }}</div>
+            } @else if (allLists().length === 0) {
+              <div class="muted">No lists yet.</div>
+            } @else {
+              <div class="listPills">
+                @for (l of allLists(); track l.id) {
+                  <button
+                    class="pill"
+                    type="button"
+                    [class.on]="selectedListIds().includes(l.id)"
+                    (click)="toggleList(l)"
+                  >
+                    {{ l.name }}
+                  </button>
+                }
+              </div>
+            }
+          </section>
 
           <section class="attachments">
             <h2>Attachments</h2>
@@ -372,6 +398,38 @@ import { EntriesStore } from '../../store/entries.store';
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.10);
     }
+    .lists {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: grid;
+      gap: 10px;
+    }
+    .listsHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .listPills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .pill.on {
+      background: rgba(90, 97, 255, 0.14);
+      border-color: rgba(90, 97, 255, 0.24);
+    }
     .jobs {
       padding: 14px;
       border-radius: 14px;
@@ -481,6 +539,14 @@ export class EntryDetailsPage {
   readonly runningJobsCount = computed(() => this.jobs().filter((j) => j.status === 'RUNNING').length);
   readonly failedJobsCount = computed(() => this.jobs().filter((j) => j.status === 'FAILED').length);
 
+  private tagsSaveTimer: any = null;
+  private lastRunningCount = 0;
+
+  readonly allLists = signal<ListResponse[]>([]);
+  readonly selectedListIds = signal<string[]>([]);
+  readonly listsError = signal<string | null>(null);
+  private listsSaveTimer: any = null;
+
   readonly form = new FormGroup({
     title: new FormControl<string>('', { nonNullable: true }),
     description: new FormControl<string>('', { nonNullable: true })
@@ -535,6 +601,7 @@ export class EntryDetailsPage {
           this.form.controls.title.setValue(res.entry.title ?? '');
           this.form.controls.description.setValue(res.entry.description ?? '');
           this.tags.set(res.entry.tags ?? []);
+          this.loadLists(id);
         },
         error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to load entry')
       });
@@ -549,8 +616,7 @@ export class EntryDetailsPage {
     this.api
       .patchEntry(id, {
         title: this.form.controls.title.value.trim() || null,
-        description: this.form.controls.description.value.trim() || null,
-        tags: this.tags()
+        description: this.form.controls.description.value.trim() || null
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
@@ -615,9 +681,69 @@ export class EntryDetailsPage {
       .listJobs({ entryId, limit: 50 })
       .pipe(finalize(() => this.jobsLoading.set(false)))
       .subscribe({
-        next: (items) => this.jobs.set(items),
+        next: (items) => {
+          this.jobs.set(items);
+          const running = items.filter((j) => j.status === 'RUNNING').length;
+          // Auto-refresh the entry after work finishes (give backend a moment to persist thumbnail/files).
+          if (this.lastRunningCount > 0 && running === 0) {
+            const id = this.id();
+            if (id) setTimeout(() => this.refresh(id), 900);
+          }
+          this.lastRunningCount = running;
+        },
         error: (e) => this.jobsError.set(e?.error?.detail ?? e?.message ?? 'Failed to load jobs')
       });
+  }
+
+  loadLists(entryId: string) {
+    this.listsError.set(null);
+    this.api.listLists().subscribe({
+      next: (all) => this.allLists.set(all),
+      error: () => this.listsError.set('Failed to load lists')
+    });
+    this.api.getEntryLists(entryId).subscribe({
+      next: (sel) => this.selectedListIds.set(sel.map((x) => x.id)),
+      error: () => this.listsError.set('Failed to load entry lists')
+    });
+  }
+
+  toggleList(list: ListResponse) {
+    const id = this.id();
+    if (!id) return;
+    const current = this.selectedListIds();
+    const next = current.includes(list.id) ? current.filter((x) => x !== list.id) : [...current, list.id];
+    this.selectedListIds.set(next);
+    this.scheduleSaveLists();
+  }
+
+  private scheduleSaveLists() {
+    const id = this.id();
+    if (!id) return;
+    if (this.listsSaveTimer) clearTimeout(this.listsSaveTimer);
+    this.listsSaveTimer = setTimeout(() => {
+      this.api.setEntryLists(id, this.selectedListIds()).subscribe({
+        next: () => {},
+        error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to save lists')
+      });
+    }, 250);
+  }
+
+  onTagsChange(tags: string[]) {
+    this.tags.set(tags);
+    this.scheduleSaveTags();
+  }
+
+  private scheduleSaveTags() {
+    const id = this.id();
+    if (!id) return;
+
+    if (this.tagsSaveTimer) clearTimeout(this.tagsSaveTimer);
+    this.tagsSaveTimer = setTimeout(() => {
+      this.api.patchEntry(id, { tags: this.tags() }).subscribe({
+        next: () => this.refresh(id),
+        error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to save tags')
+      });
+    }, 250);
   }
 
   cancelJob(job: JobResponse) {

@@ -127,7 +127,7 @@ import { finalize } from 'rxjs';
     }
     .suggestion.active {
       border-color: rgba(90, 97, 255, 0.35);
-      background: rgba(90, 97, 255, 0.14);
+      background: rgba(90, 97, 255, 0.10);
     }
     .sName {
       overflow: hidden;

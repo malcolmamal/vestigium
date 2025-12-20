@@ -128,6 +128,7 @@ public class EntryRepository {
             String addedFrom,
             String addedTo,
             String sort,
+            List<String> listIds,
             int page,
             int pageSize
     ) {
@@ -170,6 +171,20 @@ public class EntryRepository {
             );
             params.put("tagNames", tags);
             params.put("tagCount", tags.size());
+        }
+
+        // List filtering: entry belongs to ANY of selected lists.
+        if (listIds != null && !listIds.isEmpty()) {
+            where.add(
+                    """
+                    id IN (
+                      SELECT el.entry_id
+                      FROM entry_lists el
+                      WHERE el.list_id IN (:listIds)
+                    )
+                    """
+            );
+            params.put("listIds", listIds);
         }
 
         var whereSql = where.isEmpty() ? "" : "WHERE " + String.join(" AND ", where);

@@ -9,7 +9,9 @@ import com.vestigium.api.dto.EntryListResponse;
 import com.vestigium.api.dto.EntryResponse;
 import com.vestigium.api.dto.ImportEntriesRequest;
 import com.vestigium.api.dto.ImportEntriesResponse;
+import com.vestigium.api.dto.ListResponse;
 import com.vestigium.api.dto.PatchEntryRequest;
+import com.vestigium.api.dto.ReplaceEntryListsRequest;
 import com.vestigium.service.EntryService;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
@@ -66,10 +68,11 @@ public class EntriesController {
             @RequestParam(value = "addedFrom", required = false) String addedFrom,
             @RequestParam(value = "addedTo", required = false) String addedTo,
             @RequestParam(value = "sort", required = false) String sort,
+            @RequestParam(value = "listId", required = false) List<String> listIds,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "pageSize", defaultValue = "25") int pageSize
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
     ) {
-        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, page, pageSize)
+        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, page, pageSize)
                 .stream()
                 .map(EntryResponse::from)
                 .toList();
@@ -113,6 +116,16 @@ public class EntriesController {
                 EntryResponse.from(entry),
                 attachments.stream().map(AttachmentResponse::from).toList()
         );
+    }
+
+    @GetMapping("/api/entries/{id}/lists")
+    public List<ListResponse> lists(@PathVariable String id) {
+        return entryService.listListsForEntry(id).stream().map(ListResponse::from).toList();
+    }
+
+    @PostMapping(value = "/api/entries/{id}/lists", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void replaceLists(@PathVariable String id, @RequestBody ReplaceEntryListsRequest req) {
+        entryService.replaceEntryLists(id, req == null ? null : req.listIds());
     }
 
     @PatchMapping("/api/entries/{id}")

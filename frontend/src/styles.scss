@@ -12,3 +12,19 @@ body {
 }
 
 /* You can add global styles to this file, and also import other style files */
+
+/* Prefer native dark UI for form controls (select, date input dropdowns) */
+:root {
+  color-scheme: dark;
+}
+
+select,
+input[type='date'] {
+  color-scheme: dark;
+}
+
+/* Best-effort: improve native dropdown contrast in dark mode (browser-dependent) */
+select option {
+  background: #0b0d12;
+  color: rgba(255, 255, 255, 0.92);
+}

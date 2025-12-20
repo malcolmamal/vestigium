@@ -4,6 +4,7 @@ import { inject, Injectable } from '@angular/core';
 import type { EntryDetailsResponse, EntryListResponse, PatchEntryRequest } from '../models/entry.model';
 import type { JobResponse } from '../models/job.model';
 import type { EntryExportItem, ImportEntriesResponse } from '../models/import-export.model';
+import type { ListResponse } from '../models/list.model';
 import type { TagSuggestionResponse } from '../models/tag-suggestion.model';
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +25,7 @@ export class VestigiumApiService {
   listEntries(params: {
     q?: string;
     tags?: string[];
+    listIds?: string[];
     important?: boolean;
     visited?: boolean;
     addedFrom?: string;
@@ -37,13 +39,16 @@ export class VestigiumApiService {
     if (params.tags && params.tags.length > 0) {
       for (const tag of params.tags) httpParams = httpParams.append('tags', tag);
     }
+    if (params.listIds && params.listIds.length > 0) {
+      for (const id of params.listIds) httpParams = httpParams.append('listId', id);
+    }
     if (params.important !== undefined) httpParams = httpParams.set('important', String(params.important));
     if (params.visited !== undefined) httpParams = httpParams.set('visited', String(params.visited));
     if (params.addedFrom) httpParams = httpParams.set('addedFrom', params.addedFrom);
     if (params.addedTo) httpParams = httpParams.set('addedTo', params.addedTo);
     if (params.sort) httpParams = httpParams.set('sort', params.sort);
     httpParams = httpParams.set('page', String(params.page ?? 0));
-    httpParams = httpParams.set('pageSize', String(params.pageSize ?? 25));
+    httpParams = httpParams.set('pageSize', String(params.pageSize ?? 20));
 
     return this.http.get<EntryListResponse>('/api/entries', { params: httpParams });
   }
@@ -96,6 +101,27 @@ export class VestigiumApiService {
 
   importEntries(mode: 'skip' | 'update', items: EntryExportItem[]) {
     return this.http.post<ImportEntriesResponse>('/api/entries/import', { mode, items });
+  }
+
+  listLists() {
+    return this.http.get<ListResponse[]>('/api/lists');
+  }
+
+  createList(name: string) {
+    return this.http.post<ListResponse>('/api/lists', { name });
+  }
+
+  deleteList(id: string, force = false) {
+    const params = new HttpParams().set('force', String(force));
+    return this.http.delete<void>(`/api/lists/${encodeURIComponent(id)}`, { params });
+  }
+
+  getEntryLists(entryId: string) {
+    return this.http.get<ListResponse[]>(`/api/entries/${encodeURIComponent(entryId)}/lists`);
+  }
+
+  setEntryLists(entryId: string, listIds: string[]) {
+    return this.http.post<void>(`/api/entries/${encodeURIComponent(entryId)}/lists`, { listIds });
   }
 
   searchTags(prefix: string, limit = 20) {

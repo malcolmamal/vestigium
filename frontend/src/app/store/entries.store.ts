@@ -10,6 +10,7 @@ export class EntriesStore {
 
   readonly query = signal('');
   readonly tagFilter = signal<string[]>([]);
+  readonly listFilter = signal<string[]>([]); // list ids
   readonly importantOnly = signal<boolean | null>(null);
   readonly visitedOnly = signal<boolean | null>(null);
   readonly addedFrom = signal<string | null>(null); // yyyy-mm-dd
@@ -17,7 +18,7 @@ export class EntriesStore {
   readonly sort = signal<'updated_desc' | 'updated_asc' | 'added_desc' | 'added_asc'>('updated_desc');
 
   readonly page = signal(0);
-  readonly pageSize = signal(25);
+  readonly pageSize = signal(20);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -39,6 +40,7 @@ export class EntriesStore {
         // Re-load when filters change (simple v1 approach).
         void this.query();
         void this.tagFilter();
+        void this.listFilter();
         void this.importantOnly();
         void this.visitedOnly();
         void this.addedFrom();
@@ -73,6 +75,7 @@ export class EntriesStore {
       .listEntries({
         q: this.query().trim() || undefined,
         tags: this.tagFilter(),
+        listIds: this.listFilter(),
         important: this.importantOnly() ?? undefined,
         visited: this.visitedOnly() ?? undefined,
         addedFrom: this.toIsoStartOfDay(this.addedFrom()),
@@ -90,6 +93,11 @@ export class EntriesStore {
 
   setTagFilter(tags: string[]) {
     this.tagFilter.set([...tags]);
+    this.page.set(0);
+  }
+
+  setListFilter(listIds: string[]) {
+    this.listFilter.set([...listIds]);
     this.page.set(0);
   }
 
