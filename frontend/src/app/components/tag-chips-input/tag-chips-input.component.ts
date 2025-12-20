@@ -28,8 +28,13 @@ import { finalize } from 'rxjs';
       </div>
       @if (showSuggestions() && suggestions().length > 0) {
         <div class="suggestions" (mousedown)="$event.preventDefault()">
-          @for (s of suggestions(); track s.name) {
-            <button type="button" class="suggestion" (click)="pickSuggestion(s.name)">
+          @for (s of suggestions(); track s.name; let i = $index) {
+            <button
+              type="button"
+              class="suggestion"
+              [class.active]="i === activeIndex()"
+              (click)="pickSuggestion(s.name)"
+            >
               <span class="sName">{{ s.name }}</span>
               <span class="sCount">{{ s.count }}</span>
             </button>
@@ -120,6 +125,10 @@ import { finalize } from 'rxjs';
     .suggestion:hover {
       background: rgba(255, 255, 255, 0.10);
     }
+    .suggestion.active {
+      border-color: rgba(90, 97, 255, 0.35);
+      background: rgba(90, 97, 255, 0.14);
+    }
     .sName {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -147,6 +156,7 @@ export class TagChipsInputComponent {
   readonly suggestionsLoading = signal(false);
   readonly suggestions = signal<TagSuggestionResponse[]>([]);
   readonly showSuggestions = computed(() => this.draftTrimmed().length >= 2);
+  readonly activeIndex = signal(0);
 
   private suggestTimer: any = null;
 
@@ -157,6 +167,34 @@ export class TagChipsInputComponent {
   }
 
   onKeydown(evt: KeyboardEvent) {
+    const hasSuggestions = this.showSuggestions() && this.suggestions().length > 0;
+    if (hasSuggestions) {
+      if (evt.key === 'ArrowDown') {
+        evt.preventDefault();
+        this.activeIndex.set(Math.min(this.activeIndex() + 1, this.suggestions().length - 1));
+        return;
+      }
+      if (evt.key === 'ArrowUp') {
+        evt.preventDefault();
+        this.activeIndex.set(Math.max(this.activeIndex() - 1, 0));
+        return;
+      }
+      if (evt.key === 'Enter') {
+        evt.preventDefault();
+        const idx = this.activeIndex();
+        const item = this.suggestions().at(idx);
+        if (item) {
+          this.pickSuggestion(item.name);
+          return;
+        }
+      }
+      if (evt.key === 'Escape') {
+        evt.preventDefault();
+        this.suggestions.set([]);
+        return;
+      }
+    }
+
     if (evt.key === 'Enter' || evt.key === ',') {
       evt.preventDefault();
       this.commitDraft();
@@ -176,6 +214,7 @@ export class TagChipsInputComponent {
     }
     this.draft.set('');
     this.suggestions.set([]);
+    this.activeIndex.set(0);
   }
 
   remove(tag: string) {
@@ -190,6 +229,7 @@ export class TagChipsInputComponent {
     }
     this.draft.set('');
     this.suggestions.set([]);
+    this.activeIndex.set(0);
   }
 
   private scheduleSuggest() {
@@ -200,6 +240,7 @@ export class TagChipsInputComponent {
     const q = this.draftTrimmed().toLowerCase();
     if (q.length < 2) {
       this.suggestions.set([]);
+      this.activeIndex.set(0);
       return;
     }
 
@@ -211,9 +252,14 @@ export class TagChipsInputComponent {
         .subscribe({
           next: (items) => {
             const selected = new Set(this.tags());
-            this.suggestions.set(items.filter((s) => !selected.has(s.name)));
+            const filtered = items.filter((s) => !selected.has(s.name));
+            this.suggestions.set(filtered);
+            this.activeIndex.set(0);
           },
-          error: () => this.suggestions.set([])
+          error: () => {
+            this.suggestions.set([]);
+            this.activeIndex.set(0);
+          }
         });
     }, 200);
   }

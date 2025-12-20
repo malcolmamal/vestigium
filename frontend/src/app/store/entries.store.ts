@@ -12,6 +12,9 @@ export class EntriesStore {
   readonly tagFilter = signal<string[]>([]);
   readonly importantOnly = signal<boolean | null>(null);
   readonly visitedOnly = signal<boolean | null>(null);
+  readonly addedFrom = signal<string | null>(null); // yyyy-mm-dd
+  readonly addedTo = signal<string | null>(null); // yyyy-mm-dd
+  readonly sort = signal<'updated_desc' | 'updated_asc' | 'added_desc' | 'added_asc'>('updated_desc');
 
   readonly page = signal(0);
   readonly pageSize = signal(25);
@@ -38,6 +41,9 @@ export class EntriesStore {
         void this.tagFilter();
         void this.importantOnly();
         void this.visitedOnly();
+        void this.addedFrom();
+        void this.addedTo();
+        void this.sort();
         void this.page();
         void this.pageSize();
         void this.refreshToken();
@@ -46,6 +52,17 @@ export class EntriesStore {
       },
       { allowSignalWrites: true }
     );
+  }
+
+  private toIsoStartOfDay(dateYmd: string | null) {
+    if (!dateYmd) return undefined;
+    // Use UTC to match backend's Instant.toString() (Z)
+    return `${dateYmd}T00:00:00.000Z`;
+  }
+
+  private toIsoEndOfDay(dateYmd: string | null) {
+    if (!dateYmd) return undefined;
+    return `${dateYmd}T23:59:59.999Z`;
   }
 
   load() {
@@ -58,6 +75,9 @@ export class EntriesStore {
         tags: this.tagFilter(),
         important: this.importantOnly() ?? undefined,
         visited: this.visitedOnly() ?? undefined,
+        addedFrom: this.toIsoStartOfDay(this.addedFrom()),
+        addedTo: this.toIsoEndOfDay(this.addedTo()),
+        sort: this.sort(),
         page: this.page(),
         pageSize: this.pageSize()
       })

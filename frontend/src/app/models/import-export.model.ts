@@ -1,6 +1,7 @@
 export interface EntryExportItem {
   id: string;
   url: string;
+  addedAt: string | null;
   title: string | null;
   description: string | null;
   tags: string[];

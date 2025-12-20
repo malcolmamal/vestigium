@@ -26,6 +26,9 @@ export class VestigiumApiService {
     tags?: string[];
     important?: boolean;
     visited?: boolean;
+    addedFrom?: string;
+    addedTo?: string;
+    sort?: 'added_desc' | 'added_asc' | 'updated_desc' | 'updated_asc';
     page?: number;
     pageSize?: number;
   }) {
@@ -36,6 +39,9 @@ export class VestigiumApiService {
     }
     if (params.important !== undefined) httpParams = httpParams.set('important', String(params.important));
     if (params.visited !== undefined) httpParams = httpParams.set('visited', String(params.visited));
+    if (params.addedFrom) httpParams = httpParams.set('addedFrom', params.addedFrom);
+    if (params.addedTo) httpParams = httpParams.set('addedTo', params.addedTo);
+    if (params.sort) httpParams = httpParams.set('sort', params.sort);
     httpParams = httpParams.set('page', String(params.page ?? 0));
     httpParams = httpParams.set('pageSize', String(params.pageSize ?? 25));
 

@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
+import type { TagSuggestionResponse } from '../../models/tag-suggestion.model';
+import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 
 @Component({
@@ -22,6 +24,26 @@ import { EntriesStore } from '../../store/entries.store';
           <a class="button" routerLink="/entries/new">Add entry</a>
         </div>
       </header>
+
+      <section class="tagsSection">
+        <div class="tagsHeader">
+          <span class="tagsTitle">Tags</span>
+          <span class="muted">Most used</span>
+        </div>
+        @if (popularTagsError()) {
+          <div class="muted">{{ popularTagsError() }}</div>
+        } @else if (popularTags().length === 0) {
+          <div class="muted">No tags yet.</div>
+        } @else {
+          <div class="tagPills">
+            @for (t of popularTags(); track t.name) {
+              <button class="pill" type="button" (click)="applyPopularTag(t.name)">
+                {{ t.name }} <span class="count">{{ t.count }}</span>
+              </button>
+            }
+          </div>
+        }
+      </section>
 
       <div class="filters">
         <label class="field">
@@ -47,6 +69,27 @@ import { EntriesStore } from '../../store/entries.store';
 
         <div class="row">
           <label class="field">
+            <span class="label">Added from</span>
+            <input
+              class="textInput"
+              type="date"
+              [value]="store.addedFrom() ?? ''"
+              (input)="store.addedFrom.set(($any($event.target).value ?? '').toString() || null)"
+            />
+          </label>
+          <label class="field">
+            <span class="label">Added to</span>
+            <input
+              class="textInput"
+              type="date"
+              [value]="store.addedTo() ?? ''"
+              (input)="store.addedTo.set(($any($event.target).value ?? '').toString() || null)"
+            />
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
             <span class="label">Important</span>
             <select class="select" [value]="importantValue()" (change)="onImportantChange($event)">
               <option value="any">Any</option>
@@ -63,6 +106,20 @@ import { EntriesStore } from '../../store/entries.store';
             </select>
           </label>
         </div>
+
+        <label class="field">
+          <span class="label">Sort</span>
+          <select
+            class="select"
+            [value]="store.sort()"
+            (change)="store.sort.set(($any($event.target).value ?? 'updated_desc').toString())"
+          >
+            <option value="updated_desc">Updated (newest)</option>
+            <option value="updated_asc">Updated (oldest)</option>
+            <option value="added_desc">Added (newest)</option>
+            <option value="added_asc">Added (oldest)</option>
+          </select>
+        </label>
       </div>
 
       @if (store.error()) {
@@ -127,6 +184,46 @@ import { EntriesStore } from '../../store/entries.store';
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.14);
     }
+    .tagsSection {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      margin-bottom: 18px;
+    }
+    .tagsHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .tagsTitle {
+      font-weight: 650;
+      letter-spacing: -0.01em;
+    }
+    .tagPills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .pill:hover {
+      background: rgba(255, 255, 255, 0.10);
+    }
+    .pill .count {
+      margin-left: 6px;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 12px;
+    }
     .filters {
       display: grid;
       gap: 14px;
@@ -183,6 +280,31 @@ import { EntriesStore } from '../../store/entries.store';
 })
 export class EntriesPage {
   readonly store = inject(EntriesStore);
+  private readonly api = inject(VestigiumApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  readonly popularTags = signal<TagSuggestionResponse[]>([]);
+  readonly popularTagsError = signal<string | null>(null);
+
+  constructor() {
+    this.api.suggestTags('', 30).subscribe({
+      next: (items) => this.popularTags.set(items),
+      error: () => this.popularTagsError.set('Failed to load tags')
+    });
+
+    const tag = this.route.snapshot.queryParamMap.get('tag');
+    if (tag && tag.trim()) {
+      this.store.setTagFilter([tag.trim().toLowerCase()]);
+    }
+  }
+
+  applyPopularTag(tag: string) {
+    const t = tag.trim().toLowerCase();
+    if (!t) return;
+    this.store.setTagFilter([t]);
+    void this.router.navigate(['/entries'], { queryParams: { tag: t } });
+  }
 
   importantValue(): 'any' | 'true' | 'false' {
     const v = this.store.importantOnly();

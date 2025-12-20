@@ -45,6 +45,27 @@ public class EntryRepository {
         return getById(id).orElseThrow();
     }
 
+    public Entry createWithTimestamps(String url, String title, String description, boolean important, String createdAt, String updatedAt) {
+        var id = UUID.randomUUID().toString();
+        var now = InstantSql.nowIso();
+        var params = new HashMap<String, Object>();
+        params.put("id", id);
+        params.put("url", url);
+        params.put("title", title);
+        params.put("description", description);
+        params.put("important", important ? 1 : 0);
+        params.put("createdAt", createdAt == null || createdAt.isBlank() ? now : createdAt.trim());
+        params.put("updatedAt", updatedAt == null || updatedAt.isBlank() ? now : updatedAt.trim());
+        jdbc.update(
+                """
+                INSERT INTO entries (id, url, title, description, thumbnail_path, visited_at, important, created_at, updated_at)
+                VALUES (:id, :url, :title, :description, NULL, NULL, :important, :createdAt, :updatedAt)
+                """,
+                params
+        );
+        return getById(id).orElseThrow();
+    }
+
     public Optional<Entry> getById(String id) {
         var rows = jdbc.query(
                 """
@@ -99,7 +120,17 @@ public class EntryRepository {
         return out;
     }
 
-    public List<Entry> search(String q, List<String> tags, Boolean important, Boolean visited, int page, int pageSize) {
+    public List<Entry> search(
+            String q,
+            List<String> tags,
+            Boolean important,
+            Boolean visited,
+            String addedFrom,
+            String addedTo,
+            String sort,
+            int page,
+            int pageSize
+    ) {
         var where = new ArrayList<String>();
         var params = new java.util.HashMap<String, Object>();
 
@@ -113,6 +144,14 @@ public class EntryRepository {
         }
         if (visited != null) {
             where.add(visited ? "visited_at IS NOT NULL" : "visited_at IS NULL");
+        }
+        if (addedFrom != null && !addedFrom.isBlank()) {
+            where.add("created_at >= :addedFrom");
+            params.put("addedFrom", addedFrom.trim());
+        }
+        if (addedTo != null && !addedTo.isBlank()) {
+            where.add("created_at <= :addedTo");
+            params.put("addedTo", addedTo.trim());
         }
 
         // Tag filtering: require entry to have all requested tags.
@@ -138,14 +177,25 @@ public class EntryRepository {
         params.put("limit", pageSize);
         params.put("offset", offset);
 
+        var orderBy = "updated_at DESC";
+        if (sort != null && !sort.isBlank()) {
+            orderBy = switch (sort.trim().toLowerCase()) {
+                case "added_asc" -> "created_at ASC";
+                case "added_desc" -> "created_at DESC";
+                case "updated_asc" -> "updated_at ASC";
+                case "updated_desc" -> "updated_at DESC";
+                default -> "updated_at DESC";
+            };
+        }
+
         var rows = jdbc.query(
                 """
                 SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 %s
-                ORDER BY updated_at DESC
+                ORDER BY %s
                 LIMIT :limit OFFSET :offset
-                """.formatted(whereSql),
+                """.formatted(whereSql, orderBy),
                 params,
                 ENTRY_ROW_MAPPER
         );

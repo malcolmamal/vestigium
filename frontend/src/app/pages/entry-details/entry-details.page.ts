@@ -56,6 +56,7 @@ import { EntriesStore } from '../../store/entries.store';
               <a class="url" [href]="data()!.entry.url" target="_blank" rel="noreferrer">
                 {{ data()!.entry.url }}
               </a>
+              <div class="muted">Added: {{ data()!.entry.createdAt }}</div>
               <div class="pillRow">
                 <span class="pill" [class.on]="data()!.entry.important">Important</span>
                 <span class="pill" [class.on]="!!data()!.entry.visitedAt">Visited</span>
@@ -78,53 +79,71 @@ import { EntriesStore } from '../../store/entries.store';
           </div>
 
           <section class="jobs">
-            <h2>Jobs</h2>
+            <div class="jobsHeader">
+              <h2>Jobs</h2>
+              <button class="button small secondary" type="button" (click)="jobsCollapsed.set(!jobsCollapsed())">
+                {{ jobsCollapsed() ? 'Show' : 'Hide' }}
+              </button>
+            </div>
+            @if (jobsCollapsed()) {
+              <div class="muted">
+                @if (runningJobsCount() > 0) {
+                  Processing… ({{ runningJobsCount() }} running)
+                } @else if (failedJobsCount() > 0) {
+                  Failed jobs: {{ failedJobsCount() }}
+                } @else {
+                  No running jobs.
+                }
+              </div>
+            }
             @if (jobActionError()) {
               <div class="errorBox">{{ jobActionError() }}</div>
             }
             @if (jobsError()) {
               <div class="errorBox">{{ jobsError() }}</div>
-            } @else if (jobsLoading() && jobs().length === 0) {
-              <div class="muted">Loading…</div>
-            } @else if (jobs().length === 0) {
-              <div class="muted">No jobs yet.</div>
-            } @else {
-              <div class="jobsList">
-                @for (j of jobs(); track j.id) {
-                  <div class="jobRow" [class.running]="j.status === 'RUNNING'">
-                    <div class="jobMain">
-                      <div class="jobTop">
-                        <span class="jobType">{{ j.type }}</span>
-                        <span class="jobStatus">{{ j.status }}</span>
-                        <span class="jobMeta">attempt {{ j.attempts }}</span>
+            } @else if (!jobsCollapsed()) {
+              @if (jobsLoading() && jobs().length === 0) {
+                <div class="muted">Loading…</div>
+              } @else if (jobs().length === 0) {
+                <div class="muted">No jobs yet.</div>
+              } @else {
+                <div class="jobsList">
+                  @for (j of jobs(); track j.id) {
+                    <div class="jobRow" [class.running]="j.status === 'RUNNING'">
+                      <div class="jobMain">
+                        <div class="jobTop">
+                          <span class="jobType">{{ j.type }}</span>
+                          <span class="jobStatus">{{ j.status }}</span>
+                          <span class="jobMeta">attempt {{ j.attempts }}</span>
+                        </div>
+                        @if (j.lastError) {
+                          <div class="jobErr">{{ j.lastError }}</div>
+                        }
                       </div>
-                      @if (j.lastError) {
-                        <div class="jobErr">{{ j.lastError }}</div>
-                      }
-                    </div>
-                    <div class="jobActions">
-                      @if (j.status === 'PENDING') {
+                      <div class="jobActions">
+                        @if (j.status === 'PENDING') {
+                          <button
+                            class="button small"
+                            type="button"
+                            (click)="cancelJob(j)"
+                            [disabled]="jobActionBusy() === j.id"
+                          >
+                            Cancel
+                          </button>
+                        }
                         <button
-                          class="button small"
+                          class="button small secondary"
                           type="button"
-                          (click)="cancelJob(j)"
-                          [disabled]="jobActionBusy() === j.id"
+                          (click)="removeJob(j)"
+                          [disabled]="jobActionBusy() === j.id || j.status === 'RUNNING'"
                         >
-                          Cancel
+                          Remove
                         </button>
-                      }
-                      <button
-                        class="button small secondary"
-                        type="button"
-                        (click)="removeJob(j)"
-                        [disabled]="jobActionBusy() === j.id || j.status === 'RUNNING'"
-                      >
-                        Remove
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              }
             }
           </section>
 
@@ -359,6 +378,19 @@ import { EntriesStore } from '../../store/entries.store';
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.10);
     }
+    .jobsHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .button.small.secondary {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.14);
+    }
     .jobsList {
       display: grid;
       gap: 10px;
@@ -444,6 +476,10 @@ export class EntryDetailsPage {
   readonly jobs = signal<JobResponse[]>([]);
   readonly jobActionBusy = signal<string | null>(null);
   readonly jobActionError = signal<string | null>(null);
+  readonly jobsCollapsed = signal(true);
+
+  readonly runningJobsCount = computed(() => this.jobs().filter((j) => j.status === 'RUNNING').length);
+  readonly failedJobsCount = computed(() => this.jobs().filter((j) => j.status === 'FAILED').length);
 
   readonly form = new FormGroup({
     title: new FormControl<string>('', { nonNullable: true }),
@@ -474,6 +510,14 @@ export class EntryDetailsPage {
         this.loadJobs(id);
         const t = setInterval(() => this.loadJobs(id), 2000);
         onCleanup(() => clearInterval(t));
+      },
+      { allowSignalWrites: true }
+    );
+
+    effect(
+      () => {
+        // Collapsed by default; auto-expand while something is RUNNING; auto-collapse once nothing is running.
+        this.jobsCollapsed.set(this.runningJobsCount() === 0);
       },
       { allowSignalWrites: true }
     );
