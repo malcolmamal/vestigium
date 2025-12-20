@@ -1,0 +1,186 @@
+<section class="page">
+  <header class="pageHeader">
+    <div>
+      <h1>Vestigium</h1>
+      <p class="muted">Your repository of links.</p>
+    </div>
+    <div class="headerActions">
+      <a class="button secondary" routerLink="/entries/bulk">Bulk add</a>
+      <a class="button secondary" routerLink="/entries/import-export">Import/Export</a>
+      <a class="button" routerLink="/entries/new">Add entry</a>
+    </div>
+  </header>
+
+  <section class="tagsSection">
+    <div class="tagsHeader">
+      <span class="tagsTitle">Tags</span>
+      <div class="tagsHeaderRight">
+        <span class="muted">Top 20</span>
+        <a class="mutedLink" routerLink="/tags">All</a>
+      </div>
+    </div>
+    @if (popularTagsError()) {
+      <div class="muted">{{ popularTagsError() }}</div>
+    } @else if (popularTags().length === 0) {
+      <div class="muted">No tags yet.</div>
+    } @else {
+      <div class="tagPills">
+        @for (t of popularTags(); track t.name) {
+          <button class="pill" type="button" (click)="applyPopularTag(t.name)">
+            {{ t.name }} <span class="count">{{ t.count }}</span>
+          </button>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="listsSection">
+    <div class="listsHeader">
+      <span class="listsTitle">Lists</span>
+      <span class="muted">Filter + manage</span>
+    </div>
+
+    <div class="listCreate">
+      <input
+        class="textInput"
+        type="text"
+        placeholder="New list name…"
+        [value]="listCreateName()"
+        (input)="listCreateName.set(($any($event.target).value ?? '').toString())"
+        (keydown.enter)="createList()"
+      />
+      <button class="button secondary" type="button" (click)="createList()">Add list</button>
+    </div>
+
+    @if (listError()) {
+      <div class="muted">{{ listError() }}</div>
+    }
+
+    @if (lists.error()) {
+      <div class="muted">{{ lists.error() }}</div>
+    } @else if (lists.loading() && lists.items().length === 0) {
+      <div class="muted">Loading lists…</div>
+    } @else if (lists.items().length === 0) {
+      <div class="muted">No lists yet.</div>
+    } @else {
+      <div class="listPills">
+        @for (l of lists.items(); track l.id) {
+          <div class="listPillWrap">
+            <button class="pill" type="button" [class.on]="store.listFilter().includes(l.id)" (click)="toggleList(l)">
+              {{ l.name }} <span class="count">{{ l.entryCount }}</span>
+            </button>
+            <button class="x" type="button" title="Delete list" (click)="deleteList(l)">×</button>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <div class="filters">
+    <label class="field">
+      <span class="label">Search</span>
+      <input
+        class="textInput"
+        type="text"
+        [value]="store.query()"
+        (input)="store.query.set(($any($event.target).value ?? '').toString())"
+        placeholder="Search title/description…"
+      />
+    </label>
+
+    <label class="field">
+      <span class="label">Tags</span>
+      <app-tag-chips-input
+        [tags]="store.tagFilter()"
+        placeholder="Type tag and press Enter"
+        [hint]="'Filter requires ALL selected tags'"
+        (tagsChange)="store.setTagFilter($event)"
+      />
+    </label>
+
+    <div class="row">
+      <label class="field">
+        <span class="label">Added from</span>
+        <input
+          class="textInput"
+          type="date"
+          [value]="store.addedFrom() ?? ''"
+          (input)="store.addedFrom.set(($any($event.target).value ?? '').toString() || null)"
+        />
+      </label>
+      <label class="field">
+        <span class="label">Added to</span>
+        <input
+          class="textInput"
+          type="date"
+          [value]="store.addedTo() ?? ''"
+          (input)="store.addedTo.set(($any($event.target).value ?? '').toString() || null)"
+        />
+      </label>
+    </div>
+
+    <div class="row">
+      <label class="field">
+        <span class="label">Important</span>
+        <select class="select" [value]="importantValue()" (change)="onImportantChange($event)">
+          <option value="any">Any</option>
+          <option value="true">Important only</option>
+          <option value="false">Not important</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">Visited</span>
+        <select class="select" [value]="visitedValue()" (change)="onVisitedChange($event)">
+          <option value="any">Any</option>
+          <option value="true">Visited only</option>
+          <option value="false">Not visited</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="label">Sort</span>
+      <select class="select" [value]="store.sort()" (change)="store.sort.set(($any($event.target).value ?? 'updated_desc').toString())">
+        <option value="updated_desc">Updated (newest)</option>
+        <option value="updated_asc">Updated (oldest)</option>
+        <option value="added_desc">Added (newest)</option>
+        <option value="added_asc">Added (oldest)</option>
+      </select>
+    </label>
+
+    <div class="pager">
+      <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
+      <div class="muted">Page {{ store.page() + 1 }}</div>
+      <button class="button secondary" type="button" (click)="nextPage()" [disabled]="store.items().length < store.pageSize()">
+        Next
+      </button>
+      <div class="spacer"></div>
+      <label class="field inline">
+        <span class="label">Per page</span>
+        <select class="select" [value]="store.pageSize()" (change)="setPageSize($event)">
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  @if (store.error()) {
+    <div class="error">{{ store.error() }}</div>
+  }
+
+  @if (store.loading()) {
+    <div class="muted">Loading…</div>
+  } @else if (store.items().length === 0) {
+    <div class="empty">No entries yet.</div>
+  } @else {
+    <div class="grid">
+      @for (e of store.items(); track e.id) {
+        <app-entry-card [entry]="e" />
+      }
+    </div>
+  }
+</section>
+
+

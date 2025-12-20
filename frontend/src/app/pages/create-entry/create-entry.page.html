@@ -1,0 +1,52 @@
+<section class="page">
+  <header class="pageHeader">
+    <a class="link" routerLink="/entries">Back</a>
+    <h1>New entry</h1>
+  </header>
+
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+    <label class="field">
+      <span class="label">URL *</span>
+      <input class="textInput" formControlName="url" placeholder="https://…" />
+      @if (form.controls.url.touched && form.controls.url.invalid) {
+        <span class="error">URL is required.</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="label">Title (optional)</span>
+      <input class="textInput" formControlName="title" />
+    </label>
+
+    <label class="field">
+      <span class="label">Description (optional)</span>
+      <textarea class="textArea" rows="4" formControlName="description"></textarea>
+    </label>
+
+    <label class="field">
+      <span class="label">Tags (optional)</span>
+      <app-tag-chips-input [tags]="tags()" (tagsChange)="tags.set($event)" />
+    </label>
+
+    <label class="field">
+      <span class="label">Attachments (PDF/images)</span>
+      <input type="file" multiple (change)="onFilesSelected($event)" />
+      @if (files().length > 0) {
+        <div class="muted">{{ files().length }} file(s) selected</div>
+      }
+    </label>
+
+    @if (error()) {
+      <div class="errorBox">{{ error() }}</div>
+    }
+
+    <div class="actions">
+      <button class="button" type="submit" [disabled]="saving() || form.invalid">Create</button>
+      @if (saving()) {
+        <span class="muted">Saving… enrichment will run in background.</span>
+      }
+    </div>
+  </form>
+</section>
+
+

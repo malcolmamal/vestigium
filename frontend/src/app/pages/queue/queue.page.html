@@ -1,0 +1,57 @@
+<section class="page">
+  <header class="pageHeader">
+    <div>
+      <h1>Queue</h1>
+      <p class="muted">Pending, running and failed background jobs.</p>
+    </div>
+    <button class="button" type="button" (click)="jobs.load()">Refresh</button>
+  </header>
+
+  @if (jobActionError()) {
+    <div class="errorBox">{{ jobActionError() }}</div>
+  }
+
+  @if (jobs.error()) {
+    <div class="errorBox">{{ jobs.error() }}</div>
+  } @else if (jobs.loading() && jobs.items().length === 0) {
+    <div class="muted">Loading…</div>
+  } @else if (jobs.items().length === 0) {
+    <div class="muted">No queued jobs.</div>
+  } @else {
+    <div class="queueList">
+      @for (j of jobs.items(); track j.id) {
+        <div class="jobRow" [class.running]="isRunning(j)">
+          <div class="jobMain">
+            <div class="jobTop">
+              <span class="jobType">{{ j.type }}</span>
+              <span class="jobStatus">{{ j.status }}</span>
+              <a class="jobEntry" [routerLink]="['/entries', j.entryId]">{{ j.entryId }}</a>
+              <span class="jobMeta">attempt {{ j.attempts }}</span>
+            </div>
+            @if (j.lastError) {
+              <div class="jobErr">{{ j.lastError }}</div>
+            }
+          </div>
+
+          <div class="jobActions">
+            @if (j.status === 'PENDING') {
+              <button class="button small" type="button" (click)="cancelJob(j)" [disabled]="jobActionBusy() === j.id">
+                Cancel
+              </button>
+            }
+            <button
+              class="button small secondary"
+              type="button"
+              (click)="deleteJob(j)"
+              [disabled]="jobActionBusy() === j.id || isRunning(j)"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+

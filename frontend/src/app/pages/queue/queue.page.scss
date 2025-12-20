@@ -1,0 +1,133 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.pageHeader {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.muted {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 6px 0 0 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: white;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.button.small {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.errorBox {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 80, 80, 0.14);
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  color: rgba(255, 220, 220, 0.92);
+  margin-bottom: 12px;
+}
+
+.queueList {
+  display: grid;
+  gap: 10px;
+}
+
+.jobRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.jobRow.running {
+  border-color: rgba(90, 97, 255, 0.30);
+  background: rgba(90, 97, 255, 0.08);
+}
+
+.jobTop {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.jobType {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.jobStatus {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.jobEntry {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  max-width: 650px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobMeta {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.jobErr {
+  margin-top: 6px;
+  color: rgba(255, 200, 200, 0.9);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobActions {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+}
+
+

@@ -1,0 +1,256 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.pageHeader {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.muted {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 6px 0 0 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: white;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.tagsSection {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  margin-bottom: 18px;
+}
+
+.tagsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tagsHeaderRight {
+  display: inline-flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.mutedLink {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+}
+
+.mutedLink:hover {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: underline;
+}
+
+.tagsTitle {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.tagPills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.pill:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.pill .count {
+  margin-left: 6px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.pill.on {
+  background: rgba(90, 97, 255, 0.14);
+  border-color: rgba(90, 97, 255, 0.24);
+}
+
+.listsSection {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  margin-bottom: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.listsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.listsTitle {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.listCreate {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.listPills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.listPillWrap {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.x {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  line-height: 1;
+  font-size: 16px;
+}
+
+.x:hover {
+  background: rgba(255, 80, 80, 0.12);
+  border-color: rgba(255, 80, 80, 0.22);
+  color: rgba(255, 220, 220, 0.95);
+}
+
+.pager {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.field.inline {
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.filters {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  margin-bottom: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.textInput,
+.select {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 10px 10px;
+  outline: none;
+  font-size: 14px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 12px;
+}
+
+.empty {
+  color: rgba(255, 255, 255, 0.7);
+  padding: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 80, 80, 0.14);
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  color: rgba(255, 220, 220, 0.92);
+  margin-bottom: 12px;
+}
+
+

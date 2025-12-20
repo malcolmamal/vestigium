@@ -1,0 +1,105 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  align-items: center;
+  min-height: 46px;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+}
+
+.chipText {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.chipX {
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.input {
+  flex: 1 1 180px;
+  min-width: 160px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  padding: 6px 4px;
+}
+
+.hint {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.suggestions {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(12, 14, 18, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.suggestion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.suggestion:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.suggestion.active {
+  border-color: rgba(90, 97, 255, 0.35);
+  background: rgba(90, 97, 255, 0.10);
+}
+
+.sName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sCount {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+

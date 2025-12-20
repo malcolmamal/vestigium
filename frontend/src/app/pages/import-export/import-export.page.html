@@ -1,0 +1,58 @@
+<section class="page">
+  <header class="pageHeader">
+    <a class="link" routerLink="/entries">Back</a>
+    <h1>Import / Export</h1>
+  </header>
+
+  <section class="card">
+    <h2>Export</h2>
+    <p class="muted">Exports JSON with: id, url, addedAt, title, description, tags. No files/attachments.</p>
+    <div class="actions">
+      <button class="button" type="button" (click)="exportJson()" [disabled]="busy()">Download JSON</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Import</h2>
+    <p class="muted">Import JSON exported from here. Matching is by URL.</p>
+
+    <label class="field">
+      <span class="label">Mode</span>
+      <select class="select" [value]="mode()" (change)="mode.set(($any($event.target).value ?? 'skip').toString())">
+        <option value="skip">Skip existing (by url)</option>
+        <option value="update">Update existing (by url)</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="label">JSON file</span>
+      <input class="file" type="file" accept="application/json" (change)="onFileSelected($event)" />
+    </label>
+
+    <div class="actions">
+      <button class="button" type="button" (click)="importJson()" [disabled]="busy() || !fileText()">Import</button>
+    </div>
+
+    @if (importResult()) {
+      <div class="resultBox">
+        <div><b>Created</b>: {{ importResult()!.createdCount }}</div>
+        <div><b>Updated</b>: {{ importResult()!.updatedCount }}</div>
+        <div><b>Skipped</b>: {{ importResult()!.skippedCount }}</div>
+        @if (importResult()!.errors.length > 0) {
+          <div class="errListTitle">Errors:</div>
+          <ul class="errList">
+            @for (e of importResult()!.errors; track e.url) {
+              <li><b>{{ e.url }}</b> — {{ e.error }}</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    @if (error()) {
+      <div class="errorBox">{{ error() }}</div>
+    }
+  </section>
+</section>
+
+

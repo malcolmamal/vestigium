@@ -1,0 +1,28 @@
+<a class="card" [routerLink]="['/entries', entry().id]">
+  <div class="thumb">
+    <img [src]="entry().thumbnailUrl" alt="" (error)="onImgError($event)" />
+  </div>
+  <div class="body">
+    <div class="titleRow">
+      <div class="title">{{ entry().title || entry().url }}</div>
+      @if (entry().important) {
+        <span class="pill">Important</span>
+      }
+      @if (entry().visitedAt) {
+        <span class="pill">Visited</span>
+      }
+    </div>
+    @if (entry().description) {
+      <div class="desc">{{ entry().description }}</div>
+    }
+    @if (entry().tags.length > 0) {
+      <div class="tags">
+        @for (tag of entry().tags; track tag) {
+          <span class="tag">{{ tag }}</span>
+        }
+      </div>
+    }
+  </div>
+</a>
+
+

@@ -1,0 +1,191 @@
+<section class="page">
+  <header class="pageHeader">
+    <a class="link" routerLink="/entries">Back</a>
+    <h1>{{ data()?.entry?.title || 'Entry' }}</h1>
+  </header>
+
+  @if (showThumbModal() && thumbModalUrl()) {
+    <div class="modalBackdrop" (click)="closeThumbModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <img [src]="thumbModalUrl()!" alt="" />
+        <div class="modalActions">
+          <a class="button" [href]="thumbModalUrl()!" target="_blank" rel="noreferrer">Open</a>
+          <button class="button secondary" type="button" (click)="closeThumbModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="errorBox">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="muted">Loading…</div>
+  } @else if (data() === null) {
+    <div class="muted">Not found.</div>
+  } @else {
+    <div class="content">
+      <div class="topRow">
+        <div class="thumb">
+          <img
+            class="clickable"
+            [src]="data()!.entry.thumbnailUrl"
+            alt=""
+            (error)="onImgError($event)"
+            (click)="openThumbModal()"
+          />
+        </div>
+        <div class="meta">
+          <a class="url" [href]="data()!.entry.url" target="_blank" rel="noreferrer">
+            {{ data()!.entry.url }}
+          </a>
+          <div class="muted">Added: {{ data()!.entry.createdAt }}</div>
+          <div class="pillRow">
+            <span class="pill" [class.on]="data()!.entry.important">Important</span>
+            <span class="pill" [class.on]="!!data()!.entry.visitedAt">Visited</span>
+          </div>
+          <div class="actions">
+            <button class="button" type="button" (click)="toggleImportant()">
+              {{ data()!.entry.important ? 'Unmark important' : 'Mark important' }}
+            </button>
+            <button class="button" type="button" (click)="markVisited()" [disabled]="!!data()!.entry.visitedAt">
+              Mark visited
+            </button>
+            <button class="button" type="button" (click)="enqueueEnrich()">Update via LLM</button>
+            <button class="button" type="button" (click)="enqueueThumbnail()">Regenerate thumbnail</button>
+            <button class="button danger" type="button" (click)="deleteEntry()">Delete entry</button>
+          </div>
+          @if (actionHint()) {
+            <div class="muted">{{ actionHint() }}</div>
+          }
+        </div>
+      </div>
+
+      <section class="jobs">
+        <div class="jobsHeader">
+          <h2>Jobs</h2>
+          <button class="button small secondary" type="button" (click)="jobsCollapsed.set(!jobsCollapsed())">
+            {{ jobsCollapsed() ? 'Show' : 'Hide' }}
+          </button>
+        </div>
+        @if (jobsCollapsed()) {
+          <div class="muted">
+            @if (runningJobsCount() > 0) {
+              Processing… ({{ runningJobsCount() }} running)
+            } @else if (failedJobsCount() > 0) {
+              Failed jobs: {{ failedJobsCount() }}
+            } @else {
+              No running jobs.
+            }
+          </div>
+        }
+        @if (jobActionError()) {
+          <div class="errorBox">{{ jobActionError() }}</div>
+        }
+        @if (jobsError()) {
+          <div class="errorBox">{{ jobsError() }}</div>
+        } @else if (!jobsCollapsed()) {
+          @if (jobsLoading() && jobs().length === 0) {
+            <div class="muted">Loading…</div>
+          } @else if (jobs().length === 0) {
+            <div class="muted">No jobs yet.</div>
+          } @else {
+            <div class="jobsList">
+              @for (j of jobs(); track j.id) {
+                <div class="jobRow" [class.running]="j.status === 'RUNNING'">
+                  <div class="jobMain">
+                    <div class="jobTop">
+                      <span class="jobType">{{ j.type }}</span>
+                      <span class="jobStatus">{{ j.status }}</span>
+                      <span class="jobMeta">attempt {{ j.attempts }}</span>
+                    </div>
+                    @if (j.lastError) {
+                      <div class="jobErr">{{ j.lastError }}</div>
+                    }
+                  </div>
+                  <div class="jobActions">
+                    @if (j.status === 'PENDING') {
+                      <button class="button small" type="button" (click)="cancelJob(j)" [disabled]="jobActionBusy() === j.id">
+                        Cancel
+                      </button>
+                    }
+                    <button
+                      class="button small secondary"
+                      type="button"
+                      (click)="removeJob(j)"
+                      [disabled]="jobActionBusy() === j.id || j.status === 'RUNNING'"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </section>
+
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <label class="field">
+          <span class="label">Title</span>
+          <input class="textInput" formControlName="title" />
+        </label>
+
+        <label class="field">
+          <span class="label">Description</span>
+          <textarea class="textArea" rows="5" formControlName="description"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="label">Tags</span>
+          <app-tag-chips-input [tags]="tags()" (tagsChange)="onTagsChange($event)" />
+        </label>
+
+        <div class="actions">
+          <button class="button" type="submit" [disabled]="saving()">Save</button>
+          @if (saving()) {
+            <span class="muted">Saving…</span>
+          }
+        </div>
+      </form>
+
+      <section class="lists">
+        <div class="listsHeader">
+          <h2>Lists</h2>
+          <a class="link" routerLink="/entries">Manage in Entries</a>
+        </div>
+        @if (listsError()) {
+          <div class="muted">{{ listsError() }}</div>
+        } @else if (allLists().length === 0) {
+          <div class="muted">No lists yet.</div>
+        } @else {
+          <div class="listPills">
+            @for (l of allLists(); track l.id) {
+              <button class="pill" type="button" [class.on]="selectedListIds().includes(l.id)" (click)="toggleList(l)">
+                {{ l.name }}
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="attachments">
+        <h2>Attachments</h2>
+        @if (data()!.attachments.length === 0) {
+          <div class="muted">No attachments.</div>
+        } @else {
+          <ul class="list">
+            @for (a of data()!.attachments; track a.id) {
+              <li>
+                <a [href]="a.downloadUrl" target="_blank" rel="noreferrer"> {{ a.originalName }} ({{ a.kind }}) </a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+  }
+</section>
+
+

@@ -1,0 +1,39 @@
+<section class="page">
+  <header class="pageHeader">
+    <h1>Tags</h1>
+    <a class="button secondary" routerLink="/entries">Back to entries</a>
+  </header>
+
+  <div class="card">
+    <label class="field">
+      <span class="label">Search</span>
+      <input
+        class="textInput"
+        type="text"
+        placeholder="Type at least 2 characters…"
+        [value]="prefix()"
+        (input)="onPrefix(($any($event.target).value ?? '').toString())"
+      />
+    </label>
+    <div class="muted">Click a tag to add it to the Entries filter.</div>
+  </div>
+
+  @if (error()) {
+    <div class="errorBox">{{ error() }}</div>
+  } @else if (loading()) {
+    <div class="muted">Loading…</div>
+  } @else if (items().length === 0) {
+    <div class="muted">No tags yet.</div>
+  } @else {
+    <div class="grid">
+      @for (t of items(); track t.name) {
+        <button class="pill" type="button" (click)="addTagToFilter(t.name)">
+          <span class="name">{{ t.name }}</span>
+          <span class="count">{{ t.count }}</span>
+        </button>
+      }
+    </div>
+  }
+</section>
+
+

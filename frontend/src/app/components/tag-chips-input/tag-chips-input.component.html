@@ -1,0 +1,33 @@
+<div class="wrap">
+  <div class="chips" [class.empty]="tags().length === 0">
+    @for (tag of tags(); track tag) {
+      <span class="chip">
+        <span class="chipText">{{ tag }}</span>
+        <button type="button" class="chipX" (click)="remove(tag)" aria-label="Remove tag">×</button>
+      </span>
+    }
+    <input
+      class="input"
+      [placeholder]="placeholder()"
+      [value]="draft()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      (blur)="commitDraft()"
+    />
+  </div>
+  @if (showSuggestions() && suggestions().length > 0) {
+    <div class="suggestions" (mousedown)="$event.preventDefault()">
+      @for (s of suggestions(); track s.name; let i = $index) {
+        <button type="button" class="suggestion" [class.active]="i === activeIndex()" (click)="pickSuggestion(s.name)">
+          <span class="sName">{{ s.name }}</span>
+          <span class="sCount">{{ s.count }}</span>
+        </button>
+      }
+    </div>
+  }
+  @if (hint()) {
+    <div class="hint">{{ hint() }}</div>
+  }
+</div>
+
+
