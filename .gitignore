@@ -8,6 +8,7 @@ example-angular-project/
 .gradle/
 google-api-key
 build/
+bin/
 data/
 frontend/node_modules/
 frontend/dist/

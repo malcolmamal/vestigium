@@ -90,9 +90,10 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         contextText.append("\n");
 
         // Site-specific extra metadata (best-effort).
+        boolean isYoutube = entry.url().contains("youtube.com") || entry.url().contains("youtu.be");
         try {
             log.info("Starting enrichment for entryId={} url={}", entry.id(), entry.url());
-            if (entry.url().contains("youtube.com") || entry.url().contains("youtu.be")) {
+            if (isYoutube) {
                 youtubeMetadata.fetch(entry.url()).ifPresent(yt -> {
                     log.info("Fetched YouTube metadata for entryId={}: channel={}", entry.id(), yt.authorName());
                     contextText.append("YouTube Metadata:\n");
@@ -143,11 +144,16 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             }
         } else {
             UrlContentFetcher.PageContent page;
-            try {
-                page = urlFetcher.fetchReadableText(entry.url());
-            } catch (Exception e) {
-                // Some pages (or temporary test URLs) can fail; still allow LLM to work on URL-only context.
+            if (isYoutube) {
+                // Skip generic HTML fetching for YouTube, we already have oEmbed metadata.
                 page = new UrlContentFetcher.PageContent(null, null, "");
+            } else {
+                try {
+                    page = urlFetcher.fetchReadableText(entry.url());
+                } catch (Exception e) {
+                    // Some pages (or temporary test URLs) can fail; still allow LLM to work on URL-only context.
+                    page = new UrlContentFetcher.PageContent(null, null, "");
+                }
             }
 
             // Even without LLM, we can often fill missing title/description from HTML metadata.
@@ -183,22 +189,22 @@ public class EnrichEntryJobProcessor implements JobProcessor {
                 ? enrichment.detailedDescription()
                 : null;
 
-        entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null);
-
-        var normalizedTags = TagNormalizer.normalize(enrichment.tags());
-        // Always keep obvious URL-derived tags (imdb/reddit/subreddit/etc) even when forcing an enrichment.
-        normalizedTags = mergeTags(normalizedTags, UrlTagger.tagsForUrl(entry.url()));
-
-        boolean replaceTags = force || entry.tags() == null || entry.tags().isEmpty() || isOnlyObviousTags(entry.tags(), entry.url());
-        log.info("Applying enrichment results for entryId={}: titleUpdate={}, tagsUpdate={} (currentTags={})", 
-                entry.id(), newTitle != null, replaceTags, entry.tags());
-
         if (newTitle != null || newDescription != null || newDetailedDescription != null) {
             entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null);
         }
 
+        // Reload entry to get latest state (especially tags) before deciding on tag replacement
+        var currentEntry = entries.getById(entry.id()).orElse(entry);
+        var normalizedTags = TagNormalizer.normalize(enrichment.tags());
+        // Always keep obvious URL-derived tags (imdb/reddit/subreddit/etc) even when forcing an enrichment.
+        normalizedTags = mergeTags(normalizedTags, UrlTagger.tagsForUrl(currentEntry.url()));
+
+        boolean replaceTags = force || currentEntry.tags() == null || currentEntry.tags().isEmpty() || isOnlyObviousTags(currentEntry.tags(), currentEntry.url());
+        log.info("Applying enrichment results for entryId={}: titleUpdate={}, tagsUpdate={} (currentTags={})", 
+                currentEntry.id(), newTitle != null, replaceTags, currentEntry.tags());
+
         if (replaceTags) {
-            entries.replaceTags(entry.id(), normalizedTags, tags);
+            entries.replaceTags(currentEntry.id(), normalizedTags, tags);
         }
     }
 

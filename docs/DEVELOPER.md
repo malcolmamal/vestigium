@@ -141,3 +141,7 @@ We use a custom **Store pattern** built on Angular Signals.
 - **Change Detection**: All components should use `ChangeDetectionStrategy.OnPush`.
 
 ---
+
+## Future Roadmap
+
+For a list of planned features and cool improvements, see [docs/ROADMAP.md](ROADMAP.md).
