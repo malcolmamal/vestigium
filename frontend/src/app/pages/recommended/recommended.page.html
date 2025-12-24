@@ -1,0 +1,65 @@
+<section class="page">
+  <header class="pageHeader">
+    <a class="link" routerLink="/entries">Back</a>
+    <h1>Recommended</h1>
+  </header>
+
+  <section class="card">
+    <div class="row">
+      <div class="title">Mode</div>
+      <button class="button secondary" type="button" (click)="loadRandom()" [disabled]="loading()">
+        Random unvisited
+      </button>
+      <button class="button secondary" type="button" (click)="runLlm()" [disabled]="loading()">
+        LLM recommendation
+      </button>
+    </div>
+
+    <div class="row">
+      <div class="title">Prompt</div>
+      <select class="select" [value]="promptId()" (change)="promptId.set(($any($event.target).value ?? 'movie').toString())">
+        <option value="movie">I want to watch a good movie</option>
+        <option value="short_funny">I want to watch something short and funny</option>
+        <option value="learn">I want to learn something</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <div class="title">Suggestion</div>
+      <textarea
+        class="textArea"
+        rows="2"
+        [value]="customPrompt()"
+        (input)="customPrompt.set(($any($event.target).value ?? '').toString())"
+        placeholder='e.g. "I want to watch something relaxing"'
+      ></textarea>
+    </div>
+  </section>
+
+  @if (error()) {
+    <div class="errorBox">{{ error() }}</div>
+  }
+
+  @if (loading() && items().length === 0 && llmItems().length === 0) {
+    <div class="muted">Loading…</div>
+  } @else if (items().length === 0 && llmItems().length === 0) {
+    <div class="muted">No recommendations found.</div>
+  } @else {
+    <div class="grid">
+      @for (e of items(); track e.id) {
+        <app-entry-card [entry]="e" />
+      }
+      @for (r of llmItems(); track r.entry.id) {
+        <div class="llmCard">
+          <app-entry-card [entry]="r.entry" />
+          @if (r.reason) {
+            <div class="llmReason">{{ r.reason }}</div>
+          }
+        </div>
+      }
+    </div>
+  }
+</section>
+
+

@@ -7,6 +7,7 @@ public record Entry(
         String url,
         String title,
         String description,
+        String detailedDescription,
         String thumbnailPath,
         String thumbnailLargePath,
         String visitedAt,

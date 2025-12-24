@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vestigium.enrich.EnrichmentParser;
 import com.vestigium.enrich.PdfTextExtractor;
+import com.vestigium.enrich.ImdbMetadataFetcher;
 import com.vestigium.enrich.UrlContentFetcher;
 import com.vestigium.llm.GeminiClient;
 import com.vestigium.persistence.AttachmentRepository;
@@ -26,6 +27,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
     private final AttachmentRepository attachments;
     private final FileStorageService fileStorage;
     private final UrlContentFetcher urlFetcher;
+    private final ImdbMetadataFetcher imdb;
     private final PdfTextExtractor pdfTextExtractor;
     private final GeminiClient gemini;
     private final EnrichmentParser enrichmentParser;
@@ -37,6 +39,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             AttachmentRepository attachments,
             FileStorageService fileStorage,
             UrlContentFetcher urlFetcher,
+            ImdbMetadataFetcher imdb,
             PdfTextExtractor pdfTextExtractor,
             GeminiClient gemini,
             EnrichmentParser enrichmentParser,
@@ -47,6 +50,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         this.attachments = attachments;
         this.fileStorage = fileStorage;
         this.urlFetcher = urlFetcher;
+        this.imdb = imdb;
         this.pdfTextExtractor = pdfTextExtractor;
         this.gemini = gemini;
         this.enrichmentParser = enrichmentParser;
@@ -68,6 +72,26 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         var images = new ArrayList<GeminiClient.InlineImage>();
         var contextText = new StringBuilder();
         contextText.append("URL: ").append(entry.url()).append("\n\n");
+
+        // Site-specific extra metadata (best-effort).
+        try {
+            imdb.fetch(entry.url()).ifPresent(m -> {
+                contextText.append("IMDb metadata:\n");
+                if (m.datePublished() != null && !m.datePublished().isBlank()) {
+                    contextText.append("- Release date: ").append(m.datePublished()).append("\n");
+                }
+                if (m.duration() != null && !m.duration().isBlank()) {
+                    contextText.append("- Runtime: ").append(m.duration()).append("\n");
+                }
+                if (m.stars() != null && !m.stars().isEmpty()) {
+                    var take = m.stars().stream().limit(5).toList();
+                    contextText.append("- Stars: ").append(String.join(", ", take)).append("\n");
+                }
+                contextText.append("\n");
+            });
+        } catch (Exception ignored) {
+            // ignore
+        }
 
         if (!attachmentList.isEmpty()) {
             contextText.append("The user provided attachments. Use them to infer a good description and tags.\n");
@@ -104,7 +128,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force) ? metaTitle : null;
             var metaUpdateDesc = shouldUpdate(entry.description(), metaDesc, force) ? metaDesc : null;
             if (metaUpdateTitle != null || metaUpdateDesc != null) {
-                entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null);
+                entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null, null);
             }
 
             contextText.append("Fetched page content:\n");
@@ -125,12 +149,15 @@ public class EnrichEntryJobProcessor implements JobProcessor {
 
         var newTitle = shouldUpdate(entry.title(), enrichment.title(), force) ? enrichment.title() : null;
         var newDescription = shouldUpdate(entry.description(), enrichment.description(), force) ? enrichment.description() : null;
+        var newDetailedDescription = shouldUpdate(entry.detailedDescription(), enrichment.detailedDescription(), force)
+                ? enrichment.detailedDescription()
+                : null;
 
-        entries.updateCore(entry.id(), newTitle, newDescription, null);
+        entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null);
 
         var normalizedTags = TagNormalizer.normalize(enrichment.tags());
         if (normalizedTags.isEmpty() && YouTube.extractVideoId(entry.url()).isPresent()) {
-            normalizedTags = List.of("youtube");
+            normalizedTags = YouTube.isShortsUrl(entry.url()) ? List.of("youtube", "youtube-shorts") : List.of("youtube");
         }
         if (force || entry.tags() == null || entry.tags().isEmpty()) {
             entries.replaceTags(entry.id(), normalizedTags, tags);
@@ -167,12 +194,17 @@ public class EnrichEntryJobProcessor implements JobProcessor {
                {
                  "title": "optional short title",
                  "description": "useful description, 2-8 sentences (can be 1-2 short paragraphs)",
+                 "detailedDescription": "longer description with key details; can be multiple short paragraphs and/or bullet points",
                  "tags": ["lowercase tag", "another tag"]
                }
 
                Description rules:
                - be informative (what it is, why it matters, key entities)
                - aim for ~400-900 characters unless the page is very small
+
+               Detailed description rules:
+               - include any concrete facts you can extract (people, dates, runtime/length, notable attributes)
+               - if nothing extra is known, you can repeat/expand the short description
 
                Tag rules:
                - keep tags short, lowercase, and specific

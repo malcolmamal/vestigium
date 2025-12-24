@@ -137,6 +137,29 @@
           <textarea class="textArea" rows="5" formControlName="description"></textarea>
         </label>
 
+        <div class="field">
+          <div class="labelRow">
+            <span class="label">Detailed description</span>
+            <span class="muted">
+              @if (form.controls.detailedDescription.value.trim().length > 0) {
+                Available
+              } @else {
+                Empty
+              }
+            </span>
+            <button
+              class="button small secondary"
+              type="button"
+              (click)="detailedCollapsed.set(!detailedCollapsed())"
+            >
+              {{ detailedCollapsed() ? 'Show' : 'Hide' }}
+            </button>
+          </div>
+          @if (!detailedCollapsed()) {
+            <textarea class="textArea" rows="10" formControlName="detailedDescription"></textarea>
+          }
+        </div>
+
         <label class="field">
           <span class="label">Tags</span>
           <app-tag-chips-input [tags]="tags()" (tagsChange)="onTagsChange($event)" />

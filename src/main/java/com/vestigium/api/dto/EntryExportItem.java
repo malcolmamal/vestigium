@@ -11,6 +11,8 @@ public record EntryExportItem(
         String thumbnailLargePath,
         String title,
         String description,
+        String detailedDescription,
+        List<String> lists,
         List<String> tags
 ) {
     public static EntryExportItem from(Entry e) {
@@ -22,6 +24,8 @@ public record EntryExportItem(
                 e.thumbnailLargePath(),
                 e.title(),
                 e.description(),
+                e.detailedDescription(),
+                List.of(),
                 e.tags()
         );
     }

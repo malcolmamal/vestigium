@@ -3,6 +3,14 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'entries' },
   {
+    path: 'settings',
+    loadComponent: () => import('./pages/settings/settings.page').then((m) => m.SettingsPage)
+  },
+  {
+    path: 'recommended',
+    loadComponent: () => import('./pages/recommended/recommended.page').then((m) => m.RecommendedPage)
+  },
+  {
     path: 'entries',
     loadComponent: () => import('./pages/entries/entries.page').then((m) => m.EntriesPage)
   },

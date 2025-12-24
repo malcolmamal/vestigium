@@ -1,10 +1,11 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import type { EntryDetailsResponse, EntryListResponse, PatchEntryRequest } from '../models/entry.model';
+import type { EntryDetailsResponse, EntryListResponse, EntryResponse, PatchEntryRequest } from '../models/entry.model';
 import type { JobResponse } from '../models/job.model';
 import type { EntryExportItem, ImportEntriesResponse } from '../models/import-export.model';
 import type { ListResponse } from '../models/list.model';
+import type { LlmRecommendRequest, LlmRecommendResponse } from '../models/recommendation.model';
 import type { TagSuggestionResponse } from '../models/tag-suggestion.model';
 
 @Injectable({ providedIn: 'root' })
@@ -28,6 +29,7 @@ export class VestigiumApiService {
     listIds?: string[];
     important?: boolean;
     visited?: boolean;
+    includeNsfw?: boolean;
     addedFrom?: string;
     addedTo?: string;
     sort?: 'added_desc' | 'added_asc' | 'updated_desc' | 'updated_asc';
@@ -44,6 +46,7 @@ export class VestigiumApiService {
     }
     if (params.important !== undefined) httpParams = httpParams.set('important', String(params.important));
     if (params.visited !== undefined) httpParams = httpParams.set('visited', String(params.visited));
+    if (params.includeNsfw !== undefined) httpParams = httpParams.set('includeNsfw', String(params.includeNsfw));
     if (params.addedFrom) httpParams = httpParams.set('addedFrom', params.addedFrom);
     if (params.addedTo) httpParams = httpParams.set('addedTo', params.addedTo);
     if (params.sort) httpParams = httpParams.set('sort', params.sort);
@@ -132,6 +135,17 @@ export class VestigiumApiService {
   suggestTags(prefix: string, limit = 20) {
     const params = new HttpParams().set('prefix', prefix).set('limit', String(limit));
     return this.http.get<TagSuggestionResponse[]>('/api/tags/suggest', { params });
+  }
+
+  getRandomRecommendations(params: { limit?: number; includeNsfw?: boolean }) {
+    let httpParams = new HttpParams();
+    httpParams = httpParams.set('limit', String(params.limit ?? 20));
+    if (params.includeNsfw !== undefined) httpParams = httpParams.set('includeNsfw', String(params.includeNsfw));
+    return this.http.get<EntryResponse[]>('/api/recommendations/random', { params: httpParams });
+  }
+
+  getLlmRecommendations(body: LlmRecommendRequest) {
+    return this.http.post<LlmRecommendResponse>('/api/recommendations/llm', body ?? {});
   }
 }
 

@@ -3,11 +3,14 @@ package com.vestigium.thumb;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -37,6 +40,13 @@ public class PageScreenshotter {
                             .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED));
                     // Small delay to let above-the-fold render.
                     page.waitForTimeout(800);
+
+                    // Site-specific dismissals to avoid consent popups covering screenshots.
+                    if (isRedgifs(url)) {
+                        dismissRedgifsConsent(page);
+                        page.waitForTimeout(400);
+                    }
+
                     return page.screenshot(new Page.ScreenshotOptions()
                             .setFullPage(false));
                 } finally {
@@ -45,6 +55,44 @@ public class PageScreenshotter {
             } finally {
                 browser.close();
             }
+        }
+    }
+
+    private static boolean isRedgifs(String url) {
+        return host(url).map(h -> h.endsWith("redgifs.com")).orElse(false);
+    }
+
+    private static Optional<String> host(String url) {
+        try {
+            var uri = URI.create(url);
+            var host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return Optional.empty();
+            }
+            return Optional.of(host.toLowerCase());
+        } catch (Exception ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private static void dismissRedgifsConsent(Page page) {
+        // Best-effort; Redgifs often shows cookie + age/consent dialogs.
+        tryClick(page, "button:has-text(\"Accept all\")", 2000);
+        tryClick(page, "button:has-text(\"I agree\")", 2000);
+        // Some variants use different wording.
+        tryClick(page, "button:has-text(\"Accept\")", 1500);
+        tryClick(page, "button:has-text(\"Agree\")", 1500);
+    }
+
+    private static void tryClick(Page page, String selector, int timeoutMs) {
+        try {
+            Locator loc = page.locator(selector).first();
+            if (loc.count() == 0) {
+                return;
+            }
+            loc.click(new Locator.ClickOptions().setTimeout(timeoutMs));
+        } catch (Exception ignored) {
+            // ignore
         }
     }
 }

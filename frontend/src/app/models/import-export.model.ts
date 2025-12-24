@@ -6,6 +6,8 @@ export interface EntryExportItem {
   thumbnailLargePath?: string | null;
   title: string | null;
   description: string | null;
+  detailedDescription?: string | null;
+  lists?: string[];
   tags: string[];
 }
 

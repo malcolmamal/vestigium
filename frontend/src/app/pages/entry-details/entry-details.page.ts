@@ -52,9 +52,12 @@ export class EntryDetailsPage {
   readonly listsError = signal<string | null>(null);
   private listsSaveTimer: any = null;
 
+  readonly detailedCollapsed = signal(true);
+
   readonly form = new FormGroup({
     title: new FormControl<string>('', { nonNullable: true }),
-    description: new FormControl<string>('', { nonNullable: true })
+    description: new FormControl<string>('', { nonNullable: true }),
+    detailedDescription: new FormControl<string>('', { nonNullable: true })
   });
 
   readonly entry = computed(() => this.data()?.entry ?? null);
@@ -96,6 +99,7 @@ export class EntryDetailsPage {
           this.data.set(res);
           this.form.controls.title.setValue(res.entry.title ?? '');
           this.form.controls.description.setValue(res.entry.description ?? '');
+          this.form.controls.detailedDescription.setValue(res.entry.detailedDescription ?? '');
           this.tags.set(res.entry.tags ?? []);
           this.loadLists(id);
         },
@@ -112,7 +116,8 @@ export class EntryDetailsPage {
     this.api
       .patchEntry(id, {
         title: this.form.controls.title.value.trim() || null,
-        description: this.form.controls.description.value.trim() || null
+        description: this.form.controls.description.value.trim() || null,
+        detailedDescription: this.form.controls.detailedDescription.value.trim() || null
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({

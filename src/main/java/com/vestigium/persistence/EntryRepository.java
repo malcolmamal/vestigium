@@ -37,8 +37,8 @@ public class EntryRepository {
         params.put("updatedAt", now);
         jdbc.update(
                 """
-                INSERT INTO entries (id, url, title, description, thumbnail_path, visited_at, important, created_at, updated_at)
-                VALUES (:id, :url, :title, :description, NULL, NULL, :important, :createdAt, :updatedAt)
+                INSERT INTO entries (id, url, title, description, detailed_description, thumbnail_path, visited_at, important, created_at, updated_at)
+                VALUES (:id, :url, :title, :description, NULL, NULL, NULL, :important, :createdAt, :updatedAt)
                 """,
                 params
         );
@@ -58,8 +58,8 @@ public class EntryRepository {
         params.put("updatedAt", updatedAt == null || updatedAt.isBlank() ? now : updatedAt.trim());
         jdbc.update(
                 """
-                INSERT INTO entries (id, url, title, description, thumbnail_path, visited_at, important, created_at, updated_at)
-                VALUES (:id, :url, :title, :description, NULL, NULL, :important, :createdAt, :updatedAt)
+                INSERT INTO entries (id, url, title, description, detailed_description, thumbnail_path, visited_at, important, created_at, updated_at)
+                VALUES (:id, :url, :title, :description, NULL, NULL, NULL, :important, :createdAt, :updatedAt)
                 """,
                 params
         );
@@ -69,7 +69,7 @@ public class EntryRepository {
     public Optional<Entry> getById(String id) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 WHERE id = :id
                 """,
@@ -88,7 +88,7 @@ public class EntryRepository {
     public Optional<Entry> getByUrl(String url) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 WHERE url = :url
                 """,
@@ -106,11 +106,51 @@ public class EntryRepository {
     public List<Entry> listAllForExport() {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 ORDER BY created_at ASC
                 """,
                 Map.of(),
+                ENTRY_ROW_MAPPER
+        );
+        var out = new ArrayList<Entry>(rows.size());
+        for (var row : rows) {
+            out.add(row.toEntry(getTagsForEntry(row.id())));
+        }
+        return out;
+    }
+
+    public List<Entry> listRandomUnvisited(int limit, boolean includeNsfw) {
+        var where = new ArrayList<String>();
+        var params = new HashMap<String, Object>();
+        where.add("visited_at IS NULL");
+
+        if (!includeNsfw) {
+            where.add(
+                    """
+                    id NOT IN (
+                      SELECT et.entry_id
+                      FROM entry_tags et
+                      JOIN tags t ON t.id = et.tag_id
+                      WHERE t.name IN (:nsfwTags)
+                    )
+                    """
+            );
+            params.put("nsfwTags", List.of("adult content", "porn", "erotic", "redgifs", "pornhub"));
+        }
+
+        var whereSql = "WHERE " + String.join(" AND ", where);
+        params.put("limit", Math.max(1, limit));
+
+        var rows = jdbc.query(
+                """
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                FROM entries
+                %s
+                ORDER BY RANDOM()
+                LIMIT :limit
+                """.formatted(whereSql),
+                params,
                 ENTRY_ROW_MAPPER
         );
         var out = new ArrayList<Entry>(rows.size());
@@ -129,6 +169,7 @@ public class EntryRepository {
             String addedTo,
             String sort,
             List<String> listIds,
+            boolean includeNsfw,
             int page,
             int pageSize
     ) {
@@ -187,6 +228,20 @@ public class EntryRepository {
             params.put("listIds", listIds);
         }
 
+        if (!includeNsfw) {
+            where.add(
+                    """
+                    id NOT IN (
+                      SELECT et.entry_id
+                      FROM entry_tags et
+                      JOIN tags t ON t.id = et.tag_id
+                      WHERE t.name IN (:nsfwTags)
+                    )
+                    """
+            );
+            params.put("nsfwTags", List.of("adult content", "porn", "erotic", "redgifs", "pornhub"));
+        }
+
         var whereSql = where.isEmpty() ? "" : "WHERE " + String.join(" AND ", where);
         var offset = Math.max(page, 0) * Math.max(pageSize, 1);
         params.put("limit", pageSize);
@@ -205,7 +260,7 @@ public class EntryRepository {
 
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
                 FROM entries
                 %s
                 ORDER BY %s
@@ -222,7 +277,7 @@ public class EntryRepository {
         return out;
     }
 
-    public void updateCore(String id, String title, String description, Boolean important) {
+    public void updateCore(String id, String title, String description, String detailedDescription, Boolean important) {
         var sets = new ArrayList<String>();
         var params = new java.util.HashMap<String, Object>();
         params.put("id", id);
@@ -234,6 +289,10 @@ public class EntryRepository {
         if (description != null) {
             sets.add("description = :description");
             params.put("description", description);
+        }
+        if (detailedDescription != null) {
+            sets.add("detailed_description = :detailedDescription");
+            params.put("detailedDescription", detailedDescription);
         }
         if (important != null) {
             sets.add("important = :important");
@@ -335,6 +394,7 @@ public class EntryRepository {
             String url,
             String title,
             String description,
+            String detailedDescription,
             String thumbnailPath,
             String thumbnailLargePath,
             String visitedAt,
@@ -343,7 +403,7 @@ public class EntryRepository {
             String updatedAt
     ) {
         Entry toEntry(List<String> tags) {
-            return new Entry(id, url, title, description, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, tags);
+            return new Entry(id, url, title, description, detailedDescription, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, tags);
         }
     }
 
@@ -355,6 +415,7 @@ public class EntryRepository {
                     rs.getString("url"),
                     rs.getString("title"),
                     rs.getString("description"),
+                    rs.getString("detailed_description"),
                     rs.getString("thumbnail_path"),
                     rs.getString("thumbnail_large_path"),
                     rs.getString("visited_at"),

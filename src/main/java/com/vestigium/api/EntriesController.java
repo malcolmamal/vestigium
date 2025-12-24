@@ -69,10 +69,11 @@ public class EntriesController {
             @RequestParam(value = "addedTo", required = false) String addedTo,
             @RequestParam(value = "sort", required = false) String sort,
             @RequestParam(value = "listId", required = false) List<String> listIds,
+            @RequestParam(value = "includeNsfw", defaultValue = "true") boolean includeNsfw,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
     ) {
-        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, page, pageSize)
+        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, includeNsfw, page, pageSize)
                 .stream()
                 .map(EntryResponse::from)
                 .toList();
@@ -91,7 +92,18 @@ public class EntriesController {
     @GetMapping(value = "/api/entries/export", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<EntryExportItem> exportEntries() {
         return entryService.exportAll().items().stream()
-                .map(i -> new EntryExportItem(i.id(), i.url(), i.addedAt(), i.thumbnailPath(), i.thumbnailLargePath(), i.title(), i.description(), i.tags()))
+                .map(i -> new EntryExportItem(
+                        i.id(),
+                        i.url(),
+                        i.addedAt(),
+                        i.thumbnailPath(),
+                        i.thumbnailLargePath(),
+                        i.title(),
+                        i.description(),
+                        i.detailedDescription(),
+                        i.lists(),
+                        i.tags()
+                ))
                 .toList();
     }
 
@@ -99,7 +111,18 @@ public class EntriesController {
     public ImportEntriesResponse importEntries(@RequestBody ImportEntriesRequest req) {
         var in = req == null ? List.<EntryExportItem>of() : (req.items() == null ? List.<EntryExportItem>of() : req.items());
         var items = in.stream()
-                .map(i -> new EntryService.ExportItem(i.id(), i.url(), i.addedAt(), i.thumbnailPath(), i.thumbnailLargePath(), i.title(), i.description(), i.tags()))
+                .map(i -> new EntryService.ExportItem(
+                        i.id(),
+                        i.url(),
+                        i.addedAt(),
+                        i.thumbnailPath(),
+                        i.thumbnailLargePath(),
+                        i.title(),
+                        i.description(),
+                        i.detailedDescription(),
+                        i.lists(),
+                        i.tags()
+                ))
                 .toList();
         var result = entryService.importEntries(req == null ? null : req.mode(), items);
         var errors = result.errors().stream()
@@ -130,7 +153,7 @@ public class EntriesController {
 
     @PatchMapping("/api/entries/{id}")
     public EntryResponse patch(@PathVariable String id, @RequestBody PatchEntryRequest req) {
-        var updated = entryService.update(id, req.title(), req.description(), req.important(), req.tags());
+        var updated = entryService.update(id, req.title(), req.description(), req.detailedDescription(), req.important(), req.tags());
         return EntryResponse.from(updated);
     }
 

@@ -12,6 +12,7 @@ export interface EntryResponse {
   url: string;
   title: string | null;
   description: string | null;
+  detailedDescription: string | null;
   tags: string[];
   important: boolean;
   visitedAt: string | null;
@@ -35,6 +36,7 @@ export interface EntryListResponse {
 export interface PatchEntryRequest {
   title?: string | null;
   description?: string | null;
+  detailedDescription?: string | null;
   important?: boolean | null;
   tags?: string[] | null;
 }

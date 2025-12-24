@@ -45,6 +45,20 @@ public final class YouTube {
         }
     }
 
+    public static boolean isShortsUrl(String url) {
+        try {
+            var uri = URI.create(url);
+            var host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+            if (!(host.endsWith("youtube.com") || host.endsWith("www.youtube.com"))) {
+                return false;
+            }
+            var path = uri.getPath() == null ? "" : uri.getPath();
+            return path.startsWith("/shorts/");
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public static String hqThumbnailUrl(String videoId) {
         return "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg";
     }

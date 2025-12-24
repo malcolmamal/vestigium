@@ -89,7 +89,7 @@ public class EntryService {
 
         // Add an obvious "youtube" tag when user didn't provide any tags.
         if ((outTags == null || outTags.isEmpty()) && YouTube.extractVideoId(url).isPresent()) {
-            outTags = List.of("youtube");
+            outTags = YouTube.isShortsUrl(url) ? List.of("youtube", "youtube-shorts") : List.of("youtube");
         }
 
         boolean needTitle = outTitle == null || outTitle.isBlank();
@@ -124,11 +124,11 @@ public class EntryService {
 
     private record InferredMetadata(String title, String description, List<String> tags) {}
 
-    public Entry update(String entryId, String title, String description, Boolean important, List<String> rawTags) {
+    public Entry update(String entryId, String title, String description, String detailedDescription, Boolean important, List<String> rawTags) {
         var existing = entries.getById(entryId)
                 .orElseThrow(() -> new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found."));
 
-        entries.updateCore(entryId, title, description, important);
+        entries.updateCore(entryId, title, description, detailedDescription, important);
         if (rawTags != null) {
             entries.replaceTags(entryId, TagNormalizer.normalize(rawTags), tags);
         }
@@ -205,7 +205,8 @@ public class EntryService {
     public record BulkCreateResult(int createdCount, int skippedCount, List<BulkCreateError> errors) {}
 
     public ExportResult exportAll() {
-        var items = entries.listAllForExport().stream()
+        var all = entries.listAllForExport();
+        var items = all.stream()
                 .map(e -> new ExportItem(
                         e.id(),
                         e.url(),
@@ -214,6 +215,8 @@ public class EntryService {
                         e.thumbnailLargePath(),
                         e.title(),
                         e.description(),
+                        e.detailedDescription(),
+                        this.lists.listNamesForEntry(e.id()),
                         TagNormalizer.normalize(e.tags())
                 ))
                 .toList();
@@ -251,18 +254,24 @@ public class EntryService {
                             item.thumbnailLargePath(),
                             item.title(),
                             item.description(),
+                            item.detailedDescription(),
+                            item.lists(),
                             item.tags()
                     );
                     created++;
                     continue;
                 }
+                var existing = existingOpt.get();
+                // Merge lists even in "skip" mode (additive, doesn't remove existing).
+                mergeImportedLists(existing.id(), item.lists());
+
                 if (m.equals("skip")) {
                     skipped++;
                     continue;
                 }
-                var existing = existingOpt.get();
+
                 // Update core fields if present in import
-                entries.updateCore(existing.id(), item.title(), item.description(), null);
+                entries.updateCore(existing.id(), item.title(), item.description(), item.detailedDescription(), null);
                 if (item.tags() != null) {
                     entries.replaceTags(existing.id(), TagNormalizer.normalize(item.tags()), tags);
                 }
@@ -290,6 +299,8 @@ public class EntryService {
             String thumbnailLargePath,
             String title,
             String description,
+            String detailedDescription,
+            List<String> listNames,
             List<String> tags
     ) {
         if (entries.getByUrl(normalizedUrl).isPresent()) {
@@ -298,6 +309,10 @@ public class EntryService {
         var now = com.vestigium.persistence.InstantSql.nowIso();
         var createdAt = (addedAt == null || addedAt.isBlank()) ? now : addedAt.trim();
         var entry = entries.createWithTimestamps(normalizedUrl, title, description, false, createdAt, createdAt);
+        if (detailedDescription != null && !detailedDescription.isBlank()) {
+            entries.updateCore(entry.id(), null, null, detailedDescription.trim(), null);
+            entry = entries.getById(entry.id()).orElseThrow();
+        }
 
         if ((thumbnailPath != null && !thumbnailPath.isBlank())
                 || (thumbnailLargePath != null && !thumbnailLargePath.isBlank())) {
@@ -315,8 +330,26 @@ public class EntryService {
             entry = entries.getById(entry.id()).orElseThrow();
         }
 
+        mergeImportedLists(entry.id(), listNames);
+
         jobs.enqueue("ENRICH_ENTRY", entry.id(), null);
         jobs.enqueue("REGENERATE_THUMBNAIL", entry.id(), null);
+    }
+
+    private void mergeImportedLists(String entryId, List<String> listNames) {
+        if (listNames == null || listNames.isEmpty()) {
+            return;
+        }
+        var ids = new java.util.ArrayList<String>();
+        for (var raw : listNames) {
+            if (raw == null) continue;
+            var name = raw.trim();
+            if (name.isBlank()) continue;
+            ids.add(this.lists.upsertByName(name));
+        }
+        if (!ids.isEmpty()) {
+            this.lists.mergeEntryLists(entryId, ids);
+        }
     }
 
     public record ExportItem(
@@ -327,6 +360,8 @@ public class EntryService {
             String thumbnailLargePath,
             String title,
             String description,
+            String detailedDescription,
+            List<String> lists,
             List<String> tags
     ) {}
     public record ExportResult(List<ExportItem> items) {}
@@ -342,11 +377,12 @@ public class EntryService {
             String addedTo,
             String sort,
             List<String> listIds,
+            boolean includeNsfw,
             int page,
             int pageSize
     ) {
         var normalizedTags = TagNormalizer.normalize(tags);
-        return entries.search(q, normalizedTags, important, visited, addedFrom, addedTo, sort, listIds, page, pageSize);
+        return entries.search(q, normalizedTags, important, visited, addedFrom, addedTo, sort, listIds, includeNsfw, page, pageSize);
     }
 
     public List<com.vestigium.persistence.ListRepository.ListItem> listAllLists() {

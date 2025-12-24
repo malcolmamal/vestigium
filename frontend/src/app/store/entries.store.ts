@@ -3,10 +3,12 @@ import { finalize } from 'rxjs';
 
 import type { EntryResponse } from '../models/entry.model';
 import { VestigiumApiService } from '../services/vestigium-api.service';
+import { SettingsStore } from './settings.store';
 
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(VestigiumApiService);
+  private readonly settings = inject(SettingsStore);
 
   readonly query = signal('');
   readonly tagFilter = signal<string[]>([]);
@@ -52,6 +54,7 @@ export class EntriesStore {
       void this.page();
       void this.pageSize();
       void this.refreshToken();
+      void this.settings.showNsfw();
 
       this.load();
     });
@@ -79,6 +82,7 @@ export class EntriesStore {
         listIds: this.listFilter(),
         important: this.importantOnly() ?? undefined,
         visited: this.visitedOnly() ?? undefined,
+        includeNsfw: this.settings.showNsfw(),
         addedFrom: this.toIsoStartOfDay(this.addedFrom()),
         addedTo: this.toIsoEndOfDay(this.addedTo()),
         sort: this.sort(),
