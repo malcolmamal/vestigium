@@ -1,11 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { Message } from '@stomp/stompjs';
 
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
-import type { EntryDetailsResponse, JobResponse, ListResponse, TagSuggestionResponse } from '../../models';
+import type {
+  EntryDetailsResponse,
+  JobResponse,
+  ListResponse,
+  TagSuggestionResponse
+} from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { WebSocketService } from '../../services/websocket.service';
 import { EntriesStore } from '../../store/entries.store';
@@ -72,8 +84,12 @@ export class EntryDetailsPage {
 
   readonly pendingAutoRefresh = signal<{ type: string; observed: boolean }[]>([]);
 
-  readonly runningJobsCount = computed(() => this.jobs().filter((j) => j.status === 'RUNNING').length);
-  readonly failedJobsCount = computed(() => this.jobs().filter((j) => j.status === 'FAILED').length);
+  readonly runningJobsCount = computed(
+    () => this.jobs().filter((j) => j.status === 'RUNNING').length
+  );
+  readonly failedJobsCount = computed(
+    () => this.jobs().filter((j) => j.status === 'FAILED').length
+  );
 
   private tagsSaveTimer: any = null;
   private lastRunningCount = 0;
@@ -93,7 +109,7 @@ export class EntryDetailsPage {
   });
 
   readonly thumbVersion = signal(Date.now());
-  
+
   readonly entry = computed(() => this.data()?.entry ?? null);
   readonly youtubeId = computed(() => {
     const e = this.entry();
@@ -137,8 +153,8 @@ export class EntryDetailsPage {
   }
 
   private handleJobUpdate(job: JobResponse) {
-    this.jobs.update(current => {
-      const index = current.findIndex(j => j.id === job.id);
+    this.jobs.update((current) => {
+      const index = current.findIndex((j) => j.id === job.id);
       let next = [...current];
       if (index >= 0) {
         next[index] = job;
@@ -153,8 +169,8 @@ export class EntryDetailsPage {
     const running = items.filter((j) => j.status === 'RUNNING').length;
 
     // Track thumbnail job completion for cache-busting
-    const thumbJobCount = items.filter((j) => 
-      j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING')
+    const thumbJobCount = items.filter(
+      (j) => j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING')
     ).length;
     if (this.lastThumbJobCount > 0 && thumbJobCount === 0) {
       this.thumbVersion.set(Date.now());
@@ -174,7 +190,12 @@ export class EntryDetailsPage {
       const nowPending = this.pendingAutoRefresh();
       const completedTypes = nowPending
         .filter((p) => p.observed)
-        .filter((p) => !items.some((j) => j.type === p.type && (j.status === 'PENDING' || j.status === 'RUNNING')))
+        .filter(
+          (p) =>
+            !items.some(
+              (j) => j.type === p.type && (j.status === 'PENDING' || j.status === 'RUNNING')
+            )
+        )
         .map((p) => p.type);
 
       if (completedTypes.length > 0) {
@@ -267,7 +288,8 @@ export class EntryDetailsPage {
     this.addPendingAutoRefresh('REGENERATE_THUMBNAIL');
     this.api.enqueueThumbnail(id).subscribe({
       next: () => this.loadJobs(id),
-      error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to enqueue thumbnail regeneration')
+      error: (e) =>
+        this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to enqueue thumbnail regeneration')
     });
   }
 
@@ -303,8 +325,10 @@ export class EntryDetailsPage {
           const running = items.filter((j) => j.status === 'RUNNING').length;
 
           // Track thumbnail job completion for cache-busting
-          const thumbJobCount = items.filter((j) => 
-            j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING')
+          const thumbJobCount = items.filter(
+            (j) =>
+              j.type === 'REGENERATE_THUMBNAIL' &&
+              (j.status === 'PENDING' || j.status === 'RUNNING')
           ).length;
           if (this.lastThumbJobCount > 0 && thumbJobCount === 0) {
             this.thumbVersion.set(Date.now());
@@ -325,11 +349,18 @@ export class EntryDetailsPage {
             const nowPending = this.pendingAutoRefresh();
             const completedTypes = nowPending
               .filter((p) => p.observed)
-              .filter((p) => !items.some((j) => j.type === p.type && (j.status === 'PENDING' || j.status === 'RUNNING')))
+              .filter(
+                (p) =>
+                  !items.some(
+                    (j) => j.type === p.type && (j.status === 'PENDING' || j.status === 'RUNNING')
+                  )
+              )
               .map((p) => p.type);
 
             if (completedTypes.length > 0) {
-              this.pendingAutoRefresh.set(nowPending.filter((p) => !completedTypes.includes(p.type)));
+              this.pendingAutoRefresh.set(
+                nowPending.filter((p) => !completedTypes.includes(p.type))
+              );
               const id = this.id();
               if (id) setTimeout(() => this.refresh(id), 900);
             }
@@ -370,7 +401,9 @@ export class EntryDetailsPage {
     const id = this.id();
     if (!id) return;
     const current = this.selectedListIds();
-    const next = current.includes(list.id!) ? current.filter((x) => x !== list.id!) : [...current, list.id!];
+    const next = current.includes(list.id!)
+      ? current.filter((x) => x !== list.id!)
+      : [...current, list.id!];
     this.selectedListIds.set(next as string[]);
     this.scheduleSaveLists();
   }
@@ -381,7 +414,9 @@ export class EntryDetailsPage {
     if (this.listsSaveTimer) clearTimeout(this.listsSaveTimer);
     this.listsSaveTimer = setTimeout(() => {
       this.api.setEntryLists(id, this.selectedListIds()).subscribe({
-        next: () => {},
+        next: () => {
+          // Success
+        },
         error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to save lists')
       });
     }, 250);
@@ -416,7 +451,8 @@ export class EntryDetailsPage {
           const id = this.id();
           if (id) this.loadJobs(id);
         },
-        error: (e) => this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
+        error: (e) =>
+          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
       });
   }
 
@@ -431,14 +467,16 @@ export class EntryDetailsPage {
           const id = this.id();
           if (id) this.loadJobs(id);
         },
-        error: (e) => this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
+        error: (e) =>
+          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
       });
   }
 
   deleteEntry() {
     const id = this.id();
     if (!id) return;
-    if (!confirm('Delete this entry? This will also remove its attachments and queued jobs.')) return;
+    if (!confirm('Delete this entry? This will also remove its attachments and queued jobs.'))
+      return;
 
     this.api.deleteEntry(id).subscribe({
       next: () => {
@@ -449,5 +487,3 @@ export class EntryDetailsPage {
     });
   }
 }
-
-

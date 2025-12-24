@@ -8,7 +8,8 @@ export const routes: Routes = [
   },
   {
     path: 'recommended',
-    loadComponent: () => import('./pages/recommended/recommended.page').then((m) => m.RecommendedPage)
+    loadComponent: () =>
+      import('./pages/recommended/recommended.page').then((m) => m.RecommendedPage)
   },
   {
     path: 'entries',
@@ -28,7 +29,8 @@ export const routes: Routes = [
   },
   {
     path: 'entries/new',
-    loadComponent: () => import('./pages/create-entry/create-entry.page').then((m) => m.CreateEntryPage)
+    loadComponent: () =>
+      import('./pages/create-entry/create-entry.page').then((m) => m.CreateEntryPage)
   },
   {
     path: 'entries/bulk',
@@ -36,10 +38,12 @@ export const routes: Routes = [
   },
   {
     path: 'entries/import-export',
-    loadComponent: () => import('./pages/import-export/import-export.page').then((m) => m.ImportExportPage)
+    loadComponent: () =>
+      import('./pages/import-export/import-export.page').then((m) => m.ImportExportPage)
   },
   {
     path: 'entries/:id',
-    loadComponent: () => import('./pages/entry-details/entry-details.page').then((m) => m.EntryDetailsPage)
+    loadComponent: () =>
+      import('./pages/entry-details/entry-details.page').then((m) => m.EntryDetailsPage)
   }
 ];

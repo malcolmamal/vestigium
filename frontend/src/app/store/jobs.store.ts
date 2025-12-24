@@ -40,7 +40,7 @@ export class JobsStore {
   }
 
   patchState(patch: Partial<JobsState>) {
-    this.state.update(s => ({ ...s, ...patch }));
+    this.state.update((s) => ({ ...s, ...patch }));
   }
 
   load() {
@@ -55,7 +55,8 @@ export class JobsStore {
       .pipe(finalize(() => this.patchState({ loading: false })))
       .subscribe({
         next: (items) => this.patchState({ items }),
-        error: (e) => this.patchState({ error: e?.error?.detail ?? e?.message ?? 'Failed to load queue' })
+        error: (e) =>
+          this.patchState({ error: e?.error?.detail ?? e?.message ?? 'Failed to load queue' })
       });
   }
 
@@ -66,7 +67,7 @@ export class JobsStore {
   }
 
   private updateJobList(current: JobResponse[], job: JobResponse): JobResponse[] {
-    const index = current.findIndex(j => j.id === job.id);
+    const index = current.findIndex((j) => j.id === job.id);
     if (index >= 0) {
       const next = [...current];
       next[index] = job;
@@ -76,5 +77,3 @@ export class JobsStore {
     }
   }
 }
-
-

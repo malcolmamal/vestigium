@@ -48,7 +48,8 @@ export class ListsPage {
         if (confirm(`Delete list "${list.name}"? It has ${list.entryCount} linked entries.`)) {
           this.api.deleteList(list.id!, true).subscribe({
             next: () => this.lists.load(),
-            error: (e2) => this.error.set(e2?.error?.detail ?? e2?.message ?? 'Failed to delete list')
+            error: (e2) =>
+              this.error.set(e2?.error?.detail ?? e2?.message ?? 'Failed to delete list')
           });
         }
       }
@@ -61,5 +62,3 @@ export class ListsPage {
     void this.router.navigate(['/entries']);
   }
 }
-
-

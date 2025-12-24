@@ -27,12 +27,24 @@ export class RecommendedPage {
 
   readonly mode = signal<'random' | 'llm'>('random');
   readonly promptId = signal<
-    'movie' | 'short_funny' | 'learn' | 'music' | 'food' | 'workout' | 'news' | 'coding' | 'relax' | 'surprise' | 'custom'
+    | 'movie'
+    | 'short_funny'
+    | 'learn'
+    | 'music'
+    | 'food'
+    | 'workout'
+    | 'news'
+    | 'coding'
+    | 'relax'
+    | 'surprise'
+    | 'custom'
   >('movie');
   readonly customPrompt = signal('');
 
   readonly activeAction = signal<'random' | 'llm' | null>(null);
-  readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>({});
+  readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>(
+    {}
+  );
 
   loadRandom() {
     // ...
@@ -57,15 +69,25 @@ export class RecommendedPage {
   }
 
   onToggleImportant(id: string) {
-    const entry = this.items().find(e => e.id === id) || this.llmItems()?.find(r => r.entry!.id === id)?.entry;
+    const entry =
+      this.items().find((e) => e.id === id) ||
+      this.llmItems()?.find((r) => r.entry!.id === id)?.entry;
     if (!entry) return;
     this.updateBusy(id, 'important');
     this.api.patchEntry(id, { important: !entry.important }).subscribe({
       next: () => {
         this.updateBusy(id, null);
         // Local update for simple toggle
-        this.items.update(items => items.map(e => e.id === id ? { ...e, important: !e.important } : e));
-        this.llmItems.update(items => items?.map(r => r.entry!.id === id ? { ...r, entry: { ...r.entry!, important: !r.entry!.important } } : r));
+        this.items.update((items) =>
+          items.map((e) => (e.id === id ? { ...e, important: !e.important } : e))
+        );
+        this.llmItems.update((items) =>
+          items?.map((r) =>
+            r.entry!.id === id
+              ? { ...r, entry: { ...r.entry!, important: !r.entry!.important } }
+              : r
+          )
+        );
       },
       error: () => this.updateBusy(id, null)
     });
@@ -84,7 +106,7 @@ export class RecommendedPage {
   }
 
   private updateBusy(id: string, type: 'enrich' | 'thumb' | 'important' | 'delete' | null) {
-    this.busyStates.update(s => ({ ...s, [id]: type }));
+    this.busyStates.update((s) => ({ ...s, [id]: type }));
   }
 
   runLlm() {
@@ -130,5 +152,3 @@ export class RecommendedPage {
     this.loadRandom();
   }
 }
-
-

@@ -7,10 +7,13 @@
   <section class="card">
     <h2>Export</h2>
     <p class="muted">
-      Exports JSON with: id, url, addedAt, title, description, detailedDescription, tags, lists, thumbnailPath, thumbnailLargePath. No files/attachments.
+      Exports JSON with: id, url, addedAt, title, description, detailedDescription, tags, lists,
+      thumbnailPath, thumbnailLargePath. No files/attachments.
     </p>
     <div class="actions">
-      <button class="button" type="button" (click)="exportJson()" [disabled]="busy()">Download JSON</button>
+      <button class="button" type="button" (click)="exportJson()" [disabled]="busy()">
+        Download JSON
+      </button>
     </div>
   </section>
 
@@ -20,7 +23,11 @@
 
     <label class="field">
       <span class="label">Mode</span>
-      <select class="select" [value]="mode()" (change)="mode.set(($any($event.target).value ?? 'skip').toString())">
+      <select
+        class="select"
+        [value]="mode()"
+        (change)="mode.set(($any($event.target).value ?? 'skip').toString())"
+      >
         <option value="skip">Skip existing (by url)</option>
         <option value="update">Update existing (by url)</option>
       </select>
@@ -32,7 +39,14 @@
     </label>
 
     <div class="actions">
-      <button class="button" type="button" (click)="importJson()" [disabled]="busy() || !fileText()">Import</button>
+      <button
+        class="button"
+        type="button"
+        (click)="importJson()"
+        [disabled]="busy() || !fileText()"
+      >
+        Import
+      </button>
     </div>
 
     @if (importResult()) {
@@ -44,7 +58,9 @@
           <div class="errListTitle">Errors:</div>
           <ul class="errList">
             @for (e of importResult()!.errors; track e.url) {
-              <li><b>{{ e.url }}</b> — {{ e.error }}</li>
+              <li>
+                <b>{{ e.url }}</b> — {{ e.error }}
+              </li>
             }
           </ul>
         }
@@ -56,5 +72,3 @@
     }
   </section>
 </section>
-
-

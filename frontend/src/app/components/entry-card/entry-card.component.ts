@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  signal
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -25,18 +33,22 @@ export class EntryCardComponent {
   readonly playVideo = output<string>();
 
   readonly busy = computed(() => this.busyAction() !== null);
-  
+
   readonly jobs = computed(() => {
     const id = this.entry().id;
     if (!id) return [];
-    return this.activeJobs().filter(j => j.entryId === id);
+    return this.activeJobs().filter((j) => j.entryId === id);
   });
 
-  readonly enrichJobs = computed(() => 
-    this.jobs().filter(j => j.type === 'ENRICH_ENTRY' && (j.status === 'PENDING' || j.status === 'RUNNING'))
+  readonly enrichJobs = computed(() =>
+    this.jobs().filter(
+      (j) => j.type === 'ENRICH_ENTRY' && (j.status === 'PENDING' || j.status === 'RUNNING')
+    )
   );
-  readonly thumbJobs = computed(() => 
-    this.jobs().filter(j => j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING'))
+  readonly thumbJobs = computed(() =>
+    this.jobs().filter(
+      (j) => j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING')
+    )
   );
   readonly thumbVersion = signal(Date.now());
   readonly thumbnailUrl = computed(() => `${this.entry().thumbnailUrl}?v=${this.thumbVersion()}`);

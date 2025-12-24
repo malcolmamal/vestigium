@@ -24,4 +24,3 @@ export function extractYouTubeId(url: string): string | null {
   }
   return null;
 }
-

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -37,7 +37,8 @@ export class QueuePage {
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
         next: () => this.jobs.load(),
-        error: (e) => this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
+        error: (e) =>
+          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
       });
   }
 
@@ -49,9 +50,8 @@ export class QueuePage {
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
         next: () => this.jobs.load(),
-        error: (e) => this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
+        error: (e) =>
+          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
       });
   }
 }
-
-

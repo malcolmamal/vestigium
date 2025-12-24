@@ -47,8 +47,8 @@ describe('EntriesStore', () => {
 
   it('should load entries on init', fakeAsync(() => {
     TestBed.flushEffects();
-    tick(); 
-    
+    tick();
+
     expect(apiSpy.listEntries).toHaveBeenCalled();
     expect(store.items().length).toBe(1);
     expect(store.items()[0].title).toBe('Test Entry');
@@ -57,7 +57,7 @@ describe('EntriesStore', () => {
 
   it('should handle load error', fakeAsync(() => {
     apiSpy.listEntries.mockReturnValue(throwError(() => new Error('API Error')));
-    
+
     // Trigger reload
     store.refresh();
     TestBed.flushEffects();
@@ -76,9 +76,11 @@ describe('EntriesStore', () => {
     TestBed.flushEffects();
     tick();
 
-    expect(apiSpy.listEntries).toHaveBeenCalledWith(expect.objectContaining({
-      tags: ['new-tag']
-    }));
+    expect(apiSpy.listEntries).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tags: ['new-tag']
+      })
+    );
     expect(store.page()).toBe(0); // Should reset page
   }));
 

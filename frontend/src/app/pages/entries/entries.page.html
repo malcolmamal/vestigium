@@ -26,7 +26,12 @@
     } @else {
       <div class="tagPills">
         @for (t of popularTags(); track t.name!) {
-          <button class="pill" type="button" [class.on]="store.tagFilter().includes(t.name!)" (click)="applyPopularTag(t.name!)">
+          <button
+            class="pill"
+            type="button"
+            [class.on]="store.tagFilter().includes(t.name!)"
+            (click)="applyPopularTag(t.name!)"
+          >
             {{ t.name }} <span class="count">{{ t.count }}</span>
           </button>
         }
@@ -52,7 +57,12 @@
     } @else {
       <div class="listPills">
         @for (l of lists.items(); track l.id!) {
-          <button class="pill" type="button" [class.on]="store.listFilter().includes(l.id!)" (click)="toggleList(l)">
+          <button
+            class="pill"
+            type="button"
+            [class.on]="store.listFilter().includes(l.id!)"
+            (click)="toggleList(l)"
+          >
             {{ l.name }} <span class="count">{{ l.entryCount }}</span>
           </button>
         }
@@ -67,7 +77,11 @@
         @if (filtersCollapsed() && store.hasFilters()) {
           <span class="muted">{{ filterSummary() }}</span>
         }
-        <button class="button secondary" type="button" (click)="filtersCollapsed.set(!filtersCollapsed())">
+        <button
+          class="button secondary"
+          type="button"
+          (click)="filtersCollapsed.set(!filtersCollapsed())"
+        >
           {{ filtersCollapsed() ? 'Show' : 'Hide' }}
         </button>
       </div>
@@ -154,7 +168,14 @@
         </label>
 
         <div class="pager">
-          <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
+          <button
+            class="button secondary"
+            type="button"
+            (click)="prevPage()"
+            [disabled]="store.page() === 0"
+          >
+            Prev
+          </button>
           <div class="muted">Page {{ store.page() + 1 }}</div>
           <button
             class="button secondary"
@@ -204,9 +225,21 @@
         }
       </div>
       <div class="pager bottom">
-        <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
+        <button
+          class="button secondary"
+          type="button"
+          (click)="prevPage()"
+          [disabled]="store.page() === 0"
+        >
+          Prev
+        </button>
         <div class="muted">Page {{ store.page() + 1 }}</div>
-        <button class="button secondary" type="button" (click)="nextPage()" [disabled]="store.items().length < store.pageSize()">
+        <button
+          class="button secondary"
+          type="button"
+          (click)="nextPage()"
+          [disabled]="store.items().length < store.pageSize()"
+        >
           Next
         </button>
       </div>
@@ -218,7 +251,5 @@
 </section>
 
 @if (activeVideoId()) {
-  <app-video-modal [videoId]="activeVideoId()!" (close)="closeVideo()" />
+  <app-video-modal [videoId]="activeVideoId()!" (closeModal)="closeVideo()" />
 }
-
-

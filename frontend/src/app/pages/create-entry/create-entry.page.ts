@@ -70,7 +70,8 @@ export class CreateEntryPage {
 
     const fd = new FormData();
     fd.set('url', this.form.controls.url.value);
-    if (this.form.controls.title.value.trim()) fd.set('title', this.form.controls.title.value.trim());
+    if (this.form.controls.title.value.trim())
+      fd.set('title', this.form.controls.title.value.trim());
     if (this.form.controls.description.value.trim())
       fd.set('description', this.form.controls.description.value.trim());
     for (const t of this.tags()) fd.append('tags', t);
@@ -89,5 +90,3 @@ export class CreateEntryPage {
     });
   }
 }
-
-

@@ -17,7 +17,7 @@
   }
 
   @if (showVideo() && youtubeId()) {
-    <app-video-modal [videoId]="youtubeId()!" (close)="closeVideo()" />
+    <app-video-modal [videoId]="youtubeId()!" (closeModal)="closeVideo()" />
   }
 
   @if (error()) {
@@ -56,12 +56,21 @@
             <button class="button" type="button" (click)="toggleImportant()">
               {{ data()!.entry!.important ? 'Unmark important' : 'Mark important' }}
             </button>
-            <button class="button" type="button" (click)="markVisited()" [disabled]="!!data()!.entry!.visitedAt">
+            <button
+              class="button"
+              type="button"
+              (click)="markVisited()"
+              [disabled]="!!data()!.entry!.visitedAt"
+            >
               Mark visited
             </button>
             <button class="button" type="button" (click)="enqueueEnrich()">Update via LLM</button>
-            <button class="button" type="button" (click)="enqueueThumbnail()">Regenerate thumbnail</button>
-            <button class="button danger" type="button" (click)="deleteEntry()">Delete entry</button>
+            <button class="button" type="button" (click)="enqueueThumbnail()">
+              Regenerate thumbnail
+            </button>
+            <button class="button danger" type="button" (click)="deleteEntry()">
+              Delete entry
+            </button>
           </div>
           @if (actionHint()) {
             <div class="muted">{{ actionHint() }}</div>
@@ -72,7 +81,11 @@
       <section class="jobs">
         <div class="jobsHeader">
           <h2>Jobs</h2>
-          <button class="button small secondary" type="button" (click)="jobsCollapsed.set(!jobsCollapsed())">
+          <button
+            class="button small secondary"
+            type="button"
+            (click)="jobsCollapsed.set(!jobsCollapsed())"
+          >
             {{ jobsCollapsed() ? 'Show' : 'Hide' }}
           </button>
         </div>
@@ -113,7 +126,12 @@
                   </div>
                   <div class="jobActions">
                     @if (j.status === 'PENDING') {
-                      <button class="button small" type="button" (click)="cancelJob(j)" [disabled]="jobActionBusy() === j.id">
+                      <button
+                        class="button small"
+                        type="button"
+                        (click)="cancelJob(j)"
+                        [disabled]="jobActionBusy() === j.id"
+                      >
                         Cancel
                       </button>
                     }
@@ -198,7 +216,12 @@
         } @else {
           <div class="listPills">
             @for (l of allLists(); track l.id) {
-              <button class="pill" type="button" [class.on]="selectedListIds().includes(l.id!)" (click)="toggleList(l)">
+              <button
+                class="pill"
+                type="button"
+                [class.on]="selectedListIds().includes(l.id!)"
+                (click)="toggleList(l)"
+              >
                 {{ l.name }}
               </button>
             }
@@ -214,7 +237,9 @@
           <ul class="list">
             @for (a of data()!.attachments; track a.id) {
               <li>
-                <a [href]="a.downloadUrl" target="_blank" rel="noreferrer"> {{ a.originalName }} ({{ a.kind }}) </a>
+                <a [href]="a.downloadUrl" target="_blank" rel="noreferrer">
+                  {{ a.originalName }} ({{ a.kind }})
+                </a>
               </li>
             }
           </ul>
@@ -223,5 +248,3 @@
     </div>
   }
 </section>
-
-

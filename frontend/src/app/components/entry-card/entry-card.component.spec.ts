@@ -27,11 +27,7 @@ describe('EntryCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [EntryCardComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideRouter([]),
-      ]
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
     }).compileComponents();
 
     fixture = TestBed.createComponent(EntryCardComponent);
@@ -47,9 +43,21 @@ describe('EntryCardComponent', () => {
   });
 
   it('should filter jobs for this entry from activeJobs input', () => {
-    const job1: JobResponse = { id: 'j1', entryId: '1', status: 'PENDING', type: 'ENRICH_ENTRY', createdAt: '' };
-    const job2: JobResponse = { id: 'j2', entryId: '2', status: 'PENDING', type: 'ENRICH_ENTRY', createdAt: '' };
-    
+    const job1: JobResponse = {
+      id: 'j1',
+      entryId: '1',
+      status: 'PENDING',
+      type: 'ENRICH_ENTRY',
+      createdAt: ''
+    };
+    const job2: JobResponse = {
+      id: 'j2',
+      entryId: '2',
+      status: 'PENDING',
+      type: 'ENRICH_ENTRY',
+      createdAt: ''
+    };
+
     fixture.componentRef.setInput('activeJobs', [job1, job2]);
     fixture.detectChanges();
 
@@ -59,12 +67,18 @@ describe('EntryCardComponent', () => {
 
   it('should refresh thumbnail version when thumb job disappears', () => {
     const initialVersion = component.thumbVersion();
-    const thumbJob: JobResponse = { id: 'j1', entryId: '1', status: 'RUNNING', type: 'REGENERATE_THUMBNAIL', createdAt: '' };
-    
+    const thumbJob: JobResponse = {
+      id: 'j1',
+      entryId: '1',
+      status: 'RUNNING',
+      type: 'REGENERATE_THUMBNAIL',
+      createdAt: ''
+    };
+
     // Set active job
     fixture.componentRef.setInput('activeJobs', [thumbJob]);
     fixture.detectChanges();
-    
+
     // Job completes (disappears from input)
     fixture.componentRef.setInput('activeJobs', []);
     fixture.detectChanges();
@@ -106,11 +120,11 @@ describe('EntryCardComponent', () => {
 
   it('should compute busy state based on busyAction input', () => {
     expect(component.busy()).toBe(false);
-    
+
     fixture.componentRef.setInput('busyAction', 'enrich');
     fixture.detectChanges();
     expect(component.busy()).toBe(true);
-    
+
     fixture.componentRef.setInput('busyAction', null);
     fixture.detectChanges();
     expect(component.busy()).toBe(false);

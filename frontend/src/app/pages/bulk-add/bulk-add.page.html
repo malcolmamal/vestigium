@@ -4,7 +4,9 @@
     <h1>Bulk add</h1>
   </header>
 
-  <p class="muted">Paste one URL per line. We’ll create entries and queue enrichment/thumbnail jobs.</p>
+  <p class="muted">
+    Paste one URL per line. We’ll create entries and queue enrichment/thumbnail jobs.
+  </p>
 
   <textarea
     class="textArea"
@@ -15,7 +17,12 @@
   ></textarea>
 
   <div class="actions">
-    <button class="button" type="button" (click)="submit()" [disabled]="saving() || parsedUrls().length === 0">
+    <button
+      class="button"
+      type="button"
+      (click)="submit()"
+      [disabled]="saving() || parsedUrls().length === 0"
+    >
       Add {{ parsedUrls().length }} URL(s)
     </button>
     @if (saving()) {
@@ -31,7 +38,9 @@
         <div class="errListTitle">Errors:</div>
         <ul class="errList">
           @for (e of result()!.errors; track e.url) {
-            <li><b>{{ e.url }}</b> — {{ e.error }}</li>
+            <li>
+              <b>{{ e.url }}</b> — {{ e.error }}
+            </li>
           }
         </ul>
       }
@@ -42,5 +51,3 @@
     <div class="errorBox">{{ error() }}</div>
   }
 </section>
-
-

@@ -35,7 +35,12 @@
 
           <div class="jobActions">
             @if (j.status === 'PENDING') {
-              <button class="button small" type="button" (click)="cancelJob(j)" [disabled]="jobActionBusy() === j.id">
+              <button
+                class="button small"
+                type="button"
+                (click)="cancelJob(j)"
+                [disabled]="jobActionBusy() === j.id"
+              >
                 Cancel
               </button>
             }
@@ -53,5 +58,3 @@
     </div>
   }
 </section>
-
-

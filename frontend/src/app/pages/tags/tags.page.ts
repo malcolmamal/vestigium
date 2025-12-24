@@ -56,5 +56,3 @@ export class TagsPage {
     void this.router.navigate(['/entries'], { queryParams: { tags: next } });
   }
 }
-
-

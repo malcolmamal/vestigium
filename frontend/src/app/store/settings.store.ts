@@ -32,5 +32,3 @@ export class SettingsStore {
     writeBool(KEY_SHOW_NSFW, !!next);
   }
 }
-
-

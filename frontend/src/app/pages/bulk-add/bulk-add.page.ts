@@ -21,7 +21,11 @@ export class BulkAddPage {
   readonly raw = signal('');
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
-  readonly result = signal<{ createdCount: number; skippedCount: number; errors: { url: string; error: string }[] } | null>(null);
+  readonly result = signal<{
+    createdCount: number;
+    skippedCount: number;
+    errors: { url: string; error: string }[];
+  } | null>(null);
 
   parsedUrls() {
     const lines = this.raw()
@@ -53,5 +57,3 @@ export class BulkAddPage {
       });
   }
 }
-
-

@@ -17,4 +17,3 @@ export type { CreateListRequest } from '../../../api/models/create-list-request'
 export type { ReplaceEntryListsRequest } from '../../../api/models/replace-entry-lists-request';
 export type { AttachmentResponse } from '../../../api/models/attachment-response';
 export type { Item } from '../../../api/models/item';
-

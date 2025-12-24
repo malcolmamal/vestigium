@@ -108,9 +108,36 @@ npx playwright install chromium
 
 ---
 
-## Development Rules & Conventions
+## Real-time Updates (WebSockets)
 
-- **Models**: Always use models from the generated API. Import them from `../../models` (which maps to `frontend/src/app/models/index.ts`).
-- **Styling**: Use the existing design system (translucent cards, blur effects, CSS variables).
-- **State Management**: Use Angular Signals and the custom Store pattern (e.g., `EntriesStore`).
-- **Polling**: Keep polling intervals at **1.5 seconds** (1500ms) for consistency.
+The application uses STOMP over WebSockets for real-time job updates.
+- **Backend**: Configured in `WebSocketConfig.java`. Pushes to `/topic/jobs`.
+- **Frontend**: Managed by `WebSocketService` and consumed by `JobsStore`.
+
+This replaces manual polling for background jobs (enrichment, thumbnails).
+
+---
+
+## YouTube Integration
+
+A dedicated utility `extractYouTubeId` in `frontend/src/app/utils/youtube.ts` handles ID extraction from various YouTube URL formats (standard, shortened, shorts, embed).
+Unit tests in `youtube.spec.ts` ensure all formats are supported.
+
+---
+
+## Frontend Architecture
+
+### State Management (Store Pattern)
+We use a custom **Store pattern** built on Angular Signals. 
+- **Centralized State**: Each store holds a private `state` signal containing the entire store's state.
+- **Atomic Updates**: Use a `patchState(patch: Partial<State>)` method to update the state.
+- **Selectors**: Use `computed` signals to expose specific parts of the state.
+- **Triggering Effects**: Use `toObservable(computedFilterState)` to trigger side-effects (like API reloads). 
+  - **CRITICAL**: The `filterState` computed must only depend on the fields that *should* trigger a reload. Do not access result fields like `loading` or `items` inside it, as this will cause an infinite loop.
+
+### Component Architecture
+- **Smart Components (Pages)**: Located in `src/app/pages`. They inject stores and services, handle business logic, and orchestrate the flow.
+- **Dumb Components (Presentation)**: Located in `src/app/components`. They receive data via `input()` signals and notify parents via `output()`. They **must not** inject stores or services directly.
+- **Change Detection**: All components should use `ChangeDetectionStrategy.OnPush`.
+
+---

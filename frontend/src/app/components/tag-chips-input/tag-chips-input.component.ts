@@ -99,5 +99,3 @@ export class TagChipsInputComponent {
     this.activeIndex.set(0);
   }
 }
-
-

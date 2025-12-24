@@ -68,4 +68,3 @@ describe('JobsStore', () => {
     expect(store.items()[0].id).toBe('2');
   });
 });
-

@@ -19,5 +19,3 @@ export class SettingsPage {
     this.settings.setShowNsfw(v);
   }
 }
-
-

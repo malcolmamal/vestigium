@@ -30,7 +30,9 @@ export class EntriesPage {
   readonly popularTagsError = signal<string | null>(null);
   readonly filtersCollapsed = signal(true);
   readonly activeVideoId = signal<string | null>(null);
-  readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>({});
+  readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>(
+    {}
+  );
 
   readonly tagSuggestions = signal<TagSuggestionResponse[]>([]);
   readonly tagSuggestionsLoading = signal(false);
@@ -87,7 +89,7 @@ export class EntriesPage {
   }
 
   onToggleImportant(id: string) {
-    const entry = this.store.items().find(e => e.id === id);
+    const entry = this.store.items().find((e) => e.id === id);
     if (!entry) return;
     this.updateBusy(id, 'important');
     this.api.patchEntry(id, { important: !entry.important }).subscribe({
@@ -111,7 +113,7 @@ export class EntriesPage {
   }
 
   private updateBusy(id: string, type: 'enrich' | 'thumb' | 'important' | 'delete' | null) {
-    this.busyStates.update(s => ({ ...s, [id]: type }));
+    this.busyStates.update((s) => ({ ...s, [id]: type }));
   }
 
   constructor() {
@@ -125,8 +127,8 @@ export class EntriesPage {
     const tags = this.route.snapshot.queryParamMap.getAll('tags');
     const legacyTag = this.route.snapshot.queryParamMap.get('tag');
     const initial = [...tags, ...(legacyTag ? [legacyTag] : [])]
-    .map((t) => (t ?? '').toString().trim().toLowerCase())
-    .filter((t) => t.length > 0);
+      .map((t) => (t ?? '').toString().trim().toLowerCase())
+      .filter((t) => t.length > 0);
     if (initial.length > 0) {
       this.store.setTagFilter(Array.from(new Set(initial)));
     }
@@ -136,7 +138,9 @@ export class EntriesPage {
     const t = tag.trim().toLowerCase();
     if (!t) return;
     const current = this.store.tagFilter();
-    const next = current.includes(t) ? current.filter((x) => x !== t) : Array.from(new Set([...current, t]));
+    const next = current.includes(t)
+      ? current.filter((x) => x !== t)
+      : Array.from(new Set([...current, t]));
     this.store.setTagFilter(next);
     void this.router.navigate(['/entries'], { queryParams: { tags: next } });
   }
@@ -194,5 +198,3 @@ export class EntriesPage {
     this.activeVideoId.set(null);
   }
 }
-
-

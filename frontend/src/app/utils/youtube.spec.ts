@@ -23,4 +23,3 @@ describe('YouTube Utility', () => {
     expect(extractYouTubeId('')).toBeNull();
   });
 });
-

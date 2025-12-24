@@ -19,9 +19,11 @@ public class JobRepository {
     private static final RowMapper<Job> JOB_ROW_MAPPER = new JobRowMapper();
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
-    public JobRepository(NamedParameterJdbcTemplate jdbc) {
+    public JobRepository(NamedParameterJdbcTemplate jdbc, org.springframework.context.ApplicationEventPublisher events) {
         this.jdbc = jdbc;
+        this.events = events;
     }
 
     public Job enqueue(String type, String entryId, String payloadJson) {
@@ -40,7 +42,9 @@ public class JobRepository {
                 """,
                 params
         );
-        return new Job(id, type, "PENDING", entryId, payloadJson, 0, null, null, null, now);
+        var job = new Job(id, type, "PENDING", entryId, payloadJson, 0, null, null, null, now);
+        events.publishEvent(new com.vestigium.events.JobUpdatedEvent(job));
+        return job;
     }
 
     /**
@@ -69,14 +73,18 @@ public class JobRepository {
         if (rows.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(rows.getFirst());
+        var job = rows.getFirst();
+        events.publishEvent(new com.vestigium.events.JobUpdatedEvent(job));
+        return Optional.of(job);
     }
 
     public void markSucceeded(String jobId) {
+        var finishedAt = InstantSql.nowIso();
         jdbc.update(
                 "UPDATE jobs SET status = 'SUCCEEDED', finished_at = :finishedAt WHERE id = :id",
-                Map.of("id", jobId, "finishedAt", InstantSql.nowIso())
+                Map.of("id", jobId, "finishedAt", finishedAt)
         );
+        getById(jobId).ifPresent(j -> events.publishEvent(new com.vestigium.events.JobUpdatedEvent(j)));
     }
 
     public void markFailed(String jobId, String errorMessage, boolean retry) {
@@ -89,16 +97,17 @@ public class JobRepository {
                     """,
                     Map.of("id", jobId, "err", errorMessage)
             );
-            return;
+        } else {
+            jdbc.update(
+                    """
+                    UPDATE jobs
+                    SET status = 'FAILED', last_error = :err, finished_at = :finishedAt
+                    WHERE id = :id
+                    """,
+                    Map.of("id", jobId, "err", errorMessage, "finishedAt", InstantSql.nowIso())
+            );
         }
-        jdbc.update(
-                """
-                UPDATE jobs
-                SET status = 'FAILED', last_error = :err, finished_at = :finishedAt
-                WHERE id = :id
-                """,
-                Map.of("id", jobId, "err", errorMessage, "finishedAt", InstantSql.nowIso())
-        );
+        getById(jobId).ifPresent(j -> events.publishEvent(new com.vestigium.events.JobUpdatedEvent(j)));
     }
 
     public Optional<Job> getById(String id) {

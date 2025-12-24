@@ -38,12 +38,7 @@ describe('VestigiumApiService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        VestigiumApiService,
-        Api,
-        provideHttpClient(),
-        provideHttpClientTesting()
-      ]
+      providers: [VestigiumApiService, Api, provideHttpClient(), provideHttpClientTesting()]
     });
 
     service = TestBed.inject(VestigiumApiService);
@@ -51,13 +46,14 @@ describe('VestigiumApiService', () => {
   });
 
   // Helper to mock API response
-  const mockApiResponse = (body: any) => of({
-    body,
-    headers: {},
-    status: 200,
-    statusText: 'OK',
-    url: ''
-  });
+  const mockApiResponse = (body: any) =>
+    of({
+      body,
+      headers: {},
+      status: 200,
+      statusText: 'OK',
+      url: ''
+    });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
@@ -68,7 +64,7 @@ describe('VestigiumApiService', () => {
     const mockResponse = { items: [], page: 0, pageSize: 20 };
     (apiFn.list as unknown as jest.Mock).mockReturnValue(mockApiResponse(mockResponse));
 
-    service.listEntries(params).subscribe(response => {
+    service.listEntries(params).subscribe((response) => {
       expect(response).toEqual(mockResponse);
       expect(apiFn.list).toHaveBeenCalledWith(
         expect.any(Object), // HttpClient
@@ -86,13 +82,9 @@ describe('VestigiumApiService', () => {
     const mockEntry = { entry: { id: '123' }, attachments: [] };
     (apiFn.get as unknown as jest.Mock).mockReturnValue(mockApiResponse(mockEntry));
 
-    service.getEntry('123').subscribe(response => {
+    service.getEntry('123').subscribe((response) => {
       expect(response).toEqual(mockEntry);
-      expect(apiFn.get).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(String),
-        { id: '123' }
-      );
+      expect(apiFn.get).toHaveBeenCalledWith(expect.any(Object), expect.any(String), { id: '123' });
       done();
     });
   });
@@ -102,13 +94,12 @@ describe('VestigiumApiService', () => {
     const mockEntry = { id: '123', title: 'New Title' };
     (apiFn.patch as unknown as jest.Mock).mockReturnValue(mockApiResponse(mockEntry));
 
-    service.patchEntry('123', patch).subscribe(response => {
+    service.patchEntry('123', patch).subscribe((response) => {
       expect(response).toEqual(mockEntry);
-      expect(apiFn.patch).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(String),
-        { id: '123', body: patch }
-      );
+      expect(apiFn.patch).toHaveBeenCalledWith(expect.any(Object), expect.any(String), {
+        id: '123',
+        body: patch
+      });
       done();
     });
   });
@@ -117,11 +108,9 @@ describe('VestigiumApiService', () => {
     (apiFn.delete$ as unknown as jest.Mock).mockReturnValue(mockApiResponse(null));
 
     service.deleteEntry('123').subscribe(() => {
-      expect(apiFn.delete$).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(String),
-        { id: '123' }
-      );
+      expect(apiFn.delete$).toHaveBeenCalledWith(expect.any(Object), expect.any(String), {
+        id: '123'
+      });
       done();
     });
   });
@@ -131,13 +120,11 @@ describe('VestigiumApiService', () => {
     const mockRes = { createdCount: 1, skippedCount: 0, errors: [] };
     (apiFn.bulkCreate as unknown as jest.Mock).mockReturnValue(mockApiResponse(mockRes));
 
-    service.bulkCreateEntries(urls).subscribe(response => {
+    service.bulkCreateEntries(urls).subscribe((response) => {
       expect(response).toEqual(mockRes);
-      expect(apiFn.bulkCreate).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(String),
-        { body: { urls } }
-      );
+      expect(apiFn.bulkCreate).toHaveBeenCalledWith(expect.any(Object), expect.any(String), {
+        body: { urls }
+      });
       done();
     });
   });
@@ -146,13 +133,12 @@ describe('VestigiumApiService', () => {
     const mockTags = ['apple', 'appricot'];
     (apiFn.search as unknown as jest.Mock).mockReturnValue(mockApiResponse(mockTags));
 
-    service.searchTags('app', 10).subscribe(response => {
+    service.searchTags('app', 10).subscribe((response) => {
       expect(response).toEqual(mockTags);
-      expect(apiFn.search).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(String),
-        { prefix: 'app', limit: 10 }
-      );
+      expect(apiFn.search).toHaveBeenCalledWith(expect.any(Object), expect.any(String), {
+        prefix: 'app',
+        limit: 10
+      });
       done();
     });
   });

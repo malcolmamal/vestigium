@@ -101,39 +101,43 @@ export class EntriesStore {
   });
 
   constructor() {
-    toObservable(this.filterState).pipe(
-      tap(() => {
-        if (this.items().length === 0) {
-          this.patchResults({ loading: true });
+    toObservable(this.filterState)
+      .pipe(
+        tap(() => {
+          if (this.items().length === 0) {
+            this.patchResults({ loading: true });
+          }
+          this.patchResults({ error: null });
+        }),
+        switchMap((state) => {
+          return this.api
+            .listEntries({
+              q: state.query.trim() || undefined,
+              tags: state.tagFilter,
+              listIds: state.listFilter,
+              important: state.importantOnly ?? undefined,
+              visited: state.visitedOnly ?? undefined,
+              includeNsfw: state.nsfw,
+              addedFrom: this.toIsoStartOfDay(state.addedFrom),
+              addedTo: this.toIsoEndOfDay(state.addedTo),
+              sort: state.sort,
+              page: state.page,
+              pageSize: state.pageSize
+            })
+            .pipe(
+              catchError((err) => {
+                this.patchResults({ error: err?.message ?? 'Failed to load entries' });
+                return of({ items: [] });
+              }),
+              finalize(() => this.patchResults({ loading: false }))
+            );
+        })
+      )
+      .subscribe((res) => {
+        if (res.items) {
+          this.patchResults({ items: res.items });
         }
-        this.patchResults({ error: null });
-      }),
-      switchMap(state => {
-        return this.api.listEntries({
-          q: state.query.trim() || undefined,
-          tags: state.tagFilter,
-          listIds: state.listFilter,
-          important: state.importantOnly ?? undefined,
-          visited: state.visitedOnly ?? undefined,
-          includeNsfw: state.nsfw,
-          addedFrom: this.toIsoStartOfDay(state.addedFrom),
-          addedTo: this.toIsoEndOfDay(state.addedTo),
-          sort: state.sort,
-          page: state.page,
-          pageSize: state.pageSize
-        }).pipe(
-          catchError(err => {
-            this.patchResults({ error: err?.message ?? 'Failed to load entries' });
-            return of({ items: [] });
-          }),
-          finalize(() => this.patchResults({ loading: false }))
-        );
-      })
-    ).subscribe(res => {
-      if (res.items) {
-        this.patchResults({ items: res.items });
-      }
-    });
+      });
   }
 
   private toIsoStartOfDay(dateYmd: string | null) {
@@ -156,8 +160,17 @@ export class EntriesStore {
     const resultPatch: Partial<EntriesResult> = {};
 
     const filterKeys: (keyof EntriesFilter)[] = [
-      'query', 'tagFilter', 'listFilter', 'importantOnly', 'visitedOnly', 
-      'addedFrom', 'addedTo', 'sort', 'page', 'pageSize', 'refreshToken'
+      'query',
+      'tagFilter',
+      'listFilter',
+      'importantOnly',
+      'visitedOnly',
+      'addedFrom',
+      'addedTo',
+      'sort',
+      'page',
+      'pageSize',
+      'refreshToken'
     ];
 
     for (const key of Object.keys(patch) as (keyof EntriesState)[]) {
@@ -169,15 +182,15 @@ export class EntriesStore {
     }
 
     if (Object.keys(filterPatch).length > 0) {
-      this.filters.update(f => ({ ...f, ...filterPatch }));
+      this.filters.update((f) => ({ ...f, ...filterPatch }));
     }
     if (Object.keys(resultPatch).length > 0) {
-      this.results.update(r => ({ ...r, ...resultPatch }));
+      this.results.update((r) => ({ ...r, ...resultPatch }));
     }
   }
 
   private patchResults(patch: Partial<EntriesResult>) {
-    this.results.update(r => ({ ...r, ...patch }));
+    this.results.update((r) => ({ ...r, ...patch }));
   }
 
   setQuery(query: string) {
@@ -226,13 +239,13 @@ export class EntriesStore {
 
   updateItem(id: string, patch: Partial<EntryResponse>) {
     this.patchResults({
-      items: this.results().items.map(item => item.id === id ? { ...item, ...patch } : item)
+      items: this.results().items.map((item) => (item.id === id ? { ...item, ...patch } : item))
     });
   }
 
   removeItem(id: string) {
     this.patchResults({
-      items: this.results().items.filter(item => item.id !== id)
+      items: this.results().items.filter((item) => item.id !== id)
     });
   }
 }

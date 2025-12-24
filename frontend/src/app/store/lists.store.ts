@@ -26,7 +26,7 @@ export class ListsStore {
   readonly items = computed(() => this.state().items);
 
   patchState(patch: Partial<ListsState>) {
-    this.state.update(s => ({ ...s, ...patch }));
+    this.state.update((s) => ({ ...s, ...patch }));
   }
 
   load() {
@@ -36,9 +36,8 @@ export class ListsStore {
       .pipe(finalize(() => this.patchState({ loading: false })))
       .subscribe({
         next: (items) => this.patchState({ items }),
-        error: (e) => this.patchState({ error: e?.error?.detail ?? e?.message ?? 'Failed to load lists' })
+        error: (e) =>
+          this.patchState({ error: e?.error?.detail ?? e?.message ?? 'Failed to load lists' })
       });
   }
 }
-
-

@@ -18,7 +18,12 @@
   @if (showSuggestions() && suggestions().length > 0) {
     <div class="suggestions" (mousedown)="$event.preventDefault()">
       @for (s of suggestions(); track s.name!; let i = $index) {
-        <button type="button" class="suggestion" [class.active]="i === activeIndex()" (click)="pickSuggestion(s.name!)">
+        <button
+          type="button"
+          class="suggestion"
+          [class.active]="i === activeIndex()"
+          (click)="pickSuggestion(s.name!)"
+        >
           <span class="sName">{{ s.name }}</span>
           <span class="sCount">{{ s.count }}</span>
         </button>
@@ -29,5 +34,3 @@
     <div class="hint">{{ hint() }}</div>
   }
 </div>
-
-
