@@ -1,0 +1,23 @@
+# Vestigium Coding Rules
+
+## Project Knowledge
+- **CRITICAL**: Before starting any task, read `docs/DEVELOPER.md` to understand the project structure, execution commands, and API generation workflow.
+- The project is a Spring Boot (Java 21) backend with an Angular 20 frontend.
+- Database: SQLite with Flyway migrations.
+
+## API & Models
+- **NEVER** edit files in `frontend/api/` manually. These are generated.
+- To update the API client: ensure backend is running -> `cd frontend` -> `npm run generate-api`.
+- Use re-exports in `frontend/src/app/models/index.ts` to provide a clean import interface for components.
+- When dealing with generated models, use non-null assertions (`!`) for fields that are functionally required but marked optional by the generator.
+
+## Frontend Development
+- Use **Angular Signals** for state management.
+- Prefer the **Store pattern** (injectable services with signals) for shared state.
+- Styles should follow the existing dark-mode, translucent aesthetic. Use SCSS.
+- All polling intervals should be kept at **1.5 seconds** (1500ms) for consistency.
+
+## Backend Development
+- Use **Java Records** for DTOs and Domain models.
+- Annotate DTO fields with `@NotNull` to document required fields.
+- New database changes **must** be implemented via Flyway migrations in `src/main/resources/db/migration`.

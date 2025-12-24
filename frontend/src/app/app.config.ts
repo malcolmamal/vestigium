@@ -2,6 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChang
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 
+import { provideApiConfiguration } from '../../api/api-configuration';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -9,6 +10,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideHttpClient(),
-    provideRouter(routes)
+    provideRouter(routes),
+    provideApiConfiguration('')
   ]
 };

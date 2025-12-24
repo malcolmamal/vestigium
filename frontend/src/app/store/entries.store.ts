@@ -1,7 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
-import type { EntryResponse } from '../models/entry.model';
+import type { EntryResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
 import { SettingsStore } from './settings.store';
 
@@ -94,7 +94,7 @@ export class EntriesStore {
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (res) => this.items.set(res.items),
+        next: (res) => this.items.set(res.items!),
         error: (e) => this.error.set(e?.message ?? 'Failed to load entries')
       });
   }

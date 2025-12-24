@@ -3,8 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
-import type { ListResponse } from '../../models/list.model';
-import type { TagSuggestionResponse } from '../../models/tag-suggestion.model';
+import type { ListResponse, TagSuggestionResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 import { ListsStore } from '../../store/lists.store';
@@ -70,7 +69,7 @@ export class EntriesPage {
 
   toggleList(list: ListResponse) {
     const current = this.store.listFilter();
-    const id = list.id;
+    const id = list.id!;
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
     this.store.setListFilter(next);
   }

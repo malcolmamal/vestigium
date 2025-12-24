@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
-import type { JobResponse } from './models/job.model';
+import type { JobResponse } from './models';
 import { VestigiumApiService } from './services/vestigium-api.service';
 
 @Component({
@@ -34,7 +34,10 @@ export class App {
 
   private loadJobs() {
     this.api.listJobs({ status: ['PENDING', 'RUNNING'], limit: 100 }).subscribe({
-      next: (jobs) => this.jobs.set(jobs),
+      next: (jobs) => {
+        // console.log('Jobs loaded:', jobs);
+        this.jobs.set(jobs || []);
+      },
       error: () => {}
     });
   }

@@ -1,25 +1,34 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { from, map, Observable, of, switchMap } from 'rxjs';
 
-import type { EntryDetailsResponse, EntryListResponse, EntryResponse, PatchEntryRequest } from '../models/entry.model';
-import type { JobResponse } from '../models/job.model';
-import type { EntryExportItem, ImportEntriesResponse } from '../models/import-export.model';
-import type { ListResponse } from '../models/list.model';
-import type { LlmRecommendRequest, LlmRecommendResponse } from '../models/recommendation.model';
-import type { TagSuggestionResponse } from '../models/tag-suggestion.model';
+import { Api } from '../../../api/api';
+import * as apiFn from '../../../api/functions';
+import { StrictHttpResponse } from '../../../api/strict-http-response';
+import type { EntryDetailsResponse } from '../../../api/models/entry-details-response';
+import type { EntryResponse } from '../../../api/models/entry-response';
+import type { JobResponse } from '../../../api/models/job-response';
+import type { ListResponse } from '../../../api/models/list-response';
+import type { TagSuggestionResponse } from '../../../api/models/tag-suggestion-response';
+import type { EntryExportItem } from '../../../api/models/entry-export-item';
+import type { ImportEntriesResponse } from '../../../api/models/import-entries-response';
+import type { LlmRecommendRequest } from '../../../api/models/llm-recommend-request';
+import type { LlmRecommendResponse } from '../../../api/models/llm-recommend-response';
+import type { PatchEntryRequest } from '../../../api/models/patch-entry-request';
 
 @Injectable({ providedIn: 'root' })
 export class VestigiumApiService {
   private readonly http = inject(HttpClient);
+  private readonly api = inject(Api);
 
   createEntry(formData: FormData) {
+    // FormData is not directly supported by the generated API, so we keep using HttpClient
     return this.http.post<EntryDetailsResponse>('/api/entries', formData);
   }
 
   bulkCreateEntries(urls: string[]) {
-    return this.http.post<{ createdCount: number; skippedCount: number; errors: { url: string; error: string }[] }>(
-      '/api/entries/bulk',
-      { urls }
+    return apiFn.bulkCreate(this.http, this.api.rootUrl, { body: { urls } }).pipe(
+      switchMap(unwrapBody)
     );
   }
 
@@ -36,117 +45,150 @@ export class VestigiumApiService {
     page?: number;
     pageSize?: number;
   }) {
-    let httpParams = new HttpParams();
-    if (params.q) httpParams = httpParams.set('q', params.q);
-    if (params.tags && params.tags.length > 0) {
-      for (const tag of params.tags) httpParams = httpParams.append('tags', tag);
-    }
-    if (params.listIds && params.listIds.length > 0) {
-      for (const id of params.listIds) httpParams = httpParams.append('listId', id);
-    }
-    if (params.important !== undefined) httpParams = httpParams.set('important', String(params.important));
-    if (params.visited !== undefined) httpParams = httpParams.set('visited', String(params.visited));
-    if (params.includeNsfw !== undefined) httpParams = httpParams.set('includeNsfw', String(params.includeNsfw));
-    if (params.addedFrom) httpParams = httpParams.set('addedFrom', params.addedFrom);
-    if (params.addedTo) httpParams = httpParams.set('addedTo', params.addedTo);
-    if (params.sort) httpParams = httpParams.set('sort', params.sort);
-    httpParams = httpParams.set('page', String(params.page ?? 0));
-    httpParams = httpParams.set('pageSize', String(params.pageSize ?? 20));
-
-    return this.http.get<EntryListResponse>('/api/entries', { params: httpParams });
+    return apiFn.list(this.http, this.api.rootUrl, {
+      q: params.q,
+      tags: params.tags,
+      listId: params.listIds,
+      important: params.important,
+      visited: params.visited,
+      includeNsfw: params.includeNsfw,
+      addedFrom: params.addedFrom,
+      addedTo: params.addedTo,
+      sort: params.sort,
+      page: params.page ?? 0,
+      pageSize: params.pageSize ?? 20
+    }).pipe(switchMap(unwrapBody));
   }
 
   getEntry(id: string) {
-    return this.http.get<EntryDetailsResponse>(`/api/entries/${encodeURIComponent(id)}`);
+    return apiFn.get(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   patchEntry(id: string, patch: PatchEntryRequest) {
-    return this.http.patch(`/api/entries/${encodeURIComponent(id)}`, patch);
+    return apiFn.patch(this.http, this.api.rootUrl, { id, body: patch }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   markVisited(id: string) {
-    return this.http.post<void>(`/api/entries/${encodeURIComponent(id)}/visited`, {});
+    return apiFn.markVisited(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   enqueueEnrich(id: string) {
-    return this.http.post<void>(`/api/entries/${encodeURIComponent(id)}/enqueue-enrich`, {});
+    return apiFn.enqueueEnrich(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   enqueueThumbnail(id: string) {
-    return this.http.post<void>(`/api/entries/${encodeURIComponent(id)}/enqueue-thumbnail`, {});
+    return apiFn.enqueueThumbnail(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   listJobs(params: { entryId?: string; status?: string[]; limit?: number }) {
-    let httpParams = new HttpParams();
-    if (params.entryId) httpParams = httpParams.set('entryId', params.entryId);
-    if (params.status && params.status.length > 0) {
-      for (const s of params.status) httpParams = httpParams.append('status', s);
-    }
-    if (params.limit !== undefined) httpParams = httpParams.set('limit', String(params.limit));
-    return this.http.get<JobResponse[]>('/api/jobs', { params: httpParams });
+    return apiFn.list1(this.http, this.api.rootUrl, {
+      entryId: params.entryId,
+      status: params.status,
+      limit: params.limit
+    }).pipe(switchMap(unwrapBody));
   }
 
   cancelJob(id: string) {
-    return this.http.post<void>(`/api/jobs/${encodeURIComponent(id)}/cancel`, {});
+    return apiFn.cancel(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   deleteJob(id: string) {
-    return this.http.delete<void>(`/api/jobs/${encodeURIComponent(id)}`);
+    return apiFn.delete1(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   deleteEntry(id: string) {
-    return this.http.delete<void>(`/api/entries/${encodeURIComponent(id)}`);
+    return apiFn.delete$(this.http, this.api.rootUrl, { id }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   exportEntries() {
-    return this.http.get<EntryExportItem[]>('/api/entries/export');
+    return apiFn.exportEntries(this.http, this.api.rootUrl).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   importEntries(mode: 'skip' | 'update', items: EntryExportItem[]) {
-    return this.http.post<ImportEntriesResponse>('/api/entries/import', { mode, items });
+    return apiFn.importEntries(this.http, this.api.rootUrl, { body: { mode, items } }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   listLists() {
-    return this.http.get<ListResponse[]>('/api/lists');
+    return apiFn.listAll(this.http, this.api.rootUrl).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   createList(name: string) {
-    return this.http.post<ListResponse>('/api/lists', { name });
+    return apiFn.create(this.http, this.api.rootUrl, { body: { name } }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   deleteList(id: string, force = false) {
-    const params = new HttpParams().set('force', String(force));
-    return this.http.delete<void>(`/api/lists/${encodeURIComponent(id)}`, { params });
+    return apiFn.delete2(this.http, this.api.rootUrl, { id, force }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   getEntryLists(entryId: string) {
-    return this.http.get<ListResponse[]>(`/api/entries/${encodeURIComponent(entryId)}/lists`);
+    return apiFn.lists(this.http, this.api.rootUrl, { id: entryId }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   setEntryLists(entryId: string, listIds: string[]) {
-    return this.http.post<void>(`/api/entries/${encodeURIComponent(entryId)}/lists`, { listIds });
+    return apiFn.replaceLists(this.http, this.api.rootUrl, { id: entryId, body: { listIds } }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   searchTags(prefix: string, limit = 20) {
-    const params = new HttpParams().set('prefix', prefix).set('limit', String(limit));
-    return this.http.get<string[]>('/api/tags', { params });
+    return apiFn.search(this.http, this.api.rootUrl, { prefix, limit }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   suggestTags(prefix: string, limit = 20) {
-    const params = new HttpParams().set('prefix', prefix).set('limit', String(limit));
-    return this.http.get<TagSuggestionResponse[]>('/api/tags/suggest', { params });
+    return apiFn.suggest(this.http, this.api.rootUrl, { prefix, limit }).pipe(
+      switchMap(unwrapBody)
+    );
   }
 
   getRandomRecommendations(params: { limit?: number; includeNsfw?: boolean }) {
-    let httpParams = new HttpParams();
-    httpParams = httpParams.set('limit', String(params.limit ?? 20));
-    if (params.includeNsfw !== undefined) httpParams = httpParams.set('includeNsfw', String(params.includeNsfw));
-    return this.http.get<EntryResponse[]>('/api/recommendations/random', { params: httpParams });
+    return apiFn.random(this.http, this.api.rootUrl, {
+      limit: params.limit ?? 20,
+      includeNsfw: params.includeNsfw
+    }).pipe(switchMap(unwrapBody));
   }
 
   getLlmRecommendations(body: LlmRecommendRequest) {
-    return this.http.post<LlmRecommendResponse>('/api/recommendations/llm', body ?? {});
+    return apiFn.llm(this.http, this.api.rootUrl, { body }).pipe(
+      switchMap(unwrapBody)
+    );
   }
+}
+
+function unwrapBody<T>(r: StrictHttpResponse<T>): Observable<T> {
+  if (r.body instanceof Blob) {
+    return from(r.body.text().then((text) => (text ? JSON.parse(text) : null)));
+  }
+  return of(r.body);
 }
 
 

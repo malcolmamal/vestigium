@@ -63,9 +63,9 @@
     @if (entry().description) {
       <div class="desc">{{ entry().description }}</div>
     }
-    @if (entry().tags.length > 0) {
+    @if (entry().tags!.length > 0) {
       <div class="tags">
-        @for (tag of entry().tags; track tag) {
+        @for (tag of entry().tags!; track tag) {
           <span class="tag">{{ tag }}</span>
         }
       </div>

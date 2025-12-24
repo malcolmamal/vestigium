@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
-import type { ListResponse } from '../../models/list.model';
+import type { ListResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 import { ListsStore } from '../../store/lists.store';
@@ -42,11 +42,11 @@ export class ListsPage {
 
   delete(list: ListResponse) {
     this.error.set(null);
-    this.api.deleteList(list.id, false).subscribe({
+    this.api.deleteList(list.id!, false).subscribe({
       next: () => this.lists.load(),
       error: () => {
         if (confirm(`Delete list "${list.name}"? It has ${list.entryCount} linked entries.`)) {
-          this.api.deleteList(list.id, true).subscribe({
+          this.api.deleteList(list.id!, true).subscribe({
             next: () => this.lists.load(),
             error: (e2) => this.error.set(e2?.error?.detail ?? e2?.message ?? 'Failed to delete list')
           });
@@ -56,7 +56,7 @@ export class ListsPage {
   }
 
   addToEntriesFilter(list: ListResponse) {
-    const next = Array.from(new Set([...this.entriesStore.listFilter(), list.id]));
+    const next = Array.from(new Set([...this.entriesStore.listFilter(), list.id!])) as string[];
     this.entriesStore.setListFilter(next);
     void this.router.navigate(['/entries']);
   }

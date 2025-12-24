@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import type { TagSuggestionResponse } from '../../models/tag-suggestion.model';
+import type { TagSuggestionResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { EntryExportItem } from '../../models/import-export.model';
+import type { EntryExportItem } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 
@@ -82,7 +82,7 @@ export class ImportExportPage {
 
     this.api.importEntries(this.mode(), items).subscribe({
       next: (res) => {
-        this.importResult.set(res);
+        this.importResult.set(res as any);
         this.entriesStore.refresh();
         this.busy.set(false);
       },

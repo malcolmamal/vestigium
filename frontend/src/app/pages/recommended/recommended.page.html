@@ -72,18 +72,18 @@
     <div class="errorBox">{{ error() }}</div>
   }
 
-  @if (loading() && items().length === 0 && llmItems().length === 0) {
+  @if (loading() && items().length === 0 && llmItems()!.length === 0) {
     <div class="muted">Loading…</div>
-  } @else if (items().length === 0 && llmItems().length === 0) {
+  } @else if (items().length === 0 && llmItems()!.length === 0) {
     <div class="muted">No recommendations found.</div>
   } @else {
     <div class="grid">
       @for (e of items(); track e.id) {
         <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
       }
-      @for (r of llmItems(); track r.entry.id) {
+      @for (r of llmItems()!; track r.entry!.id) {
         <div class="llmCard">
-          <app-entry-card [entry]="r.entry" (changed)="onCardChanged($event)" />
+          <app-entry-card [entry]="r.entry!" (changed)="onCardChanged($event)" />
           @if (r.reason) {
             <div class="llmReason">{{ r.reason }}</div>
           }

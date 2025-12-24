@@ -25,8 +25,8 @@
       <div class="muted">No tags yet.</div>
     } @else {
       <div class="tagPills">
-        @for (t of popularTags(); track t.name) {
-          <button class="pill" type="button" [class.on]="store.tagFilter().includes(t.name)" (click)="applyPopularTag(t.name)">
+        @for (t of popularTags(); track t.name!) {
+          <button class="pill" type="button" [class.on]="store.tagFilter().includes(t.name!)" (click)="applyPopularTag(t.name!)">
             {{ t.name }} <span class="count">{{ t.count }}</span>
           </button>
         }
@@ -51,8 +51,8 @@
       <div class="muted">No lists yet.</div>
     } @else {
       <div class="listPills">
-        @for (l of lists.items(); track l.id) {
-          <button class="pill" type="button" [class.on]="store.listFilter().includes(l.id)" (click)="toggleList(l)">
+        @for (l of lists.items(); track l.id!) {
+          <button class="pill" type="button" [class.on]="store.listFilter().includes(l.id!)" (click)="toggleList(l)">
             {{ l.name }} <span class="count">{{ l.entryCount }}</span>
           </button>
         }

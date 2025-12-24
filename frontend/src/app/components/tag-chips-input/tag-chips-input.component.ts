@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
-import type { TagSuggestionResponse } from '../../models/tag-suggestion.model';
+import type { TagSuggestionResponse } from '../../models';
 import { finalize } from 'rxjs';
 
 @Component({
@@ -55,7 +55,7 @@ export class TagChipsInputComponent {
         const idx = this.activeIndex();
         const item = this.suggestions().at(idx);
         if (item) {
-          this.pickSuggestion(item.name);
+          this.pickSuggestion(item.name!);
           return;
         }
       }
@@ -123,7 +123,7 @@ export class TagChipsInputComponent {
         .subscribe({
           next: (items) => {
             const selected = new Set(this.tags());
-            const filtered = items.filter((s) => !selected.has(s.name));
+            const filtered = items.filter((s) => !selected.has(s.name!));
             this.suggestions.set(filtered);
             this.activeIndex.set(0);
           },

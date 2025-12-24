@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
-import type { EntryResponse } from '../../models/entry.model';
-import type { JobResponse } from '../../models/job.model';
+import type { EntryResponse, JobResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 
@@ -39,7 +38,7 @@ export class EntryCardComponent {
 
   constructor() {
     effect(() => {
-      const id = this.entry().id;
+      const id = this.entry().id!;
       this.loadJobs(id);
       this.startPolling(id);
     }, { allowSignalWrites: true });
@@ -65,7 +64,7 @@ export class EntryCardComponent {
     this.api.listJobs({ entryId, status: ['PENDING', 'RUNNING'] }).subscribe({
       next: (jobs) => {
         const prevThumbCount = this.thumbJobs().length;
-        this.jobs.set(jobs);
+        this.jobs.set(jobs || []);
         const currThumbCount = this.thumbJobs().length;
         
         // If thumbnail jobs dropped from >0 to 0, refresh the thumbnail
@@ -83,7 +82,7 @@ export class EntryCardComponent {
 
   enqueueEnrich(evt: MouseEvent) {
     this.stop(evt);
-    const id = this.entry().id;
+    const id = this.entry().id!;
     this.busyAction.set('enrich');
     this.api.enqueueEnrich(id).subscribe({
       next: () => {
@@ -97,7 +96,7 @@ export class EntryCardComponent {
 
   enqueueThumbnail(evt: MouseEvent) {
     this.stop(evt);
-    const id = this.entry().id;
+    const id = this.entry().id!;
     this.busyAction.set('thumb');
     this.api.enqueueThumbnail(id).subscribe({
       next: () => {
@@ -113,10 +112,10 @@ export class EntryCardComponent {
     this.stop(evt);
     const e = this.entry();
     this.busyAction.set('important');
-    this.api.patchEntry(e.id, { important: !e.important }).subscribe({
+    this.api.patchEntry(e.id!, { important: !e.important }).subscribe({
       next: () => {
         this.entriesStore.refresh();
-        this.changed.emit({ kind: 'updated', entryId: e.id });
+        this.changed.emit({ kind: 'updated', entryId: e.id! });
         this.busyAction.set(null);
       },
       error: () => this.busyAction.set(null)
@@ -128,10 +127,10 @@ export class EntryCardComponent {
     const e = this.entry();
     if (!confirm(`Delete entry?\n\n${e.title || e.url}`)) return;
     this.busyAction.set('delete');
-    this.api.deleteEntry(e.id).subscribe({
+    this.api.deleteEntry(e.id!).subscribe({
       next: () => {
         this.entriesStore.refresh();
-        this.changed.emit({ kind: 'deleted', entryId: e.id });
+        this.changed.emit({ kind: 'deleted', entryId: e.id! });
         this.busyAction.set(null);
       },
       error: () => this.busyAction.set(null)

@@ -4,9 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
-import type { EntryDetailsResponse } from '../../models/entry.model';
-import type { JobResponse } from '../../models/job.model';
-import type { ListResponse } from '../../models/list.model';
+import type { EntryDetailsResponse, JobResponse, ListResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 
@@ -69,13 +67,13 @@ export class EntryDetailsPage {
   readonly thumbnailUrl = computed(() => {
     const d = this.data();
     if (!d) return null;
-    return `${d.entry.thumbnailUrl}?v=${this.thumbVersion()}`;
+    return `${d.entry!.thumbnailUrl!}?v=${this.thumbVersion()}`;
   });
   readonly thumbModalUrl = computed(() => {
     const d = this.data();
     if (!d) return null;
-    const baseUrl = d.entry.thumbnailLargeUrl || d.entry.thumbnailUrl;
-    const separator = baseUrl.includes('?') ? '&' : '?';
+    const baseUrl = d.entry!.thumbnailLargeUrl! || d.entry!.thumbnailUrl!;
+    const separator = baseUrl!.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}v=${this.thumbVersion()}`;
   });
 
@@ -109,10 +107,10 @@ export class EntryDetailsPage {
       .subscribe({
         next: (res) => {
           this.data.set(res);
-          this.form.controls.title.setValue(res.entry.title ?? '');
-          this.form.controls.description.setValue(res.entry.description ?? '');
-          this.form.controls.detailedDescription.setValue(res.entry.detailedDescription ?? '');
-          this.tags.set(res.entry.tags ?? []);
+          this.form.controls.title.setValue(res.entry!.title ?? '');
+          this.form.controls.description.setValue(res.entry!.description ?? '');
+          this.form.controls.detailedDescription.setValue(res.entry!.detailedDescription ?? '');
+          this.tags.set(res.entry!.tags! ?? []);
           this.loadLists(id);
         },
         error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to load entry')
@@ -127,9 +125,9 @@ export class EntryDetailsPage {
 
     this.api
       .patchEntry(id, {
-        title: this.form.controls.title.value.trim() || null,
-        description: this.form.controls.description.value.trim() || null,
-        detailedDescription: this.form.controls.detailedDescription.value.trim() || null
+        title: this.form.controls.title.value.trim() || undefined,
+        description: this.form.controls.description.value.trim() || undefined,
+        detailedDescription: this.form.controls.detailedDescription.value.trim() || undefined
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
@@ -261,7 +259,7 @@ export class EntryDetailsPage {
       error: () => this.listsError.set('Failed to load lists')
     });
     this.api.getEntryLists(entryId).subscribe({
-      next: (sel) => this.selectedListIds.set(sel.map((x) => x.id)),
+      next: (sel) => this.selectedListIds.set(sel.map((x) => x.id!)),
       error: () => this.listsError.set('Failed to load entry lists')
     });
   }
@@ -270,8 +268,8 @@ export class EntryDetailsPage {
     const id = this.id();
     if (!id) return;
     const current = this.selectedListIds();
-    const next = current.includes(list.id) ? current.filter((x) => x !== list.id) : [...current, list.id];
-    this.selectedListIds.set(next);
+    const next = current.includes(list.id!) ? current.filter((x) => x !== list.id!) : [...current, list.id!];
+    this.selectedListIds.set(next as string[]);
     this.scheduleSaveLists();
   }
 
@@ -307,9 +305,9 @@ export class EntryDetailsPage {
 
   cancelJob(job: JobResponse) {
     this.jobActionError.set(null);
-    this.jobActionBusy.set(job.id);
+    this.jobActionBusy.set(job.id!);
     this.api
-      .cancelJob(job.id)
+      .cancelJob(job.id!)
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
         next: () => {
@@ -322,9 +320,9 @@ export class EntryDetailsPage {
 
   removeJob(job: JobResponse) {
     this.jobActionError.set(null);
-    this.jobActionBusy.set(job.id);
+    this.jobActionBusy.set(job.id!);
     this.api
-      .deleteJob(job.id)
+      .deleteJob(job.id!)
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
         next: () => {

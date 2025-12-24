@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
-import type { EntryResponse } from '../../models/entry.model';
-import type { LlmRecommendResponse } from '../../models/recommendation.model';
+import type { EntryResponse, LlmRecommendResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { SettingsStore } from '../../store/settings.store';
 
@@ -65,8 +64,8 @@ export class RecommendedPage {
     const pid = this.promptId();
     this.api
       .getLlmRecommendations({
-        promptId: pid === 'custom' ? null : pid,
-        customPrompt: this.customPrompt().trim() || null,
+        promptId: pid === 'custom' ? undefined : pid,
+        customPrompt: this.customPrompt().trim() || undefined,
         limit: 10,
         includeNsfw: this.includeNsfw()
       })
@@ -102,7 +101,7 @@ export class RecommendedPage {
     if (evt.kind !== 'deleted') return;
 
     this.items.set(this.items().filter((e) => e.id !== evt.entryId));
-    this.llmItems.set(this.llmItems().filter((r) => r.entry.id !== evt.entryId));
+    this.llmItems.set(this.llmItems()!.filter((r) => r.entry!.id !== evt.entryId));
   }
 }
 

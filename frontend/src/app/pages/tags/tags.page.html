@@ -27,7 +27,7 @@
   } @else {
     <div class="grid">
       @for (t of items(); track t.name) {
-        <button class="pill" type="button" (click)="addTagToFilter(t.name)">
+        <button class="pill" type="button" (click)="addTagToFilter(t.name!)">
           <span class="name">{{ t.name }}</span>
           <span class="count">{{ t.count }}</span>
         </button>

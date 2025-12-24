@@ -1,14 +1,15 @@
 package com.vestigium.api.dto;
 
 import com.vestigium.domain.Attachment;
+import jakarta.validation.constraints.NotNull;
 
 public record AttachmentResponse(
-        String id,
-        String kind,
-        String originalName,
-        String mimeType,
+        @NotNull String id,
+        @NotNull String kind,
+        @NotNull String originalName,
+        @NotNull String mimeType,
         long sizeBytes,
-        String downloadUrl
+        @NotNull String downloadUrl
 ) {
     public static AttachmentResponse from(Attachment a) {
         return new AttachmentResponse(

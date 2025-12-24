@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
-import type { ListResponse } from '../models/list.model';
+import type { ListResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
 
 @Injectable({ providedIn: 'root' })

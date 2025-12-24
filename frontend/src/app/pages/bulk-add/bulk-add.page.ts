@@ -44,10 +44,10 @@ export class BulkAddPage {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: (res) => {
-          this.result.set(res);
+          this.result.set(res as any);
           this.entriesStore.refresh();
           // If we created anything, go back to entries list.
-          if (res.createdCount > 0) void this.router.navigate(['/entries']);
+          if (res.createdCount! > 0) void this.router.navigate(['/entries']);
         },
         error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to bulk add')
       });

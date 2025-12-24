@@ -1,13 +1,17 @@
 package com.vestigium.api.dto;
 
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record BulkCreateEntriesResponse(
         int createdCount,
         int skippedCount,
-        List<ErrorItem> errors
+        @NotNull List<ErrorItem> errors
 ) {
-    public record ErrorItem(String url, String error) {}
+    public record ErrorItem(
+            @NotNull String url,
+            @NotNull String error
+    ) {}
 }
 
 

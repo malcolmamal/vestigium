@@ -53,7 +53,7 @@ export class CreateEntryPage {
       next: (res) => {
         this.saving.set(false);
         this.entriesStore.refresh();
-        void this.router.navigate(['/entries', res.entry.id]);
+        void this.router.navigate(['/entries', res.entry!.id!]);
       },
       error: (e) => {
         this.saving.set(false);

@@ -1,12 +1,13 @@
 package com.vestigium.api.dto;
 
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record LlmRecommendResponse(
-        List<Item> items
+        @NotNull List<Item> items
 ) {
     public record Item(
-            EntryResponse entry,
+            @NotNull EntryResponse entry,
             String reason
     ) {}
 }

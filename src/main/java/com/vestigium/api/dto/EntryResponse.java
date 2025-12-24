@@ -1,21 +1,25 @@
 package com.vestigium.api.dto;
 
 import com.vestigium.domain.Entry;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 public record EntryResponse(
-        String id,
-        String url,
+        @Schema(requiredMode = REQUIRED) @NotNull String id,
+        @Schema(requiredMode = REQUIRED) @NotNull String url,
         String title,
         String description,
         String detailedDescription,
-        List<String> tags,
+        @Schema(requiredMode = REQUIRED) @NotNull List<String> tags,
         boolean important,
         String visitedAt,
-        String createdAt,
-        String updatedAt,
-        String thumbnailUrl,
-        String thumbnailLargeUrl
+        @Schema(requiredMode = REQUIRED) @NotNull String createdAt,
+        @Schema(requiredMode = REQUIRED) @NotNull String updatedAt,
+        @Schema(requiredMode = REQUIRED) @NotNull String thumbnailUrl,
+        @Schema(requiredMode = REQUIRED) @NotNull String thumbnailLargeUrl
 ) {
     public static EntryResponse from(Entry e) {
         return new EntryResponse(

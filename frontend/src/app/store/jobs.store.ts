@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
-import type { JobResponse } from '../models/job.model';
+import type { JobResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
 import { inject } from '@angular/core';
 

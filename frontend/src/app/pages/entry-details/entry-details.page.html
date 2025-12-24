@@ -37,19 +37,19 @@
           />
         </div>
         <div class="meta">
-          <a class="url" [href]="data()!.entry.url" target="_blank" rel="noreferrer">
-            {{ data()!.entry.url }}
+          <a class="url" [href]="data()!.entry!.url" target="_blank" rel="noreferrer">
+            {{ data()!.entry!.url }}
           </a>
-          <div class="muted">Added: {{ data()!.entry.createdAt }}</div>
+          <div class="muted">Added: {{ data()!.entry!.createdAt }}</div>
           <div class="pillRow">
-            <span class="pill" [class.on]="data()!.entry.important">Important</span>
-            <span class="pill" [class.on]="!!data()!.entry.visitedAt">Visited</span>
+            <span class="pill" [class.on]="data()!.entry!.important">Important</span>
+            <span class="pill" [class.on]="!!data()!.entry!.visitedAt">Visited</span>
           </div>
           <div class="actions">
             <button class="button" type="button" (click)="toggleImportant()">
-              {{ data()!.entry.important ? 'Unmark important' : 'Mark important' }}
+              {{ data()!.entry!.important ? 'Unmark important' : 'Mark important' }}
             </button>
-            <button class="button" type="button" (click)="markVisited()" [disabled]="!!data()!.entry.visitedAt">
+            <button class="button" type="button" (click)="markVisited()" [disabled]="!!data()!.entry!.visitedAt">
               Mark visited
             </button>
             <button class="button" type="button" (click)="enqueueEnrich()">Update via LLM</button>
@@ -185,7 +185,7 @@
         } @else {
           <div class="listPills">
             @for (l of allLists(); track l.id) {
-              <button class="pill" type="button" [class.on]="selectedListIds().includes(l.id)" (click)="toggleList(l)">
+              <button class="pill" type="button" [class.on]="selectedListIds().includes(l.id!)" (click)="toggleList(l)">
                 {{ l.name }}
               </button>
             }
@@ -195,7 +195,7 @@
 
       <section class="attachments">
         <h2>Attachments</h2>
-        @if (data()!.attachments.length === 0) {
+        @if (data()!.attachments!.length === 0) {
           <div class="muted">No attachments.</div>
         } @else {
           <ul class="list">
