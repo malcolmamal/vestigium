@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
+import type { BulkCreateEntriesResponse } from '../../models';
 
 @Component({
   selector: 'app-bulk-add-page',
@@ -21,11 +22,7 @@ export class BulkAddPage {
   readonly raw = signal('');
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
-  readonly result = signal<{
-    createdCount: number;
-    skippedCount: number;
-    errors: { url: string; error: string }[];
-  } | null>(null);
+  readonly result = signal<BulkCreateEntriesResponse | null>(null);
 
   parsedUrls() {
     const lines = this.raw()
@@ -48,7 +45,7 @@ export class BulkAddPage {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: (res) => {
-          this.result.set(res as any);
+          this.result.set(res);
           this.entriesStore.refresh();
           // If we created anything, go back to entries list.
           if (res.createdCount! > 0) void this.router.navigate(['/entries']);

@@ -159,24 +159,24 @@ export class EntriesStore {
     const filterPatch: Partial<EntriesFilter> = {};
     const resultPatch: Partial<EntriesResult> = {};
 
-    const filterKeys: (keyof EntriesFilter)[] = [
-      'query',
-      'tagFilter',
-      'listFilter',
-      'importantOnly',
-      'visitedOnly',
-      'addedFrom',
-      'addedTo',
-      'sort',
-      'page',
-      'pageSize',
-      'refreshToken'
-    ];
-
     for (const key of Object.keys(patch) as (keyof EntriesState)[]) {
-      if (filterKeys.includes(key as any)) {
+      if (
+        key === 'query' ||
+        key === 'tagFilter' ||
+        key === 'listFilter' ||
+        key === 'importantOnly' ||
+        key === 'visitedOnly' ||
+        key === 'addedFrom' ||
+        key === 'addedTo' ||
+        key === 'sort' ||
+        key === 'page' ||
+        key === 'pageSize' ||
+        key === 'refreshToken'
+      ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (filterPatch as any)[key] = patch[key];
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (resultPatch as any)[key] = patch[key];
       }
     }

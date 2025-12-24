@@ -24,7 +24,7 @@ export class TagsPage {
   readonly error = signal<string | null>(null);
   readonly items = signal<TagSuggestionResponse[]>([]);
 
-  private timer: any = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.load('');

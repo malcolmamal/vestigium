@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { EntryExportItem } from '../../models';
+import type { EntryExportItem, ImportEntriesResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 
@@ -21,12 +21,7 @@ export class ImportExportPage {
   readonly error = signal<string | null>(null);
   readonly mode = signal<'skip' | 'update'>('skip');
   readonly fileText = signal<string | null>(null);
-  readonly importResult = signal<{
-    createdCount: number;
-    updatedCount: number;
-    skippedCount: number;
-    errors: { url: string; error: string }[];
-  } | null>(null);
+  readonly importResult = signal<ImportEntriesResponse | null>(null);
 
   exportJson() {
     this.error.set(null);
@@ -74,15 +69,15 @@ export class ImportExportPage {
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) throw new Error('JSON must be an array');
       items = parsed as EntryExportItem[];
-    } catch (e: any) {
+    } catch (e) {
       this.busy.set(false);
-      this.error.set(e?.message ?? 'Invalid JSON');
+      this.error.set(e instanceof Error ? e.message : 'Invalid JSON');
       return;
     }
 
     this.api.importEntries(this.mode(), items).subscribe({
       next: (res) => {
-        this.importResult.set(res as any);
+        this.importResult.set(res);
         this.entriesStore.refresh();
         this.busy.set(false);
       },

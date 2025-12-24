@@ -51,7 +51,7 @@ export class EntryDetailsPage {
   readonly tags = signal<string[]>([]);
   readonly tagSuggestions = signal<TagSuggestionResponse[]>([]);
   readonly tagSuggestionsLoading = signal(false);
-  private tagSuggestTimer: any = null;
+  private tagSuggestTimer: ReturnType<typeof setTimeout> | null = null;
 
   onTagSearch(q: string) {
     if (this.tagSuggestTimer) clearTimeout(this.tagSuggestTimer);
@@ -91,14 +91,14 @@ export class EntryDetailsPage {
     () => this.jobs().filter((j) => j.status === 'FAILED').length
   );
 
-  private tagsSaveTimer: any = null;
+  private tagsSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private lastRunningCount = 0;
   private lastThumbJobCount = 0;
 
   readonly allLists = signal<ListResponse[]>([]);
   readonly selectedListIds = signal<string[]>([]);
   readonly listsError = signal<string | null>(null);
-  private listsSaveTimer: any = null;
+  private listsSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly detailedCollapsed = signal(true);
 

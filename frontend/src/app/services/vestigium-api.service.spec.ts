@@ -46,7 +46,7 @@ describe('VestigiumApiService', () => {
   });
 
   // Helper to mock API response
-  const mockApiResponse = (body: any) =>
+  const mockApiResponse = (body: unknown) =>
     of({
       body,
       headers: {},

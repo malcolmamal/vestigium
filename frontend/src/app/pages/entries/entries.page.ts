@@ -36,7 +36,7 @@ export class EntriesPage {
 
   readonly tagSuggestions = signal<TagSuggestionResponse[]>([]);
   readonly tagSuggestionsLoading = signal(false);
-  private suggestTimer: any = null;
+  private suggestTimer: ReturnType<typeof setTimeout> | null = null;
 
   onTagSearch(q: string) {
     if (this.suggestTimer) clearTimeout(this.suggestTimer);

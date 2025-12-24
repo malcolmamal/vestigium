@@ -34,10 +34,10 @@
     <div class="resultBox">
       <div><b>Created</b>: {{ result()!.createdCount }}</div>
       <div><b>Skipped</b>: {{ result()!.skippedCount }}</div>
-      @if (result()!.errors.length > 0) {
+      @if ((result()?.errors?.length ?? 0) > 0) {
         <div class="errListTitle">Errors:</div>
         <ul class="errList">
-          @for (e of result()!.errors; track e.url) {
+          @for (e of result()?.errors ?? []; track e.url) {
             <li>
               <b>{{ e.url }}</b> — {{ e.error }}
             </li>
