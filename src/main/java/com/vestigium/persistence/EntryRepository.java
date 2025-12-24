@@ -250,7 +250,7 @@ public class EntryRepository {
                     )
                     """
             );
-            params.put("nsfwTags", List.of("adult content", "porn", "erotic", "redgifs", "pornhub"));
+            params.put("nsfwTags", nsfwConfig.getNsfwTags());
         }
 
         var whereSql = where.isEmpty() ? "" : "WHERE " + String.join(" AND ", where);

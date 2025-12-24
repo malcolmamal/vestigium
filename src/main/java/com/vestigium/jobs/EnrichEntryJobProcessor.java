@@ -6,6 +6,7 @@ import com.vestigium.enrich.EnrichmentParser;
 import com.vestigium.enrich.PdfTextExtractor;
 import com.vestigium.enrich.ImdbMetadataFetcher;
 import com.vestigium.enrich.UrlContentFetcher;
+import com.vestigium.enrich.YouTubeMetadataFetcher;
 import com.vestigium.llm.GeminiClient;
 import com.vestigium.persistence.AttachmentRepository;
 import com.vestigium.persistence.EntryRepository;
@@ -17,17 +18,22 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 @Component
 public class EnrichEntryJobProcessor implements JobProcessor {
 
+    private static final Logger log = LoggerFactory.getLogger(EnrichEntryJobProcessor.class);
+
     private final EntryRepository entries;
     private final TagRepository tags;
     private final AttachmentRepository attachments;
     private final FileStorageService fileStorage;
     private final UrlContentFetcher urlFetcher;
+    private final YouTubeMetadataFetcher youtubeMetadata;
     private final ImdbMetadataFetcher imdb;
     private final PdfTextExtractor pdfTextExtractor;
     private final GeminiClient gemini;
@@ -40,6 +46,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             AttachmentRepository attachments,
             FileStorageService fileStorage,
             UrlContentFetcher urlFetcher,
+            YouTubeMetadataFetcher youtubeMetadata,
             ImdbMetadataFetcher imdb,
             PdfTextExtractor pdfTextExtractor,
             GeminiClient gemini,
@@ -51,6 +58,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         this.attachments = attachments;
         this.fileStorage = fileStorage;
         this.urlFetcher = urlFetcher;
+        this.youtubeMetadata = youtubeMetadata;
         this.imdb = imdb;
         this.pdfTextExtractor = pdfTextExtractor;
         this.gemini = gemini;
@@ -72,10 +80,29 @@ public class EnrichEntryJobProcessor implements JobProcessor {
 
         var images = new ArrayList<GeminiClient.InlineImage>();
         var contextText = new StringBuilder();
-        contextText.append("URL: ").append(entry.url()).append("\n\n");
+        contextText.append("URL: ").append(entry.url()).append("\n");
+        if (entry.title() != null && !entry.title().isBlank()) {
+            contextText.append("Existing Title: ").append(entry.title()).append("\n");
+        }
+        if (entry.description() != null && !entry.description().isBlank()) {
+            contextText.append("Existing Description: ").append(entry.description()).append("\n");
+        }
+        contextText.append("\n");
 
         // Site-specific extra metadata (best-effort).
         try {
+            log.info("Starting enrichment for entryId={} url={}", entry.id(), entry.url());
+            if (entry.url().contains("youtube.com") || entry.url().contains("youtu.be")) {
+                youtubeMetadata.fetch(entry.url()).ifPresent(yt -> {
+                    log.info("Fetched YouTube metadata for entryId={}: channel={}", entry.id(), yt.authorName());
+                    contextText.append("YouTube Metadata:\n");
+                    contextText.append("- Title: ").append(yt.title()).append("\n");
+                    if (yt.authorName() != null) {
+                        contextText.append("- Channel: ").append(yt.authorName()).append("\n");
+                    }
+                    contextText.append("\n");
+                });
+            }
             imdb.fetch(entry.url()).ifPresent(m -> {
                 contextText.append("IMDb metadata:\n");
                 if (m.datePublished() != null && !m.datePublished().isBlank()) {
@@ -145,8 +172,10 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         }
 
         var prompt = buildPrompt(contextText.toString());
+        log.info("Requesting LLM enrichment for entryId={}...", entry.id());
         var modelText = gemini.generateText(prompt, images);
         var enrichment = enrichmentParser.parseFromModelText(modelText);
+        log.info("LLM enrichment received for entryId={}: tags={}", entry.id(), enrichment.tags());
 
         var newTitle = shouldUpdate(entry.title(), enrichment.title(), force) ? enrichment.title() : null;
         var newDescription = shouldUpdate(entry.description(), enrichment.description(), force) ? enrichment.description() : null;
@@ -160,9 +189,30 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         // Always keep obvious URL-derived tags (imdb/reddit/subreddit/etc) even when forcing an enrichment.
         normalizedTags = mergeTags(normalizedTags, UrlTagger.tagsForUrl(entry.url()));
 
-        if (force || entry.tags() == null || entry.tags().isEmpty()) {
+        boolean replaceTags = force || entry.tags() == null || entry.tags().isEmpty() || isOnlyObviousTags(entry.tags(), entry.url());
+        log.info("Applying enrichment results for entryId={}: titleUpdate={}, tagsUpdate={} (currentTags={})", 
+                entry.id(), newTitle != null, replaceTags, entry.tags());
+
+        if (newTitle != null || newDescription != null || newDetailedDescription != null) {
+            entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null);
+        }
+
+        if (replaceTags) {
             entries.replaceTags(entry.id(), normalizedTags, tags);
         }
+    }
+
+    private boolean isOnlyObviousTags(List<String> currentTags, String url) {
+        if (currentTags == null || currentTags.isEmpty()) {
+            log.info("isOnlyObviousTags: currentTags is empty");
+            return true;
+        }
+        var obvious = TagNormalizer.normalize(UrlTagger.tagsForUrl(url));
+        var normalizedCurrent = TagNormalizer.normalize(currentTags);
+        
+        boolean matches = normalizedCurrent.size() == obvious.size() && normalizedCurrent.containsAll(obvious);
+        log.info("isOnlyObviousTags: url={} obvious={} current={} matches={}", url, obvious, normalizedCurrent, matches);
+        return matches;
     }
 
     private static List<String> mergeTags(List<String> preferredFirst, List<String> appended) {
