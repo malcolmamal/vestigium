@@ -36,6 +36,9 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x gradlew
 
+    - name: Create data directory for SQLite
+      run: mkdir -p data
+
     - name: Build with Gradle Wrapper
       run: ./gradlew build
 
