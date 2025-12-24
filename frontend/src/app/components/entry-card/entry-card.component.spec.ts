@@ -8,6 +8,7 @@ import { of, throwError } from 'rxjs';
 import { EntryCardComponent } from './entry-card.component';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
+import { JobsStore } from '../../store/jobs.store';
 import type { EntryResponse, JobResponse } from '../../models';
 
 describe('EntryCardComponent', () => {
@@ -15,6 +16,7 @@ describe('EntryCardComponent', () => {
   let fixture: ComponentFixture<EntryCardComponent>;
   let apiService: jest.Mocked<VestigiumApiService>;
   let entriesStore: jest.Mocked<EntriesStore>;
+  let jobsStore: any;
 
   const mockEntry: EntryResponse = {
     id: '1',
@@ -39,8 +41,12 @@ describe('EntryCardComponent', () => {
       deleteEntry: jest.fn().mockReturnValue(of({}))
     };
 
-    const storeMock = {
+    const entriesStoreMock = {
       refresh: jest.fn()
+    };
+
+    const jobsStoreMock = {
+      items: signal<JobResponse[]>([])
     };
 
     await TestBed.configureTestingModule({
@@ -50,7 +56,8 @@ describe('EntryCardComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: VestigiumApiService, useValue: apiMock },
-        { provide: EntriesStore, useValue: storeMock }
+        { provide: EntriesStore, useValue: entriesStoreMock },
+        { provide: JobsStore, useValue: jobsStoreMock }
       ]
     }).compileComponents();
 
@@ -58,6 +65,7 @@ describe('EntryCardComponent', () => {
     component = fixture.componentInstance;
     apiService = TestBed.inject(VestigiumApiService) as jest.Mocked<VestigiumApiService>;
     entriesStore = TestBed.inject(EntriesStore) as jest.Mocked<EntriesStore>;
+    jobsStore = TestBed.inject(JobsStore);
 
     // Set required input
     fixture.componentRef.setInput('entry', mockEntry);
@@ -68,11 +76,30 @@ describe('EntryCardComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load jobs on init', () => {
-    expect(apiService.listJobs).toHaveBeenCalledWith({
-      entryId: '1',
-      status: ['PENDING', 'RUNNING']
-    });
+  it('should filter jobs for this entry from store', () => {
+    const job1: JobResponse = { id: 'j1', entryId: '1', status: 'PENDING', type: 'ENRICH_ENTRY', createdAt: '' };
+    const job2: JobResponse = { id: 'j2', entryId: '2', status: 'PENDING', type: 'ENRICH_ENTRY', createdAt: '' };
+    
+    jobsStore.items.set([job1, job2]);
+    fixture.detectChanges();
+
+    expect(component.jobs()).toEqual([job1]);
+    expect(component.enrichJobs()).toEqual([job1]);
+  });
+
+  it('should refresh thumbnail version when thumb job disappears', () => {
+    const initialVersion = component.thumbVersion();
+    const thumbJob: JobResponse = { id: 'j1', entryId: '1', status: 'RUNNING', type: 'REGENERATE_THUMBNAIL', createdAt: '' };
+    
+    // Set active job
+    jobsStore.items.set([thumbJob]);
+    fixture.detectChanges();
+    
+    // Job completes (disappears from store)
+    jobsStore.items.set([]);
+    fixture.detectChanges();
+
+    expect(component.thumbVersion()).toBeGreaterThan(initialVersion);
   });
 
   it('should enqueue enrich job', () => {
@@ -136,26 +163,6 @@ describe('EntryCardComponent', () => {
     expect(component.busyAction()).toBeNull();
   });
 
-  it('should refresh thumbnail when thumb jobs complete', () => {
-    const initialVersion = component.thumbVersion();
-    
-    // Simulate jobs with thumbnail job
-    const jobs: JobResponse[] = [
-      { id: '1', type: 'REGENERATE_THUMBNAIL', status: 'RUNNING', entryId: '1', attempts: 0, createdAt: '2023-01-01' }
-    ];
-    apiService.listJobs.mockReturnValue(of(jobs));
-    
-    // Trigger job load
-    component['loadJobs']('1');
-    
-    // Now simulate job completion
-    apiService.listJobs.mockReturnValue(of([]));
-    component['loadJobs']('1');
-    
-    // Thumbnail version should have changed
-    expect(component.thumbVersion()).not.toBe(initialVersion);
-  });
-
   it('should compute busy state correctly', () => {
     expect(component.busy()).toBe(false);
     
@@ -166,5 +173,3 @@ describe('EntryCardComponent', () => {
     expect(component.busy()).toBe(false);
   });
 });
-
-

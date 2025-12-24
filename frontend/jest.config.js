@@ -5,4 +5,5 @@ module.exports = {
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1',
   },
+  transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$|@stomp/rx-stomp|@stomp/stompjs)'],
 };

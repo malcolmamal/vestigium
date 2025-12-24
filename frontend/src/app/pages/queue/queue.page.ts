@@ -22,11 +22,7 @@ export class QueuePage {
   readonly jobActionError = signal<string | null>(null);
 
   constructor() {
-    effect((onCleanup) => {
-      this.jobs.load();
-      const id = setInterval(() => this.jobs.load(), 2000);
-      onCleanup(() => clearInterval(id));
-    });
+    this.jobs.load();
   }
 
   isRunning(job: JobResponse) {
