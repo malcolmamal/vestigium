@@ -17,7 +17,7 @@ export class EntriesStore {
   readonly visitedOnly = signal<boolean | null>(null);
   readonly addedFrom = signal<string | null>(null); // yyyy-mm-dd
   readonly addedTo = signal<string | null>(null); // yyyy-mm-dd
-  readonly sort = signal<'updated_desc' | 'updated_asc' | 'added_desc' | 'added_asc'>('updated_desc');
+  readonly sort = signal<'updated_desc' | 'updated_asc' | 'added_desc' | 'added_asc'>('added_desc');
 
   readonly page = signal(0);
   readonly pageSize = signal(20);
@@ -36,7 +36,7 @@ export class EntriesStore {
       this.visitedOnly() !== null ||
       this.addedFrom() !== null ||
       this.addedTo() !== null ||
-      this.sort() !== 'updated_desc'
+      this.sort() !== 'added_desc'
     );
   });
 

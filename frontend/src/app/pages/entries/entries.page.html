@@ -187,7 +187,7 @@
   } @else {
     <div class="grid">
       @for (e of store.items(); track e.id) {
-        <app-entry-card [entry]="e" />
+        <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
       }
     </div>
     <div class="pager bottom">

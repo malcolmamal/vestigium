@@ -7,11 +7,33 @@
   <section class="card">
     <div class="row">
       <div class="title">Mode</div>
-      <button class="button secondary" type="button" (click)="loadRandom()" [disabled]="loading()">
-        Random unvisited
+      <button
+        class="button secondary"
+        type="button"
+        (click)="loadRandom()"
+        [disabled]="loading()"
+        [class.loading]="activeAction() === 'random'"
+      >
+        @if (activeAction() === 'random') {
+          <span class="spinner"></span>
+          Loading…
+        } @else {
+          Random unvisited
+        }
       </button>
-      <button class="button secondary" type="button" (click)="runLlm()" [disabled]="loading()">
-        LLM recommendation
+      <button
+        class="button secondary"
+        type="button"
+        (click)="runLlm()"
+        [disabled]="loading()"
+        [class.loading]="activeAction() === 'llm'"
+      >
+        @if (activeAction() === 'llm') {
+          <span class="spinner"></span>
+          Thinking…
+        } @else {
+          LLM recommendation
+        }
       </button>
     </div>
 
@@ -21,6 +43,13 @@
         <option value="movie">I want to watch a good movie</option>
         <option value="short_funny">I want to watch something short and funny</option>
         <option value="learn">I want to learn something</option>
+        <option value="music">I want to listen to some good music</option>
+        <option value="food">I want to cook or eat something tasty</option>
+        <option value="workout">I want something about fitness / workouts</option>
+        <option value="news">I want something interesting and current</option>
+        <option value="coding">I want to learn or practice coding</option>
+        <option value="relax">I want something relaxing</option>
+        <option value="surprise">Surprise me</option>
         <option value="custom">Custom</option>
       </select>
     </div>
@@ -32,8 +61,10 @@
         rows="2"
         [value]="customPrompt()"
         (input)="customPrompt.set(($any($event.target).value ?? '').toString())"
+        (keydown)="onSuggestionKeydown($event)"
         placeholder='e.g. "I want to watch something relaxing"'
       ></textarea>
+      <div class="hint muted">Tip: Press Enter to run. Use Shift+Enter for a new line.</div>
     </div>
   </section>
 
@@ -48,11 +79,11 @@
   } @else {
     <div class="grid">
       @for (e of items(); track e.id) {
-        <app-entry-card [entry]="e" />
+        <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
       }
       @for (r of llmItems(); track r.entry.id) {
         <div class="llmCard">
-          <app-entry-card [entry]="r.entry" />
+          <app-entry-card [entry]="r.entry" (changed)="onCardChanged($event)" />
           @if (r.reason) {
             <div class="llmReason">{{ r.reason }}</div>
           }

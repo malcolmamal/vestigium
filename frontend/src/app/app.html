@@ -7,7 +7,12 @@
       <a routerLink="/tags" routerLinkActive="active">Tags</a>
       <a routerLink="/lists" routerLinkActive="active">Lists</a>
       <a routerLink="/entries/new" routerLinkActive="active">New</a>
-      <a routerLink="/queue" routerLinkActive="active">Queue</a>
+      <a routerLink="/queue" routerLinkActive="active" class="queueLink">
+        Queue
+        @if (queueCount() > 0) {
+          <span class="queueBadge">{{ queueCount() }}</span>
+        }
+      </a>
       <a routerLink="/settings" routerLinkActive="active">Settings</a>
     </nav>
   </header>

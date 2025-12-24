@@ -13,6 +13,21 @@ export class JobsStore {
   readonly error = signal<string | null>(null);
   readonly items = signal<JobResponse[]>([]);
 
+  private pollInterval: any = null;
+
+  startPolling(ms = 3000) {
+    if (this.pollInterval) return;
+    this.load();
+    this.pollInterval = setInterval(() => this.load(), ms);
+  }
+
+  stopPolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+
   load(params?: { entryId?: string; status?: string[]; limit?: number }) {
     this.loading.set(true);
     this.error.set(null);

@@ -9,7 +9,6 @@ import com.vestigium.persistence.EntryRepository;
 import com.vestigium.persistence.JobRepository;
 import com.vestigium.persistence.TagRepository;
 import com.vestigium.storage.FileStorageService;
-import com.vestigium.thumb.YouTube;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -87,9 +86,9 @@ public class EntryService {
         var outDescription = description;
         var outTags = rawTags;
 
-        // Add an obvious "youtube" tag when user didn't provide any tags.
-        if ((outTags == null || outTags.isEmpty()) && YouTube.extractVideoId(url).isPresent()) {
-            outTags = YouTube.isShortsUrl(url) ? List.of("youtube", "youtube-shorts") : List.of("youtube");
+        // Add obvious tags derived from URL when user didn't provide any tags.
+        if (outTags == null || outTags.isEmpty()) {
+            outTags = UrlTagger.tagsForUrl(url);
         }
 
         boolean needTitle = outTitle == null || outTitle.isBlank();

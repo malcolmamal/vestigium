@@ -11,10 +11,11 @@ import com.vestigium.persistence.AttachmentRepository;
 import com.vestigium.persistence.EntryRepository;
 import com.vestigium.persistence.TagRepository;
 import com.vestigium.service.TagNormalizer;
+import com.vestigium.service.UrlTagger;
 import com.vestigium.storage.FileStorageService;
-import com.vestigium.thumb.YouTube;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -156,12 +157,23 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null);
 
         var normalizedTags = TagNormalizer.normalize(enrichment.tags());
-        if (normalizedTags.isEmpty() && YouTube.extractVideoId(entry.url()).isPresent()) {
-            normalizedTags = YouTube.isShortsUrl(entry.url()) ? List.of("youtube", "youtube-shorts") : List.of("youtube");
-        }
+        // Always keep obvious URL-derived tags (imdb/reddit/subreddit/etc) even when forcing an enrichment.
+        normalizedTags = mergeTags(normalizedTags, UrlTagger.tagsForUrl(entry.url()));
+
         if (force || entry.tags() == null || entry.tags().isEmpty()) {
             entries.replaceTags(entry.id(), normalizedTags, tags);
         }
+    }
+
+    private static List<String> mergeTags(List<String> preferredFirst, List<String> appended) {
+        var merged = new LinkedHashSet<String>();
+        if (preferredFirst != null) {
+            merged.addAll(preferredFirst);
+        }
+        if (appended != null) {
+            merged.addAll(appended);
+        }
+        return TagNormalizer.normalize(new ArrayList<>(merged));
     }
 
     private boolean payloadForce(String payloadJson) {

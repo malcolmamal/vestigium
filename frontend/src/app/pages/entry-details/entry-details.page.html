@@ -30,7 +30,7 @@
         <div class="thumb">
           <img
             class="clickable"
-            [src]="data()!.entry.thumbnailUrl"
+            [src]="thumbnailUrl()"
             alt=""
             (error)="onImgError($event)"
             (click)="openThumbModal()"

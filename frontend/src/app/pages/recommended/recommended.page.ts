@@ -27,21 +27,28 @@ export class RecommendedPage {
   readonly includeNsfw = computed(() => this.settings.showNsfw());
 
   readonly mode = signal<'random' | 'llm'>('random');
-  readonly promptId = signal<'movie' | 'short_funny' | 'learn' | 'custom'>('movie');
+  readonly promptId = signal<
+    'movie' | 'short_funny' | 'learn' | 'music' | 'food' | 'workout' | 'news' | 'coding' | 'relax' | 'surprise' | 'custom'
+  >('movie');
   readonly customPrompt = signal('');
+
+  readonly activeAction = signal<'random' | 'llm' | null>(null);
 
   loadRandom() {
     this.loading.set(true);
     this.error.set(null);
     this.mode.set('random');
     this.llmItems.set([]);
+    this.activeAction.set('random');
     this.api.getRandomRecommendations({ limit: 30, includeNsfw: this.includeNsfw() }).subscribe({
       next: (items) => {
         this.items.set(items ?? []);
         this.loading.set(false);
+        this.activeAction.set(null);
       },
       error: (e) => {
         this.loading.set(false);
+        this.activeAction.set(null);
         this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to load recommendations');
       }
     });
@@ -53,6 +60,7 @@ export class RecommendedPage {
     this.mode.set('llm');
     this.items.set([]);
     this.llmItems.set([]);
+    this.activeAction.set('llm');
 
     const pid = this.promptId();
     this.api
@@ -66,16 +74,35 @@ export class RecommendedPage {
         next: (res) => {
           this.llmItems.set(res?.items ?? []);
           this.loading.set(false);
+          this.activeAction.set(null);
         },
         error: (e) => {
           this.loading.set(false);
+          this.activeAction.set(null);
           this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to get LLM recommendation');
         }
       });
   }
 
+  onSuggestionKeydown(evt: KeyboardEvent) {
+    if (evt.key === 'Enter' && !evt.shiftKey) {
+      evt.preventDefault();
+      if (!this.loading()) {
+        this.runLlm();
+      }
+    }
+  }
+
   constructor() {
     this.loadRandom();
+  }
+
+  onCardChanged(evt: { kind: 'queued' | 'updated' | 'deleted'; entryId: string }) {
+    if (!evt) return;
+    if (evt.kind !== 'deleted') return;
+
+    this.items.set(this.items().filter((e) => e.id !== evt.entryId));
+    this.llmItems.set(this.llmItems().filter((r) => r.entry.id !== evt.entryId));
   }
 }
 

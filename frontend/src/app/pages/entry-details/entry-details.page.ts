@@ -41,11 +41,14 @@ export class EntryDetailsPage {
   readonly jobActionError = signal<string | null>(null);
   readonly jobsCollapsed = signal(true);
 
+  readonly pendingAutoRefresh = signal<{ type: string; observed: boolean }[]>([]);
+
   readonly runningJobsCount = computed(() => this.jobs().filter((j) => j.status === 'RUNNING').length);
   readonly failedJobsCount = computed(() => this.jobs().filter((j) => j.status === 'FAILED').length);
 
   private tagsSaveTimer: any = null;
   private lastRunningCount = 0;
+  private lastThumbJobCount = 0;
 
   readonly allLists = signal<ListResponse[]>([]);
   readonly selectedListIds = signal<string[]>([]);
@@ -60,11 +63,20 @@ export class EntryDetailsPage {
     detailedDescription: new FormControl<string>('', { nonNullable: true })
   });
 
+  readonly thumbVersion = signal(Date.now());
+  
   readonly entry = computed(() => this.data()?.entry ?? null);
+  readonly thumbnailUrl = computed(() => {
+    const d = this.data();
+    if (!d) return null;
+    return `${d.entry.thumbnailUrl}?v=${this.thumbVersion()}`;
+  });
   readonly thumbModalUrl = computed(() => {
     const d = this.data();
     if (!d) return null;
-    return d.entry.thumbnailLargeUrl || d.entry.thumbnailUrl;
+    const baseUrl = d.entry.thumbnailLargeUrl || d.entry.thumbnailUrl;
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}v=${this.thumbVersion()}`;
   });
 
   constructor() {
@@ -149,7 +161,9 @@ export class EntryDetailsPage {
     const id = this.id();
     if (!id) return;
     this.actionHint.set('Enrichment queued. Refresh in a moment to see updates.');
+    this.addPendingAutoRefresh('ENRICH_ENTRY');
     this.api.enqueueEnrich(id).subscribe({
+      next: () => this.loadJobs(id),
       error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to enqueue enrichment')
     });
   }
@@ -158,7 +172,9 @@ export class EntryDetailsPage {
     const id = this.id();
     if (!id) return;
     this.actionHint.set('Thumbnail regeneration queued. Refresh in a moment.');
+    this.addPendingAutoRefresh('REGENERATE_THUMBNAIL');
     this.api.enqueueThumbnail(id).subscribe({
+      next: () => this.loadJobs(id),
       error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to enqueue thumbnail regeneration')
     });
   }
@@ -185,6 +201,40 @@ export class EntryDetailsPage {
         next: (items) => {
           this.jobs.set(items);
           const running = items.filter((j) => j.status === 'RUNNING').length;
+
+          // Track thumbnail job completion for cache-busting
+          const thumbJobCount = items.filter((j) => 
+            j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING')
+          ).length;
+          if (this.lastThumbJobCount > 0 && thumbJobCount === 0) {
+            this.thumbVersion.set(Date.now());
+          }
+          this.lastThumbJobCount = thumbJobCount;
+
+          // Mark pending types as "observed" once we see any job of that type.
+          const pending = this.pendingAutoRefresh();
+          if (pending.length > 0) {
+            const nextPending = pending.map((p) => {
+              if (p.observed) return p;
+              const seen = items.some((j) => j.type === p.type);
+              return seen ? { ...p, observed: true } : p;
+            });
+            this.pendingAutoRefresh.set(nextPending);
+
+            // When an observed pending job type has no active jobs left, refresh entry once.
+            const nowPending = this.pendingAutoRefresh();
+            const completedTypes = nowPending
+              .filter((p) => p.observed)
+              .filter((p) => !items.some((j) => j.type === p.type && (j.status === 'PENDING' || j.status === 'RUNNING')))
+              .map((p) => p.type);
+
+            if (completedTypes.length > 0) {
+              this.pendingAutoRefresh.set(nowPending.filter((p) => !completedTypes.includes(p.type)));
+              const id = this.id();
+              if (id) setTimeout(() => this.refresh(id), 900);
+            }
+          }
+
           // Auto-refresh the entry after work finishes (give backend a moment to persist thumbnail/files).
           if (this.lastRunningCount > 0 && running === 0) {
             const id = this.id();
@@ -194,6 +244,14 @@ export class EntryDetailsPage {
         },
         error: (e) => this.jobsError.set(e?.error?.detail ?? e?.message ?? 'Failed to load jobs')
       });
+  }
+
+  private addPendingAutoRefresh(type: string) {
+    const t = (type ?? '').toString().trim();
+    if (!t) return;
+    const current = this.pendingAutoRefresh();
+    if (current.some((x) => x.type === t)) return;
+    this.pendingAutoRefresh.set([...current, { type: t, observed: false }]);
   }
 
   loadLists(entryId: string) {

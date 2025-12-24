@@ -62,16 +62,31 @@ public class RecommendationService {
 
     private static String buildUserPrompt(String promptId, String customPrompt) {
         var p = (customPrompt == null ? "" : customPrompt.trim());
-        if (!p.isBlank()) {
-            return p;
-        }
         var id = promptId == null ? "" : promptId.trim().toLowerCase();
-        return switch (id) {
+        var base = switch (id) {
             case "movie" -> "I want to watch a good movie.";
             case "short_funny" -> "I want to watch something short and funny.";
             case "learn" -> "I want to learn something.";
+            case "music" -> "I want to listen to some good music.";
+            case "food" -> "I want to cook or eat something tasty.";
+            case "workout" -> "I want something about fitness or workouts.";
+            case "news" -> "I want to catch up on something interesting and current.";
+            case "coding" -> "I want to learn or practice coding.";
+            case "relax" -> "I want something relaxing.";
+            case "surprise" -> "Surprise me with something good.";
             default -> "Recommend something I haven't viewed yet.";
         };
+
+        // If no custom prompt is provided, use the preset only.
+        if (p.isBlank()) {
+            return base;
+        }
+        // If no preset was selected, treat the custom prompt as the full goal.
+        if (id.isBlank()) {
+            return p;
+        }
+        // Otherwise, treat custom text as extra context for the preset prompt.
+        return base + "\nAdditional context: " + p;
     }
 
     private String buildPrompt(String userPrompt, List<Entry> candidates) throws Exception {

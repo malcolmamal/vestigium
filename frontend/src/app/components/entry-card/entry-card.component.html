@@ -1,6 +1,57 @@
 <a class="card" [routerLink]="['/entries', entry().id]">
-  <div class="thumb">
-    <img [src]="entry().thumbnailUrl" alt="" (error)="onImgError($event)" />
+  <div class="thumbCol">
+    <div class="thumb">
+      <img [src]="thumbnailUrl()" alt="" (error)="onImgError($event)" />
+    </div>
+    <div class="thumbActions">
+      <button
+        class="iconBtn"
+        [class.loading]="enrichJobs().length > 0"
+        type="button"
+        title="Update via LLM"
+        (click)="enqueueEnrich($event)"
+        [disabled]="busy()"
+      >
+        @if (enrichJobs().length > 0) {
+          <span class="spinner">⟳</span>
+          @if (enrichJobs().length > 1) {
+            <span class="badge">{{ enrichJobs().length }}</span>
+          }
+        } @else {
+          <span>AI</span>
+        }
+      </button>
+      <button
+        class="iconBtn"
+        [class.loading]="thumbJobs().length > 0"
+        type="button"
+        title="Regenerate thumbnail"
+        (click)="enqueueThumbnail($event)"
+        [disabled]="busy()"
+      >
+        @if (thumbJobs().length > 0) {
+          <span class="spinner">⟳</span>
+          @if (thumbJobs().length > 1) {
+            <span class="badge">{{ thumbJobs().length }}</span>
+          }
+        } @else {
+          <span>Img</span>
+        }
+      </button>
+      <button
+        class="iconBtn"
+        [class.active]="entry().important"
+        type="button"
+        title="Toggle important"
+        (click)="toggleImportant($event)"
+        [disabled]="busy()"
+      >
+        ★
+      </button>
+      <button class="iconBtn danger" type="button" title="Delete" (click)="delete($event)" [disabled]="busy()">
+        ✖
+      </button>
+    </div>
   </div>
   <div class="body">
     <div class="titleRow">

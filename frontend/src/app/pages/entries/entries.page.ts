@@ -37,7 +37,7 @@ export class EntriesPage {
     if (this.store.addedTo()) parts.push(`to ${this.store.addedTo()}`);
     if (this.store.importantOnly() !== null) parts.push(this.store.importantOnly() ? 'important' : 'not important');
     if (this.store.visitedOnly() !== null) parts.push(this.store.visitedOnly() ? 'visited' : 'not visited');
-    if (this.store.sort() !== 'updated_desc') parts.push(`sort=${this.store.sort()}`);
+    if (this.store.sort() !== 'added_desc') parts.push(`sort=${this.store.sort()}`);
     return parts.length > 0 ? parts.join(' · ') : 'No filters';
   });
 
@@ -110,6 +110,13 @@ export class EntriesPage {
   onVisitedChange(evt: Event) {
     const v = (evt.target as HTMLSelectElement).value;
     this.store.visitedOnly.set(v === 'any' ? null : v === 'true');
+  }
+
+  onCardChanged(evt: { kind: 'queued' | 'updated' | 'deleted'; entryId: string }) {
+    // Only refresh for updates/deletes, not for queued jobs (prevents jumping)
+    if (evt.kind === 'updated' || evt.kind === 'deleted') {
+      this.store.refresh();
+    }
   }
 }
 
