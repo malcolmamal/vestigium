@@ -63,6 +63,15 @@ cd frontend
 npm run build
 ```
 
+### Testing the Frontend
+Run unit tests (Jest):
+```bash
+cd frontend
+npm test
+```
+- Tests cover Stores, Components, and Services.
+- Run these to ensure UI logic and state management are correct.
+
 ---
 
 ## API Client Generation

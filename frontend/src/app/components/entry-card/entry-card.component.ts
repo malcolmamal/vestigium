@@ -41,7 +41,7 @@ export class EntryCardComponent {
       const id = this.entry().id!;
       this.loadJobs(id);
       this.startPolling(id);
-    }, { allowSignalWrites: true });
+    });
   }
 
   ngOnDestroy() {
