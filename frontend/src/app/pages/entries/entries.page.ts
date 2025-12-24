@@ -78,10 +78,12 @@ export class EntriesPage {
   nextPage() {
     if (this.store.items().length < this.store.pageSize()) return;
     this.store.page.set(this.store.page() + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   prevPage() {
     this.store.page.set(Math.max(0, this.store.page() - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   setPageSize(evt: Event) {

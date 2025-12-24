@@ -180,24 +180,29 @@
     <div class="error">{{ store.error() }}</div>
   }
 
-  @if (store.loading()) {
-    <div class="muted">Loading…</div>
-  } @else if (store.items().length === 0) {
-    <div class="empty">No entries yet.</div>
-  } @else {
-    <div class="grid">
-      @for (e of store.items(); track e.id) {
-        <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
-      }
-    </div>
-    <div class="pager bottom">
-      <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
-      <div class="muted">Page {{ store.page() + 1 }}</div>
-      <button class="button secondary" type="button" (click)="nextPage()" [disabled]="store.items().length < store.pageSize()">
-        Next
-      </button>
-    </div>
-  }
+  <div class="itemsContainer" [class.loading]="store.loading()">
+    @if (store.loading() && store.items().length === 0) {
+      <div class="muted">Loading…</div>
+    } @else if (store.items().length === 0) {
+      <div class="empty">No entries yet.</div>
+    } @else {
+      <div class="grid">
+        @for (e of store.items(); track e.id) {
+          <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
+        }
+      </div>
+      <div class="pager bottom">
+        <button class="button secondary" type="button" (click)="prevPage()" [disabled]="store.page() === 0">Prev</button>
+        <div class="muted">Page {{ store.page() + 1 }}</div>
+        <button class="button secondary" type="button" (click)="nextPage()" [disabled]="store.items().length < store.pageSize()">
+          Next
+        </button>
+      </div>
+    }
+    @if (store.loading() && store.items().length > 0) {
+      <div class="refreshOverlay">Refreshing…</div>
+    }
+  </div>
 </section>
 
 

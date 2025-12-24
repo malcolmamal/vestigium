@@ -252,4 +252,35 @@ h1 {
   margin-bottom: 12px;
 }
 
+.itemsContainer {
+  position: relative;
+  min-height: 200px;
+}
+
+.itemsContainer.loading .grid {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.refreshOverlay {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(90, 97, 255, 0.9);
+  color: white;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translate(-50%, 100%); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
 

@@ -23,7 +23,7 @@ export class App {
 
   constructor() {
     this.loadJobs();
-    this.pollInterval = setInterval(() => this.loadJobs(), 3000);
+    this.pollInterval = setInterval(() => this.loadJobs(), 1500);
   }
 
   ngOnDestroy() {

@@ -56,9 +56,6 @@
   <div class="body">
     <div class="titleRow">
       <div class="title">{{ entry().title || entry().url }}</div>
-      @if (entry().important) {
-        <span class="pill">Important</span>
-      }
       @if (entry().visitedAt) {
         <span class="pill">Visited</span>
       }

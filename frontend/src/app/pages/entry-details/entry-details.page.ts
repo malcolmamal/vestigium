@@ -90,7 +90,7 @@ export class EntryDetailsPage {
       const id = this.id();
       if (!id) return;
       this.loadJobs(id);
-      const t = setInterval(() => this.loadJobs(id), 2000);
+      const t = setInterval(() => this.loadJobs(id), 1500);
       onCleanup(() => clearInterval(t));
     });
 

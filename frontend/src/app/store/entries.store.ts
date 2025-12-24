@@ -72,7 +72,10 @@ export class EntriesStore {
   }
 
   load() {
-    this.loading.set(true);
+    // Only show full loading state if we have no items (initial load)
+    if (this.items().length === 0) {
+      this.loading.set(true);
+    }
     this.error.set(null);
 
     this.api

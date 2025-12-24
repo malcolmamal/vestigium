@@ -51,7 +51,7 @@ export class EntryCardComponent {
 
   private startPolling(entryId: string) {
     this.stopPolling();
-    this.pollInterval = setInterval(() => this.loadJobs(entryId), 2000);
+    this.pollInterval = setInterval(() => this.loadJobs(entryId), 1500);
   }
 
   private stopPolling() {

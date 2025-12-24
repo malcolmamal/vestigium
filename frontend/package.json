@@ -6,9 +6,7 @@
     "start": "ng serve --port 3003 --proxy-config proxy.conf.json",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "api:download": "node ./scripts/download-openapi.mjs",
-    "api:generate": "npm run api:download && ng-openapi-gen --config ng-openapi-gen.json"
+    "test": "ng test"
   },
   "prettier": {
     "printWidth": 100,
@@ -45,7 +43,6 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.9.2",
-    "ng-openapi-gen": "^1.0.5"
+    "typescript": "~5.9.2"
   }
 }
