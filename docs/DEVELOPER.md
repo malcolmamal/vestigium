@@ -32,6 +32,14 @@ The API will be available at `http://localhost:8008`.
 ./gradlew build
 ```
 
+### Testing
+It is critical to run tests to ensure backend stability.
+```bash
+./gradlew test
+```
+- Tests cover services, utilities, and API controllers.
+- Always run tests before pushing changes.
+
 ---
 
 ## Frontend (Angular)

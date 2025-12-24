@@ -15,9 +15,9 @@
 - Use **Angular Signals** for state management.
 - Prefer the **Store pattern** (injectable services with signals) for shared state.
 - Styles should follow the existing dark-mode, translucent aesthetic. Use SCSS.
-- All polling intervals should be kept at **1.5 seconds** (1500ms) for consistency.
 
 ## Backend Development
 - Use **Java Records** for DTOs and Domain models.
 - Annotate DTO fields with `@NotNull` to document required fields.
 - New database changes **must** be implemented via Flyway migrations in `src/main/resources/db/migration`.
+- **Testing**: Always run `./gradlew test` as the last step of your development workflow to ensure no regressions. Tests are designed to be meaningful and stable; do not create brittle or trivial tests.
