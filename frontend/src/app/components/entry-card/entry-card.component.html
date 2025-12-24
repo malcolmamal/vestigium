@@ -2,6 +2,11 @@
   <div class="thumbCol">
     <div class="thumb">
       <img [src]="thumbnailUrl()" alt="" (error)="onImgError($event)" />
+      @if (youtubeId()) {
+        <button class="playBtn" type="button" (click)="openVideo($event)">
+          ▶
+        </button>
+      }
     </div>
     <div class="thumbActions">
       <button
@@ -72,5 +77,9 @@
     }
   </div>
 </a>
+
+@if (showVideo() && youtubeId()) {
+  <app-video-modal [videoId]="youtubeId()!" (close)="closeVideo()" />
+}
 
 

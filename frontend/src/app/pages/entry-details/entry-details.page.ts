@@ -7,11 +7,13 @@ import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chi
 import type { EntryDetailsResponse, JobResponse, ListResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
+import { extractYouTubeId } from '../../utils/youtube';
+import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
 
 @Component({
   selector: 'app-entry-details-page',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, TagChipsInputComponent],
+  imports: [RouterLink, ReactiveFormsModule, TagChipsInputComponent, VideoModalComponent],
   templateUrl: './entry-details.page.html',
   styleUrl: './entry-details.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -28,6 +30,7 @@ export class EntryDetailsPage {
   readonly error = signal<string | null>(null);
   readonly actionHint = signal<string | null>(null);
   readonly showThumbModal = signal(false);
+  readonly showVideo = signal(false);
 
   readonly data = signal<EntryDetailsResponse | null>(null);
   readonly tags = signal<string[]>([]);
@@ -64,6 +67,10 @@ export class EntryDetailsPage {
   readonly thumbVersion = signal(Date.now());
   
   readonly entry = computed(() => this.data()?.entry ?? null);
+  readonly youtubeId = computed(() => {
+    const e = this.entry();
+    return e ? extractYouTubeId(e.url || '') : null;
+  });
   readonly thumbnailUrl = computed(() => {
     const d = this.data();
     if (!d) return null;
@@ -187,6 +194,14 @@ export class EntryDetailsPage {
 
   closeThumbModal() {
     this.showThumbModal.set(false);
+  }
+
+  openVideo() {
+    this.showVideo.set(true);
+  }
+
+  closeVideo() {
+    this.showVideo.set(false);
   }
 
   loadJobs(entryId: string) {

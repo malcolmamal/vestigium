@@ -5,11 +5,13 @@ import { RouterLink } from '@angular/router';
 import type { EntryResponse, JobResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
+import { extractYouTubeId } from '../../utils/youtube';
+import { VideoModalComponent } from '../video-modal/video-modal.component';
 
 @Component({
   selector: 'app-entry-card',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, VideoModalComponent],
   templateUrl: './entry-card.component.html',
   styleUrl: './entry-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,6 +36,9 @@ export class EntryCardComponent {
   readonly thumbVersion = signal(Date.now());
   readonly thumbnailUrl = computed(() => `${this.entry().thumbnailUrl}?v=${this.thumbVersion()}`);
 
+  readonly youtubeId = computed(() => extractYouTubeId(this.entry().url || ''));
+  readonly showVideo = signal(false);
+
   private pollInterval?: ReturnType<typeof setInterval>;
 
   constructor() {
@@ -46,6 +51,15 @@ export class EntryCardComponent {
 
   ngOnDestroy() {
     this.stopPolling();
+  }
+
+  openVideo(evt: MouseEvent) {
+    this.stop(evt);
+    this.showVideo.set(true);
+  }
+
+  closeVideo() {
+    this.showVideo.set(false);
   }
 
   private startPolling(entryId: string) {

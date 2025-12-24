@@ -16,6 +16,10 @@
     </div>
   }
 
+  @if (showVideo() && youtubeId()) {
+    <app-video-modal [videoId]="youtubeId()!" (close)="closeVideo()" />
+  }
+
   @if (error()) {
     <div class="errorBox">{{ error() }}</div>
   }
@@ -35,6 +39,9 @@
             (error)="onImgError($event)"
             (click)="openThumbModal()"
           />
+          @if (youtubeId()) {
+            <button class="playBtn" type="button" (click)="openVideo()">▶</button>
+          }
         </div>
         <div class="meta">
           <a class="url" [href]="data()!.entry!.url" target="_blank" rel="noreferrer">
