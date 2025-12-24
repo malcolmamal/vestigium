@@ -52,7 +52,6 @@ export class EntriesPage {
     });
 
     this.lists.load();
-    this.jobsStore.startPolling(2000);
 
     const tags = this.route.snapshot.queryParamMap.getAll('tags');
     const legacyTag = this.route.snapshot.queryParamMap.get('tag');
@@ -62,10 +61,6 @@ export class EntriesPage {
     if (initial.length > 0) {
       this.store.setTagFilter(Array.from(new Set(initial)));
     }
-  }
-
-  ngOnDestroy() {
-    this.jobsStore.stopPolling();
   }
 
   applyPopularTag(tag: string) {

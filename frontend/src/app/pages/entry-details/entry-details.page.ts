@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { Message } from '@stomp/stompjs';
 
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
 import type { EntryDetailsResponse, JobResponse, ListResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
+import { WebSocketService } from '../../services/websocket.service';
 import { EntriesStore } from '../../store/entries.store';
 import { extractYouTubeId } from '../../utils/youtube';
 import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
@@ -23,6 +25,7 @@ export class EntryDetailsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly entriesStore = inject(EntriesStore);
+  private readonly ws = inject(WebSocketService);
 
   readonly id = signal<string | null>(null);
   readonly loading = signal(false);
@@ -88,21 +91,80 @@ export class EntryDetailsPage {
     effect(() => {
       const id = this.route.snapshot.paramMap.get('id');
       this.id.set(id);
-      if (id) this.refresh(id);
-    });
-
-    effect((onCleanup) => {
-      const id = this.id();
-      if (!id) return;
-      this.loadJobs(id);
-      const t = setInterval(() => this.loadJobs(id), 1500);
-      onCleanup(() => clearInterval(t));
+      if (id) {
+        this.refresh(id);
+        this.loadJobs(id);
+      }
     });
 
     effect(() => {
       // Collapsed by default; auto-expand while something is RUNNING; auto-collapse once nothing is running.
       this.jobsCollapsed.set(this.runningJobsCount() === 0);
     });
+
+    // Subscribe to WebSocket updates for jobs related to this entry
+    this.ws.watch('/topic/jobs').subscribe((message: Message) => {
+      const job = JSON.parse(message.body) as JobResponse;
+      if (job.entryId === this.id()) {
+        this.handleJobUpdate(job);
+      }
+    });
+  }
+
+  private handleJobUpdate(job: JobResponse) {
+    this.jobs.update(current => {
+      const index = current.findIndex(j => j.id === job.id);
+      let next = [...current];
+      if (index >= 0) {
+        next[index] = job;
+      } else {
+        next = [job, ...current];
+      }
+      return next;
+    });
+
+    // Trigger side effects (auto-refresh etc)
+    const items = this.jobs();
+    const running = items.filter((j) => j.status === 'RUNNING').length;
+
+    // Track thumbnail job completion for cache-busting
+    const thumbJobCount = items.filter((j) => 
+      j.type === 'REGENERATE_THUMBNAIL' && (j.status === 'PENDING' || j.status === 'RUNNING')
+    ).length;
+    if (this.lastThumbJobCount > 0 && thumbJobCount === 0) {
+      this.thumbVersion.set(Date.now());
+    }
+    this.lastThumbJobCount = thumbJobCount;
+
+    // Mark pending types as "observed"
+    const pending = this.pendingAutoRefresh();
+    if (pending.length > 0) {
+      const nextPending = pending.map((p) => {
+        if (p.observed) return p;
+        const seen = items.some((j) => j.type === p.type);
+        return seen ? { ...p, observed: true } : p;
+      });
+      this.pendingAutoRefresh.set(nextPending);
+
+      const nowPending = this.pendingAutoRefresh();
+      const completedTypes = nowPending
+        .filter((p) => p.observed)
+        .filter((p) => !items.some((j) => j.type === p.type && (j.status === 'PENDING' || j.status === 'RUNNING')))
+        .map((p) => p.type);
+
+      if (completedTypes.length > 0) {
+        this.pendingAutoRefresh.set(nowPending.filter((p) => !completedTypes.includes(p.type)));
+        const id = this.id();
+        if (id) setTimeout(() => this.refresh(id), 900);
+      }
+    }
+
+    // Auto-refresh the entry after work finishes
+    if (this.lastRunningCount > 0 && running === 0) {
+      const id = this.id();
+      if (id) setTimeout(() => this.refresh(id), 900);
+    }
+    this.lastRunningCount = running;
   }
 
   refresh(id: string) {

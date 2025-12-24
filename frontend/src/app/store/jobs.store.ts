@@ -1,48 +1,62 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { finalize } from 'rxjs';
+import { Message } from '@stomp/stompjs';
 
 import type { JobResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
-import { inject } from '@angular/core';
+import { WebSocketService } from '../services/websocket.service';
 
 @Injectable({ providedIn: 'root' })
 export class JobsStore {
   private readonly api = inject(VestigiumApiService);
+  private readonly ws = inject(WebSocketService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly items = signal<JobResponse[]>([]);
 
-  private pollInterval: any = null;
-
-  startPolling(ms = 3000) {
-    if (this.pollInterval) return;
+  constructor() {
+    // Initial load of active jobs
     this.load();
-    this.pollInterval = setInterval(() => this.load(), ms);
+
+    // Subscribe to WebSocket updates
+    this.ws.watch('/topic/jobs').subscribe((message: Message) => {
+      const job = JSON.parse(message.body) as JobResponse;
+      this.handleJobUpdate(job);
+    });
   }
 
-  stopPolling() {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
-  }
-
-  load(params?: { entryId?: string; status?: string[]; limit?: number }) {
+  load() {
     this.loading.set(true);
     this.error.set(null);
 
+    // Initial fetch of pending/running/failed jobs to populate the list
     this.api
       .listJobs({
-        entryId: params?.entryId,
-        status: params?.status ?? ['PENDING', 'RUNNING', 'FAILED'],
-        limit: params?.limit ?? 50
+        status: ['PENDING', 'RUNNING', 'FAILED'],
+        limit: 100
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (items) => this.items.set(items),
         error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to load queue')
       });
+  }
+
+  private handleJobUpdate(job: JobResponse) {
+    this.items.update(current => {
+      const index = current.findIndex(j => j.id === job.id);
+      if (index >= 0) {
+        // Update existing job
+        const next = [...current];
+        next[index] = job;
+        return next;
+      } else {
+        // Add new job to the top (or bottom depending on sort, but usually top for new)
+        // Assuming we want to see new jobs
+        return [job, ...current];
+      }
+    });
   }
 }
 

@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 
 import { provideApiConfiguration } from '../../api/api-configuration';
 import { routes } from './app.routes';
+import { rxStompServiceFactory, WebSocketService } from './services/websocket.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -11,6 +12,10 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideHttpClient(),
     provideRouter(routes),
-    provideApiConfiguration('')
+    provideApiConfiguration(''),
+    {
+      provide: WebSocketService,
+      useFactory: rxStompServiceFactory,
+    },
   ]
 };
