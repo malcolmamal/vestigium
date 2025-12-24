@@ -30,20 +30,89 @@ export class EntriesPage {
   readonly popularTagsError = signal<string | null>(null);
   readonly filtersCollapsed = signal(true);
   readonly activeVideoId = signal<string | null>(null);
+  readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>({});
+
+  readonly tagSuggestions = signal<TagSuggestionResponse[]>([]);
+  readonly tagSuggestionsLoading = signal(false);
+  private suggestTimer: any = null;
+
+  onTagSearch(q: string) {
+    if (this.suggestTimer) clearTimeout(this.suggestTimer);
+    const query = q.trim().toLowerCase();
+    if (query.length < 2) {
+      this.tagSuggestions.set([]);
+      return;
+    }
+    this.suggestTimer = setTimeout(() => {
+      this.tagSuggestionsLoading.set(true);
+      this.api.suggestTags(query, 10).subscribe({
+        next: (items) => {
+          this.tagSuggestions.set(items);
+          this.tagSuggestionsLoading.set(false);
+        },
+        error: () => {
+          this.tagSuggestions.set([]);
+          this.tagSuggestionsLoading.set(false);
+        }
+      });
+    }, 200);
+  }
 
   readonly filterSummary = computed(() => {
-    const parts: string[] = [];
-    const q = this.store.query().trim();
-    if (q) parts.push(`q="${q}"`);
-    if (this.store.tagFilter().length > 0) parts.push(`${this.store.tagFilter().length} tag(s)`);
-    if (this.store.listFilter().length > 0) parts.push(`${this.store.listFilter().length} list(s)`);
-    if (this.store.addedFrom()) parts.push(`from ${this.store.addedFrom()}`);
-    if (this.store.addedTo()) parts.push(`to ${this.store.addedTo()}`);
-    if (this.store.importantOnly() !== null) parts.push(this.store.importantOnly() ? 'important' : 'not important');
-    if (this.store.visitedOnly() !== null) parts.push(this.store.visitedOnly() ? 'visited' : 'not visited');
-    if (this.store.sort() !== 'added_desc') parts.push(`sort=${this.store.sort()}`);
-    return parts.length > 0 ? parts.join(' · ') : 'No filters';
+    // ...
   });
+
+  // ... (inside class)
+
+  onEnrich(id: string) {
+    this.updateBusy(id, 'enrich');
+    this.api.enqueueEnrich(id).subscribe({
+      next: () => {
+        this.updateBusy(id, null);
+        // no refresh needed, jobs store will handle it via WS
+      },
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  onThumbnail(id: string) {
+    this.updateBusy(id, 'thumb');
+    this.api.enqueueThumbnail(id).subscribe({
+      next: () => {
+        this.updateBusy(id, null);
+        // no refresh needed, jobs store will handle it via WS
+      },
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  onToggleImportant(id: string) {
+    const entry = this.store.items().find(e => e.id === id);
+    if (!entry) return;
+    this.updateBusy(id, 'important');
+    this.api.patchEntry(id, { important: !entry.important }).subscribe({
+      next: () => {
+        this.updateBusy(id, null);
+        this.store.updateItem(id, { important: !entry.important });
+      },
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  onDelete(id: string) {
+    this.updateBusy(id, 'delete');
+    this.api.deleteEntry(id).subscribe({
+      next: () => {
+        this.updateBusy(id, null);
+        this.store.removeItem(id);
+      },
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  private updateBusy(id: string, type: 'enrich' | 'thumb' | 'important' | 'delete' | null) {
+    this.busyStates.update(s => ({ ...s, [id]: type }));
+  }
 
   constructor() {
     this.api.suggestTags('', 15).subscribe({
@@ -81,19 +150,18 @@ export class EntriesPage {
 
   nextPage() {
     if (this.store.items().length < this.store.pageSize()) return;
-    this.store.page.set(this.store.page() + 1);
+    this.store.setPage(this.store.page() + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   prevPage() {
-    this.store.page.set(Math.max(0, this.store.page() - 1));
+    this.store.setPage(Math.max(0, this.store.page() - 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   setPageSize(evt: Event) {
     const v = Number((evt.target as HTMLSelectElement).value || '20');
-    this.store.pageSize.set([10, 20, 50, 100].includes(v) ? v : 20);
-    this.store.page.set(0);
+    this.store.setPageSize([10, 20, 50, 100].includes(v) ? v : 20);
   }
 
   importantValue(): 'any' | 'true' | 'false' {
@@ -110,19 +178,12 @@ export class EntriesPage {
 
   onImportantChange(evt: Event) {
     const v = (evt.target as HTMLSelectElement).value;
-    this.store.importantOnly.set(v === 'any' ? null : v === 'true');
+    this.store.setImportantOnly(v === 'any' ? null : v === 'true');
   }
 
   onVisitedChange(evt: Event) {
     const v = (evt.target as HTMLSelectElement).value;
-    this.store.visitedOnly.set(v === 'any' ? null : v === 'true');
-  }
-
-  onCardChanged(evt: { kind: 'queued' | 'updated' | 'deleted'; entryId: string }) {
-    // Only refresh for updates/deletes, not for queued jobs (prevents jumping)
-    if (evt.kind === 'updated' || evt.kind === 'deleted') {
-      this.store.refresh();
-    }
+    this.store.setVisitedOnly(v === 'any' ? null : v === 'true');
   }
 
   onPlayVideo(videoId: string) {

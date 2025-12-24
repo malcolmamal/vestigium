@@ -25,7 +25,13 @@
 
     <label class="field">
       <span class="label">Tags (optional)</span>
-      <app-tag-chips-input [tags]="tags()" (tagsChange)="tags.set($event)" />
+      <app-tag-chips-input
+        [tags]="tags()"
+        [suggestions]="tagSuggestions()"
+        [suggestionsLoading]="tagSuggestionsLoading()"
+        (tagsChange)="tags.set($event)"
+        (searchChange)="onTagSearch($event)"
+      />
     </label>
 
     <label class="field">

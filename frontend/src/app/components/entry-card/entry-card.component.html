@@ -48,12 +48,12 @@
         [class.active]="entry().important"
         type="button"
         title="Toggle important"
-        (click)="toggleImportant($event)"
+        (click)="onToggleImportant($event)"
         [disabled]="busy()"
       >
         ★
       </button>
-      <button class="iconBtn danger" type="button" title="Delete" (click)="delete($event)" [disabled]="busy()">
+      <button class="iconBtn danger" type="button" title="Delete" (click)="onDelete($event)" [disabled]="busy()">
         ✖
       </button>
     </div>

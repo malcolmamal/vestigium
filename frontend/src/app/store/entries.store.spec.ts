@@ -9,7 +9,6 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 describe('EntriesStore', () => {
   let store: EntriesStore;
   let apiSpy: jest.Mocked<VestigiumApiService>;
-  let settingsSpy: any;
 
   const mockEntry = {
     id: '1',
@@ -44,11 +43,9 @@ describe('EntriesStore', () => {
 
     store = TestBed.inject(EntriesStore);
     apiSpy = TestBed.inject(VestigiumApiService) as jest.Mocked<VestigiumApiService>;
-    settingsSpy = TestBed.inject(SettingsStore);
   });
 
   it('should load entries on init', fakeAsync(() => {
-    // Effects run asynchronously
     TestBed.flushEffects();
     tick(); 
     
@@ -96,5 +93,16 @@ describe('EntriesStore', () => {
 
     expect(apiSpy.listEntries).toHaveBeenCalled();
   }));
-});
 
+  it('should update specific item locally', () => {
+    store.patchState({ items: [mockEntry] });
+    store.updateItem('1', { title: 'Updated Title' });
+    expect(store.items()[0].title).toBe('Updated Title');
+  });
+
+  it('should remove specific item locally', () => {
+    store.patchState({ items: [mockEntry] });
+    store.removeItem('1');
+    expect(store.items().length).toBe(0);
+  });
+});

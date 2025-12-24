@@ -79,11 +79,25 @@
   } @else {
     <div class="grid">
       @for (e of items(); track e.id) {
-        <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
+        <app-entry-card
+          [entry]="e"
+          [busyAction]="busyStates()[e.id!] ?? null"
+          (enrich)="onEnrich($event)"
+          (regenerateThumbnail)="onThumbnail($event)"
+          (toggleImportant)="onToggleImportant($event)"
+          (delete)="onDelete($event)"
+        />
       }
       @for (r of llmItems()!; track r.entry!.id) {
         <div class="llmCard">
-          <app-entry-card [entry]="r.entry!" (changed)="onCardChanged($event)" />
+          <app-entry-card
+            [entry]="r.entry!"
+            [busyAction]="busyStates()[r.entry!.id!] ?? null"
+            (enrich)="onEnrich($event)"
+            (regenerateThumbnail)="onThumbnail($event)"
+            (toggleImportant)="onToggleImportant($event)"
+            (delete)="onDelete($event)"
+          />
           @if (r.reason) {
             <div class="llmReason">{{ r.reason }}</div>
           }

@@ -1,8 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { VestigiumApiService } from '../../services/vestigium-api.service';
 import type { TagSuggestionResponse } from '../../models';
-import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-tag-chips-input',
@@ -13,28 +11,25 @@ import { finalize } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TagChipsInputComponent {
-  private readonly api = inject(VestigiumApiService);
-
   readonly tags = input<string[]>([]);
   readonly placeholder = input<string>('Add tag and press Enter');
   readonly hint = input<string | null>(null);
+  readonly suggestions = input<TagSuggestionResponse[]>([]);
+  readonly suggestionsLoading = input<boolean>(false);
 
   readonly tagsChange = output<string[]>();
+  readonly searchChange = output<string>();
 
   readonly draft = signal('');
   readonly draftTrimmed = computed(() => this.draft().trim());
 
-  readonly suggestionsLoading = signal(false);
-  readonly suggestions = signal<TagSuggestionResponse[]>([]);
   readonly showSuggestions = computed(() => this.draftTrimmed().length >= 2);
   readonly activeIndex = signal(0);
-
-  private suggestTimer: any = null;
 
   onInput(evt: Event) {
     const value = (evt.target as HTMLInputElement).value;
     this.draft.set(value);
-    this.scheduleSuggest();
+    this.searchChange.emit(value);
   }
 
   onKeydown(evt: KeyboardEvent) {
@@ -61,7 +56,8 @@ export class TagChipsInputComponent {
       }
       if (evt.key === 'Escape') {
         evt.preventDefault();
-        this.suggestions.set([]);
+        this.draft.set('');
+        this.searchChange.emit('');
         return;
       }
     }
@@ -84,7 +80,7 @@ export class TagChipsInputComponent {
       this.tagsChange.emit([...this.tags(), normalized]);
     }
     this.draft.set('');
-    this.suggestions.set([]);
+    this.searchChange.emit('');
     this.activeIndex.set(0);
   }
 
@@ -99,40 +95,8 @@ export class TagChipsInputComponent {
       this.tagsChange.emit([...this.tags(), normalized]);
     }
     this.draft.set('');
-    this.suggestions.set([]);
+    this.searchChange.emit('');
     this.activeIndex.set(0);
-  }
-
-  private scheduleSuggest() {
-    if (this.suggestTimer) {
-      clearTimeout(this.suggestTimer);
-    }
-
-    const q = this.draftTrimmed().toLowerCase();
-    if (q.length < 2) {
-      this.suggestions.set([]);
-      this.activeIndex.set(0);
-      return;
-    }
-
-    this.suggestTimer = setTimeout(() => {
-      this.suggestionsLoading.set(true);
-      this.api
-        .suggestTags(q, 10)
-        .pipe(finalize(() => this.suggestionsLoading.set(false)))
-        .subscribe({
-          next: (items) => {
-            const selected = new Set(this.tags());
-            const filtered = items.filter((s) => !selected.has(s.name!));
-            this.suggestions.set(filtered);
-            this.activeIndex.set(0);
-          },
-          error: () => {
-            this.suggestions.set([]);
-            this.activeIndex.set(0);
-          }
-        });
-    }, 200);
   }
 }
 

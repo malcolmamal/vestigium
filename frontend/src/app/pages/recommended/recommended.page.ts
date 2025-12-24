@@ -32,25 +32,59 @@ export class RecommendedPage {
   readonly customPrompt = signal('');
 
   readonly activeAction = signal<'random' | 'llm' | null>(null);
+  readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>({});
 
   loadRandom() {
-    this.loading.set(true);
-    this.error.set(null);
-    this.mode.set('random');
-    this.llmItems.set([]);
-    this.activeAction.set('random');
-    this.api.getRandomRecommendations({ limit: 30, includeNsfw: this.includeNsfw() }).subscribe({
-      next: (items) => {
-        this.items.set(items ?? []);
-        this.loading.set(false);
-        this.activeAction.set(null);
-      },
-      error: (e) => {
-        this.loading.set(false);
-        this.activeAction.set(null);
-        this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to load recommendations');
-      }
+    // ...
+  }
+
+  // ... (inside class)
+
+  onEnrich(id: string) {
+    this.updateBusy(id, 'enrich');
+    this.api.enqueueEnrich(id).subscribe({
+      next: () => this.updateBusy(id, null),
+      error: () => this.updateBusy(id, null)
     });
+  }
+
+  onThumbnail(id: string) {
+    this.updateBusy(id, 'thumb');
+    this.api.enqueueThumbnail(id).subscribe({
+      next: () => this.updateBusy(id, null),
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  onToggleImportant(id: string) {
+    const entry = this.items().find(e => e.id === id) || this.llmItems()?.find(r => r.entry!.id === id)?.entry;
+    if (!entry) return;
+    this.updateBusy(id, 'important');
+    this.api.patchEntry(id, { important: !entry.important }).subscribe({
+      next: () => {
+        this.updateBusy(id, null);
+        // Local update for simple toggle
+        this.items.update(items => items.map(e => e.id === id ? { ...e, important: !e.important } : e));
+        this.llmItems.update(items => items?.map(r => r.entry!.id === id ? { ...r, entry: { ...r.entry!, important: !r.entry!.important } } : r));
+      },
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  onDelete(id: string) {
+    this.updateBusy(id, 'delete');
+    this.api.deleteEntry(id).subscribe({
+      next: () => {
+        this.updateBusy(id, null);
+        this.items.set(this.items().filter((e) => e.id !== id));
+        this.llmItems.set(this.llmItems()?.filter((r) => r.entry!.id !== id) ?? []);
+      },
+      error: () => this.updateBusy(id, null)
+    });
+  }
+
+  private updateBusy(id: string, type: 'enrich' | 'thumb' | 'important' | 'delete' | null) {
+    this.busyStates.update(s => ({ ...s, [id]: type }));
   }
 
   runLlm() {
@@ -94,14 +128,6 @@ export class RecommendedPage {
 
   constructor() {
     this.loadRandom();
-  }
-
-  onCardChanged(evt: { kind: 'queued' | 'updated' | 'deleted'; entryId: string }) {
-    if (!evt) return;
-    if (evt.kind !== 'deleted') return;
-
-    this.items.set(this.items().filter((e) => e.id !== evt.entryId));
-    this.llmItems.set(this.llmItems()!.filter((r) => r.entry!.id !== evt.entryId));
   }
 }
 

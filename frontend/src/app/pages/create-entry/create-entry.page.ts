@@ -5,6 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
+import type { TagSuggestionResponse } from '../../models';
 
 @Component({
   selector: 'app-create-entry-page',
@@ -23,6 +24,32 @@ export class CreateEntryPage {
   readonly error = signal<string | null>(null);
   readonly tags = signal<string[]>([]);
   readonly files = signal<File[]>([]);
+
+  readonly tagSuggestions = signal<TagSuggestionResponse[]>([]);
+  readonly tagSuggestionsLoading = signal(false);
+  private suggestTimer: any = null;
+
+  onTagSearch(q: string) {
+    if (this.suggestTimer) clearTimeout(this.suggestTimer);
+    const query = q.trim().toLowerCase();
+    if (query.length < 2) {
+      this.tagSuggestions.set([]);
+      return;
+    }
+    this.suggestTimer = setTimeout(() => {
+      this.tagSuggestionsLoading.set(true);
+      this.api.suggestTags(query, 10).subscribe({
+        next: (items) => {
+          this.tagSuggestions.set(items);
+          this.tagSuggestionsLoading.set(false);
+        },
+        error: () => {
+          this.tagSuggestions.set([]);
+          this.tagSuggestionsLoading.set(false);
+        }
+      });
+    }, 200);
+  }
 
   readonly form = new FormGroup({
     url: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),

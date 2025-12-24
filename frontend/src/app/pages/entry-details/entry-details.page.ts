@@ -5,7 +5,7 @@ import { finalize } from 'rxjs';
 import { Message } from '@stomp/stompjs';
 
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
-import type { EntryDetailsResponse, JobResponse, ListResponse } from '../../models';
+import type { EntryDetailsResponse, JobResponse, ListResponse, TagSuggestionResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { WebSocketService } from '../../services/websocket.service';
 import { EntriesStore } from '../../store/entries.store';
@@ -37,6 +37,31 @@ export class EntryDetailsPage {
 
   readonly data = signal<EntryDetailsResponse | null>(null);
   readonly tags = signal<string[]>([]);
+  readonly tagSuggestions = signal<TagSuggestionResponse[]>([]);
+  readonly tagSuggestionsLoading = signal(false);
+  private tagSuggestTimer: any = null;
+
+  onTagSearch(q: string) {
+    if (this.tagSuggestTimer) clearTimeout(this.tagSuggestTimer);
+    const query = q.trim().toLowerCase();
+    if (query.length < 2) {
+      this.tagSuggestions.set([]);
+      return;
+    }
+    this.tagSuggestTimer = setTimeout(() => {
+      this.tagSuggestionsLoading.set(true);
+      this.api.suggestTags(query, 10).subscribe({
+        next: (items) => {
+          this.tagSuggestions.set(items);
+          this.tagSuggestionsLoading.set(false);
+        },
+        error: () => {
+          this.tagSuggestions.set([]);
+          this.tagSuggestionsLoading.set(false);
+        }
+      });
+    }, 200);
+  }
 
   readonly jobsLoading = signal(false);
   readonly jobsError = signal<string | null>(null);

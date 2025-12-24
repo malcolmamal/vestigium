@@ -81,7 +81,7 @@
             class="textInput"
             type="text"
             [value]="store.query()"
-            (input)="store.query.set(($any($event.target).value ?? '').toString())"
+            (input)="store.setQuery(($any($event.target).value ?? '').toString())"
             placeholder="Search title/description…"
           />
         </label>
@@ -90,9 +90,12 @@
           <span class="label">Tags</span>
           <app-tag-chips-input
             [tags]="store.tagFilter()"
+            [suggestions]="tagSuggestions()"
+            [suggestionsLoading]="tagSuggestionsLoading()"
             placeholder="Type tag and press Enter"
             [hint]="'Filter requires ALL selected tags'"
             (tagsChange)="store.setTagFilter($event)"
+            (searchChange)="onTagSearch($event)"
           />
         </label>
 
@@ -103,7 +106,7 @@
               class="textInput"
               type="date"
               [value]="store.addedFrom() ?? ''"
-              (input)="store.addedFrom.set(($any($event.target).value ?? '').toString() || null)"
+              (input)="store.setAddedFrom(($any($event.target).value ?? '').toString() || null)"
             />
           </label>
           <label class="field">
@@ -112,7 +115,7 @@
               class="textInput"
               type="date"
               [value]="store.addedTo() ?? ''"
-              (input)="store.addedTo.set(($any($event.target).value ?? '').toString() || null)"
+              (input)="store.setAddedTo(($any($event.target).value ?? '').toString() || null)"
             />
           </label>
         </div>
@@ -141,7 +144,7 @@
           <select
             class="select"
             [value]="store.sort()"
-            (change)="store.sort.set(($any($event.target).value ?? 'updated_desc').toString())"
+            (change)="store.setSort(($any($event.target).value ?? 'added_desc').toString())"
           >
             <option value="updated_desc">Updated (newest)</option>
             <option value="updated_asc">Updated (oldest)</option>
@@ -188,7 +191,16 @@
     } @else {
       <div class="grid">
         @for (e of store.items(); track e.id) {
-          <app-entry-card [entry]="e" (changed)="onCardChanged($event)" (playVideo)="onPlayVideo($event)" />
+          <app-entry-card
+            [entry]="e"
+            [activeJobs]="jobsStore.items()"
+            [busyAction]="busyStates()[e.id!] ?? null"
+            (enrich)="onEnrich($event)"
+            (regenerateThumbnail)="onThumbnail($event)"
+            (toggleImportant)="onToggleImportant($event)"
+            (delete)="onDelete($event)"
+            (playVideo)="onPlayVideo($event)"
+          />
         }
       </div>
       <div class="pager bottom">

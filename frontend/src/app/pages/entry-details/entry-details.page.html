@@ -169,7 +169,13 @@
 
         <label class="field">
           <span class="label">Tags</span>
-          <app-tag-chips-input [tags]="tags()" (tagsChange)="onTagsChange($event)" />
+          <app-tag-chips-input
+            [tags]="tags()"
+            [suggestions]="tagSuggestions()"
+            [suggestionsLoading]="tagSuggestionsLoading()"
+            (tagsChange)="onTagsChange($event)"
+            (searchChange)="onTagSearch($event)"
+          />
         </label>
 
         <div class="actions">

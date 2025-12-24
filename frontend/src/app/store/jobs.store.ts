@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { Message } from '@stomp/stompjs';
 
@@ -6,14 +6,27 @@ import type { JobResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
 import { WebSocketService } from '../services/websocket.service';
 
+export interface JobsState {
+  loading: boolean;
+  error: string | null;
+  items: JobResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class JobsStore {
   private readonly api = inject(VestigiumApiService);
   private readonly ws = inject(WebSocketService);
 
-  readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
-  readonly items = signal<JobResponse[]>([]);
+  private readonly state = signal<JobsState>({
+    loading: false,
+    error: null,
+    items: []
+  });
+
+  // Selectors
+  readonly loading = computed(() => this.state().loading);
+  readonly error = computed(() => this.state().error);
+  readonly items = computed(() => this.state().items);
 
   constructor() {
     // Initial load of active jobs
@@ -26,9 +39,12 @@ export class JobsStore {
     });
   }
 
+  patchState(patch: Partial<JobsState>) {
+    this.state.update(s => ({ ...s, ...patch }));
+  }
+
   load() {
-    this.loading.set(true);
-    this.error.set(null);
+    this.patchState({ loading: true, error: null });
 
     // Initial fetch of pending/running/failed jobs to populate the list
     this.api
@@ -36,27 +52,28 @@ export class JobsStore {
         status: ['PENDING', 'RUNNING', 'FAILED'],
         limit: 100
       })
-      .pipe(finalize(() => this.loading.set(false)))
+      .pipe(finalize(() => this.patchState({ loading: false })))
       .subscribe({
-        next: (items) => this.items.set(items),
-        error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to load queue')
+        next: (items) => this.patchState({ items }),
+        error: (e) => this.patchState({ error: e?.error?.detail ?? e?.message ?? 'Failed to load queue' })
       });
   }
 
   private handleJobUpdate(job: JobResponse) {
-    this.items.update(current => {
-      const index = current.findIndex(j => j.id === job.id);
-      if (index >= 0) {
-        // Update existing job
-        const next = [...current];
-        next[index] = job;
-        return next;
-      } else {
-        // Add new job to the top (or bottom depending on sort, but usually top for new)
-        // Assuming we want to see new jobs
-        return [job, ...current];
-      }
+    this.patchState({
+      items: this.updateJobList(this.state().items, job)
     });
+  }
+
+  private updateJobList(current: JobResponse[], job: JobResponse): JobResponse[] {
+    const index = current.findIndex(j => j.id === job.id);
+    if (index >= 0) {
+      const next = [...current];
+      next[index] = job;
+      return next;
+    } else {
+      return [job, ...current];
+    }
   }
 }
 
