@@ -6,6 +6,7 @@ import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chi
 import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
 import type { ListResponse, TagSuggestionResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
+import { ToastService } from '../../services/toast.service';
 import { EntriesStore } from '../../store/entries.store';
 import { ListsStore } from '../../store/lists.store';
 import { JobsStore } from '../../store/jobs.store';
@@ -25,6 +26,7 @@ export class EntriesPage {
   private readonly router = inject(Router);
   readonly lists = inject(ListsStore);
   readonly jobsStore = inject(JobsStore);
+  private readonly toasts = inject(ToastService);
 
   readonly popularTags = signal<TagSuggestionResponse[]>([]);
   readonly popularTagsError = signal<string | null>(null);
@@ -71,9 +73,12 @@ export class EntriesPage {
     this.api.enqueueEnrich(id).subscribe({
       next: () => {
         this.updateBusy(id, null);
-        // no refresh needed, jobs store will handle it via WS
+        this.toasts.success('Enrichment job queued');
       },
-      error: () => this.updateBusy(id, null)
+      error: (err) => {
+        this.updateBusy(id, null);
+        this.toasts.error(err?.message ?? 'Failed to queue enrichment');
+      }
     });
   }
 
@@ -82,9 +87,12 @@ export class EntriesPage {
     this.api.enqueueThumbnail(id).subscribe({
       next: () => {
         this.updateBusy(id, null);
-        // no refresh needed, jobs store will handle it via WS
+        this.toasts.success('Thumbnail regeneration queued');
       },
-      error: () => this.updateBusy(id, null)
+      error: (err) => {
+        this.updateBusy(id, null);
+        this.toasts.error(err?.message ?? 'Failed to queue thumbnail regeneration');
+      }
     });
   }
 
@@ -92,23 +100,33 @@ export class EntriesPage {
     const entry = this.store.items().find((e) => e.id === id);
     if (!entry) return;
     this.updateBusy(id, 'important');
-    this.api.patchEntry(id, { important: !entry.important }).subscribe({
+    const newState = !entry.important;
+    this.api.patchEntry(id, { important: newState }).subscribe({
       next: () => {
         this.updateBusy(id, null);
-        this.store.updateItem(id, { important: !entry.important });
+        this.store.updateItem(id, { important: newState });
+        this.toasts.success(newState ? 'Marked as important' : 'Removed from important');
       },
-      error: () => this.updateBusy(id, null)
+      error: (err) => {
+        this.updateBusy(id, null);
+        this.toasts.error(err?.message ?? 'Failed to update importance');
+      }
     });
   }
 
   onDelete(id: string) {
+    if (!confirm('Are you sure you want to delete this entry?')) return;
     this.updateBusy(id, 'delete');
     this.api.deleteEntry(id).subscribe({
       next: () => {
         this.updateBusy(id, null);
         this.store.removeItem(id);
+        this.toasts.success('Entry deleted');
       },
-      error: () => this.updateBusy(id, null)
+      error: (err) => {
+        this.updateBusy(id, null);
+        this.toasts.error(err?.message ?? 'Failed to delete entry');
+      }
     });
   }
 

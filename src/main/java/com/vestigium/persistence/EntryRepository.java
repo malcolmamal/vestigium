@@ -1,6 +1,7 @@
 package com.vestigium.persistence;
 
 import com.vestigium.domain.Entry;
+import com.vestigium.service.NsfwConfigService;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -19,9 +20,11 @@ public class EntryRepository {
     private static final RowMapper<EntryRow> ENTRY_ROW_MAPPER = new EntryRowMapper();
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final NsfwConfigService nsfwConfig;
 
-    public EntryRepository(NamedParameterJdbcTemplate jdbc) {
+    public EntryRepository(NamedParameterJdbcTemplate jdbc, NsfwConfigService nsfwConfig) {
         this.jdbc = jdbc;
+        this.nsfwConfig = nsfwConfig;
     }
 
     public Entry create(String url, String title, String description, boolean important) {
@@ -136,7 +139,7 @@ public class EntryRepository {
                     )
                     """
             );
-            params.put("nsfwTags", List.of("adult content", "porn", "erotic", "redgifs", "pornhub"));
+            params.put("nsfwTags", nsfwConfig.getNsfwTags());
         }
 
         var whereSql = "WHERE " + String.join(" AND ", where);
@@ -153,9 +156,17 @@ public class EntryRepository {
                 params,
                 ENTRY_ROW_MAPPER
         );
+        
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+
+        var entryIds = rows.stream().map(EntryRow::id).toList();
+        var tagsByEntry = getTagsForEntries(entryIds);
+
         var out = new ArrayList<Entry>(rows.size());
         for (var row : rows) {
-            out.add(row.toEntry(getTagsForEntry(row.id())));
+            out.add(row.toEntry(tagsByEntry.getOrDefault(row.id(), List.of())));
         }
         return out;
     }
@@ -270,9 +281,16 @@ public class EntryRepository {
                 ENTRY_ROW_MAPPER
         );
 
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+
+        var entryIds = rows.stream().map(EntryRow::id).toList();
+        var tagsByEntry = getTagsForEntries(entryIds);
+
         var out = new ArrayList<Entry>(rows.size());
         for (var row : rows) {
-            out.add(row.toEntry(getTagsForEntry(row.id())));
+            out.add(row.toEntry(tagsByEntry.getOrDefault(row.id(), List.of())));
         }
         return out;
     }
@@ -363,6 +381,32 @@ public class EntryRepository {
                 Map.of("entryId", entryId),
                 (rs, rowNum) -> rs.getString("name")
         );
+    }
+
+    public Map<String, List<String>> getTagsForEntries(List<String> entryIds) {
+        if (entryIds == null || entryIds.isEmpty()) {
+            return Map.of();
+        }
+
+        var results = jdbc.query(
+                """
+                SELECT et.entry_id, t.name
+                FROM entry_tags et
+                JOIN tags t ON t.id = et.tag_id
+                WHERE et.entry_id IN (:entryIds)
+                ORDER BY t.name ASC
+                """,
+                Map.of("entryIds", entryIds),
+                (rs, rowNum) -> new Object[] { rs.getString("entry_id"), rs.getString("name") }
+        );
+
+        var map = new HashMap<String, List<String>>();
+        for (var row : results) {
+            var entryId = (String) row[0];
+            var tagName = (String) row[1];
+            map.computeIfAbsent(entryId, k -> new ArrayList<>()).add(tagName);
+        }
+        return map;
     }
 
     public void replaceTags(String entryId, List<String> normalizedTagNames, TagRepository tagRepository) {

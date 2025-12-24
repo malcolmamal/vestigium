@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:sqlite:./data/vestigium.db
+    url: jdbc:sqlite:./data/vestigium.db?busy_timeout=5000&journal_mode=WAL
     driver-class-name: org.sqlite.JDBC
     hikari:
       connection-init-sql: PRAGMA foreign_keys = ON

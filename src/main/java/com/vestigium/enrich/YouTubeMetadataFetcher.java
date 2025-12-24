@@ -44,18 +44,24 @@ public class YouTubeMetadataFetcher {
                     .header("User-Agent", "vestigium/0.1")
                     .GET()
                     .build();
-            var resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-                return Optional.empty();
-            }
-            JsonNode root = objectMapper.readTree(resp.body());
-            var title = text(root, "title");
-            var author = text(root, "author_name");
-            var thumbnailUrl = text(root, "thumbnail_url");
-            if (title == null || title.isBlank()) {
-                return Optional.empty();
-            }
-            return Optional.of(new YouTubeMetadata(title, author, thumbnailUrl));
+            return client.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(resp -> {
+                        if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+                            return Optional.<YouTubeMetadata>empty();
+                        }
+                        try {
+                            JsonNode root = objectMapper.readTree(resp.body());
+                            var title = text(root, "title");
+                            var author = text(root, "author_name");
+                            var thumbnailUrl = text(root, "thumbnail_url");
+                            if (title == null || title.isBlank()) {
+                                return Optional.<YouTubeMetadata>empty();
+                            }
+                            return Optional.of(new YouTubeMetadata(title, author, thumbnailUrl));
+                        } catch (Exception e) {
+                            return Optional.<YouTubeMetadata>empty();
+                        }
+                    }).get();
         } catch (Exception ignored) {
             return Optional.empty();
         }

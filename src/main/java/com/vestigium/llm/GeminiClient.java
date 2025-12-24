@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -67,21 +68,27 @@ public class GeminiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-        if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-            var bodySnippet = resp.body() == null ? "" : resp.body();
-            if (bodySnippet.length() > 400) {
-                bodySnippet = bodySnippet.substring(0, 400);
-            }
-            throw new IllegalStateException("Gemini error: HTTP " + resp.statusCode() + " body=" + bodySnippet);
-        }
+        return httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                .thenApply(resp -> {
+                    if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+                        var bodySnippet = resp.body() == null ? "" : resp.body();
+                        if (bodySnippet.length() > 400) {
+                            bodySnippet = bodySnippet.substring(0, 400);
+                        }
+                        throw new IllegalStateException("Gemini error: HTTP " + resp.statusCode() + " body=" + bodySnippet);
+                    }
 
-        JsonNode root = objectMapper.readTree(resp.body());
-        var textNode = root.at("/candidates/0/content/parts/0/text");
-        if (textNode.isMissingNode() || textNode.asText().isBlank()) {
-            throw new IllegalStateException("Gemini returned empty response.");
-        }
-        return textNode.asText();
+                    try {
+                        JsonNode root = objectMapper.readTree(resp.body());
+                        var textNode = root.at("/candidates/0/content/parts/0/text");
+                        if (textNode.isMissingNode() || textNode.asText().isBlank()) {
+                            throw new IllegalStateException("Gemini returned empty response.");
+                        }
+                        return textNode.asText();
+                    } catch (Exception e) {
+                        throw new RuntimeException("Failed to parse Gemini response", e);
+                    }
+                }).get();
     }
 
     public record InlineImage(String mimeType, byte[] bytes) {}

@@ -23,26 +23,28 @@ public class UrlContentFetcher {
                 .header("User-Agent", "vestigium/0.1")
                 .GET()
                 .build();
-        var resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-        if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-            throw new IllegalStateException("Fetch failed: HTTP " + resp.statusCode());
-        }
+        return client.sendAsync(req, HttpResponse.BodyHandlers.ofString())
+                .thenApply(resp -> {
+                    if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+                        throw new IllegalStateException("Fetch failed: HTTP " + resp.statusCode());
+                    }
 
-        Document doc = Jsoup.parse(resp.body(), url);
-        var title = firstNonBlank(
-                () -> attr(doc, "meta[property=og:title]", "content"),
-                () -> attr(doc, "meta[name=twitter:title]", "content"),
-                doc::title
-        );
-        var metaDescription = firstNonBlank(
-                () -> attr(doc, "meta[property=og:description]", "content"),
-                () -> attr(doc, "meta[name=twitter:description]", "content"),
-                () -> attr(doc, "meta[name=description]", "content")
-        );
-        doc.select("script,style,noscript").remove();
-        var text = doc.body() == null ? "" : doc.body().text();
+                    Document doc = Jsoup.parse(resp.body(), url);
+                    var title = firstNonBlank(
+                            () -> attr(doc, "meta[property=og:title]", "content"),
+                            () -> attr(doc, "meta[name=twitter:title]", "content"),
+                            doc::title
+                    );
+                    var metaDescription = firstNonBlank(
+                            () -> attr(doc, "meta[property=og:description]", "content"),
+                            () -> attr(doc, "meta[name=twitter:description]", "content"),
+                            () -> attr(doc, "meta[name=description]", "content")
+                    );
+                    doc.select("script,style,noscript").remove();
+                    var text = doc.body() == null ? "" : doc.body().text();
 
-        return new PageContent(truncate(title, 300), truncate(metaDescription, 1000), truncate(text, 15000));
+                    return new PageContent(truncate(title, 300), truncate(metaDescription, 1000), truncate(text, 15000));
+                }).get();
     }
 
     private static String attr(Document doc, String selector, String attr) {

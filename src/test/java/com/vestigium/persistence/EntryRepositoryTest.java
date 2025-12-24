@@ -2,11 +2,13 @@ package com.vestigium.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.vestigium.service.NsfwConfigService;
 import com.vestigium.domain.Entry;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
@@ -14,7 +16,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({EntryRepository.class, TagRepository.class, ListRepository.class})
+@Import({EntryRepository.class, TagRepository.class, ListRepository.class, NsfwConfigService.class, JacksonAutoConfiguration.class})
 class EntryRepositoryTest {
 
     @Autowired

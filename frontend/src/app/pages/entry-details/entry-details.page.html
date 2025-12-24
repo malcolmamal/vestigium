@@ -47,7 +47,7 @@
           <a class="url" [href]="data()!.entry!.url" target="_blank" rel="noreferrer">
             {{ data()!.entry!.url }}
           </a>
-          <div class="muted">Added: {{ data()!.entry!.createdAt }}</div>
+          <div class="muted">Added: {{ data()!.entry!.createdAt | date: 'short' }}</div>
           <div class="pillRow">
             <span class="pill" [class.on]="data()!.entry!.important">Important</span>
             <span class="pill" [class.on]="!!data()!.entry!.visitedAt">Visited</span>

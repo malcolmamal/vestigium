@@ -7,6 +7,7 @@ import {
   signal
 } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { Message } from '@stomp/stompjs';
@@ -19,6 +20,7 @@ import type {
   TagSuggestionResponse
 } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
+import { ToastService } from '../../services/toast.service';
 import { WebSocketService } from '../../services/websocket.service';
 import { EntriesStore } from '../../store/entries.store';
 import { extractYouTubeId } from '../../utils/youtube';
@@ -27,7 +29,13 @@ import { VideoModalComponent } from '../../components/video-modal/video-modal.co
 @Component({
   selector: 'app-entry-details-page',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, TagChipsInputComponent, VideoModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    TagChipsInputComponent,
+    VideoModalComponent
+  ],
   templateUrl: './entry-details.page.html',
   styleUrl: './entry-details.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -38,6 +46,7 @@ export class EntryDetailsPage {
   private readonly router = inject(Router);
   private readonly entriesStore = inject(EntriesStore);
   private readonly ws = inject(WebSocketService);
+  private readonly toasts = inject(ToastService);
 
   readonly id = signal<string | null>(null);
   readonly loading = signal(false);
@@ -246,8 +255,15 @@ export class EntryDetailsPage {
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
-        next: () => this.refresh(id),
-        error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to save')
+        next: () => {
+          this.refresh(id);
+          this.toasts.success('Changes saved');
+        },
+        error: (e) => {
+          const msg = e?.error?.detail ?? e?.message ?? 'Failed to save';
+          this.error.set(msg);
+          this.toasts.error(msg);
+        }
       });
   }
 
@@ -255,9 +271,17 @@ export class EntryDetailsPage {
     const id = this.id();
     const entry = this.entry();
     if (!id || !entry) return;
-    this.api.patchEntry(id, { important: !entry.important }).subscribe({
-      next: () => this.refresh(id),
-      error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to update')
+    const newState = !entry.important;
+    this.api.patchEntry(id, { important: newState }).subscribe({
+      next: () => {
+        this.refresh(id);
+        this.toasts.success(newState ? 'Marked as important' : 'Removed from important');
+      },
+      error: (e) => {
+        const msg = e?.error?.detail ?? e?.message ?? 'Failed to update';
+        this.error.set(msg);
+        this.toasts.error(msg);
+      }
     });
   }
 
@@ -265,31 +289,49 @@ export class EntryDetailsPage {
     const id = this.id();
     if (!id) return;
     this.api.markVisited(id).subscribe({
-      next: () => this.refresh(id),
-      error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to mark visited')
+      next: () => {
+        this.refresh(id);
+        this.toasts.success('Marked as visited');
+      },
+      error: (e) => {
+        const msg = e?.error?.detail ?? e?.message ?? 'Failed to mark visited';
+        this.error.set(msg);
+        this.toasts.error(msg);
+      }
     });
   }
 
   enqueueEnrich() {
     const id = this.id();
     if (!id) return;
-    this.actionHint.set('Enrichment queued. Refresh in a moment to see updates.');
     this.addPendingAutoRefresh('ENRICH_ENTRY');
     this.api.enqueueEnrich(id).subscribe({
-      next: () => this.loadJobs(id),
-      error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to enqueue enrichment')
+      next: () => {
+        this.loadJobs(id);
+        this.toasts.success('Enrichment job queued');
+      },
+      error: (e) => {
+        const msg = e?.error?.detail ?? e?.message ?? 'Failed to enqueue enrichment';
+        this.error.set(msg);
+        this.toasts.error(msg);
+      }
     });
   }
 
   enqueueThumbnail() {
     const id = this.id();
     if (!id) return;
-    this.actionHint.set('Thumbnail regeneration queued. Refresh in a moment.');
     this.addPendingAutoRefresh('REGENERATE_THUMBNAIL');
     this.api.enqueueThumbnail(id).subscribe({
-      next: () => this.loadJobs(id),
-      error: (e) =>
-        this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to enqueue thumbnail regeneration')
+      next: () => {
+        this.loadJobs(id);
+        this.toasts.success('Thumbnail regeneration queued');
+      },
+      error: (e) => {
+        const msg = e?.error?.detail ?? e?.message ?? 'Failed to enqueue thumbnail regeneration';
+        this.error.set(msg);
+        this.toasts.error(msg);
+      }
     });
   }
 
@@ -448,11 +490,15 @@ export class EntryDetailsPage {
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
         next: () => {
+          this.toasts.info('Job cancelled');
           const id = this.id();
           if (id) this.loadJobs(id);
         },
-        error: (e) =>
-          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
+        error: (e) => {
+          const msg = e?.error?.detail ?? e?.message ?? 'Failed to cancel job';
+          this.jobActionError.set(msg);
+          this.toasts.error(msg);
+        }
       });
   }
 
@@ -464,11 +510,15 @@ export class EntryDetailsPage {
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
         next: () => {
+          this.toasts.info('Job removed');
           const id = this.id();
           if (id) this.loadJobs(id);
         },
-        error: (e) =>
-          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
+        error: (e) => {
+          const msg = e?.error?.detail ?? e?.message ?? 'Failed to delete job';
+          this.jobActionError.set(msg);
+          this.toasts.error(msg);
+        }
       });
   }
 
@@ -480,10 +530,15 @@ export class EntryDetailsPage {
 
     this.api.deleteEntry(id).subscribe({
       next: () => {
+        this.toasts.success('Entry deleted');
         this.entriesStore.refresh();
         void this.router.navigate(['/entries']);
       },
-      error: (e) => this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to delete entry')
+      error: (e) => {
+        const msg = e?.error?.detail ?? e?.message ?? 'Failed to delete entry';
+        this.error.set(msg);
+        this.toasts.error(msg);
+      }
     });
   }
 }
