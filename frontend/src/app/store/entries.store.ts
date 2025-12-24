@@ -1,5 +1,6 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { catchError, finalize, of, switchMap, tap } from 'rxjs';
 
 import type { EntryResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
@@ -40,23 +41,54 @@ export class EntriesStore {
     );
   });
 
-  constructor() {
-    effect(() => {
-      // Re-load when filters change (simple v1 approach).
-      void this.query();
-      void this.tagFilter();
-      void this.listFilter();
-      void this.importantOnly();
-      void this.visitedOnly();
-      void this.addedFrom();
-      void this.addedTo();
-      void this.sort();
-      void this.page();
-      void this.pageSize();
-      void this.refreshToken();
-      void this.settings.showNsfw();
+  private readonly filterState = computed(() => ({
+    query: this.query(),
+    tags: this.tagFilter(),
+    listIds: this.listFilter(),
+    important: this.importantOnly(),
+    visited: this.visitedOnly(),
+    addedFrom: this.addedFrom(),
+    addedTo: this.addedTo(),
+    sort: this.sort(),
+    page: this.page(),
+    pageSize: this.pageSize(),
+    nsfw: this.settings.showNsfw(),
+    refresh: this.refreshToken()
+  }));
 
-      this.load();
+  constructor() {
+    toObservable(this.filterState).pipe(
+      tap(() => {
+        if (this.items().length === 0) {
+          this.loading.set(true);
+        }
+        this.error.set(null);
+      }),
+      switchMap(state => {
+        return this.api.listEntries({
+          q: state.query.trim() || undefined,
+          tags: state.tags,
+          listIds: state.listIds,
+          important: state.important ?? undefined,
+          visited: state.visited ?? undefined,
+          includeNsfw: state.nsfw,
+          addedFrom: this.toIsoStartOfDay(state.addedFrom),
+          addedTo: this.toIsoEndOfDay(state.addedTo),
+          sort: state.sort,
+          page: state.page,
+          pageSize: state.pageSize
+        }).pipe(
+          catchError(err => {
+            this.error.set(err?.message ?? 'Failed to load entries');
+            return of({ items: [] });
+          }),
+          finalize(() => this.loading.set(false))
+        );
+      })
+    ).subscribe(res => {
+      if (res.items) {
+        this.items.set(res.items);
+      }
     });
   }
 
@@ -69,34 +101,6 @@ export class EntriesStore {
   private toIsoEndOfDay(dateYmd: string | null) {
     if (!dateYmd) return undefined;
     return `${dateYmd}T23:59:59.999Z`;
-  }
-
-  load() {
-    // Only show full loading state if we have no items (initial load)
-    if (this.items().length === 0) {
-      this.loading.set(true);
-    }
-    this.error.set(null);
-
-    this.api
-      .listEntries({
-        q: this.query().trim() || undefined,
-        tags: this.tagFilter(),
-        listIds: this.listFilter(),
-        important: this.importantOnly() ?? undefined,
-        visited: this.visitedOnly() ?? undefined,
-        includeNsfw: this.settings.showNsfw(),
-        addedFrom: this.toIsoStartOfDay(this.addedFrom()),
-        addedTo: this.toIsoEndOfDay(this.addedTo()),
-        sort: this.sort(),
-        page: this.page(),
-        pageSize: this.pageSize()
-      })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (res) => this.items.set(res.items!),
-        error: (e) => this.error.set(e?.message ?? 'Failed to load entries')
-      });
   }
 
   setTagFilter(tags: string[]) {

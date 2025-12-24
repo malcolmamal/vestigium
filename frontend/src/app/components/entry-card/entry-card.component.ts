@@ -2,16 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
-import type { EntryResponse, JobResponse } from '../../models';
+import type { EntryResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
+import { JobsStore } from '../../store/jobs.store';
 import { extractYouTubeId } from '../../utils/youtube';
-import { VideoModalComponent } from '../video-modal/video-modal.component';
 
 @Component({
   selector: 'app-entry-card',
   standalone: true,
-  imports: [CommonModule, RouterLink, VideoModalComponent],
+  imports: [CommonModule, RouterLink],
   templateUrl: './entry-card.component.html',
   styleUrl: './entry-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -19,14 +19,21 @@ import { VideoModalComponent } from '../video-modal/video-modal.component';
 export class EntryCardComponent {
   private readonly api = inject(VestigiumApiService);
   private readonly entriesStore = inject(EntriesStore);
+  private readonly jobsStore = inject(JobsStore);
 
   readonly entry = input.required<EntryResponse>();
   readonly changed = output<{ kind: 'queued' | 'updated' | 'deleted'; entryId: string }>();
+  readonly playVideo = output<string>();
 
   readonly busyAction = signal<'enrich' | 'thumb' | 'important' | 'delete' | null>(null);
   readonly busy = computed(() => this.busyAction() !== null);
   
-  readonly jobs = signal<JobResponse[]>([]);
+  readonly jobs = computed(() => {
+    const id = this.entry().id;
+    if (!id) return [];
+    return this.jobsStore.items().filter(j => j.entryId === id);
+  });
+
   readonly enrichJobs = computed(() => 
     this.jobs().filter(j => j.type === 'ENRICH_ENTRY' && (j.status === 'PENDING' || j.status === 'RUNNING'))
   );
@@ -37,57 +44,25 @@ export class EntryCardComponent {
   readonly thumbnailUrl = computed(() => `${this.entry().thumbnailUrl}?v=${this.thumbVersion()}`);
 
   readonly youtubeId = computed(() => extractYouTubeId(this.entry().url || ''));
-  readonly showVideo = signal(false);
 
-  private pollInterval?: ReturnType<typeof setInterval>;
+  private prevThumbCount = 0;
 
   constructor() {
     effect(() => {
-      const id = this.entry().id!;
-      this.loadJobs(id);
-      this.startPolling(id);
+      const curr = this.thumbJobs().length;
+      if (this.prevThumbCount > 0 && curr === 0) {
+        this.thumbVersion.set(Date.now());
+      }
+      this.prevThumbCount = curr;
     });
-  }
-
-  ngOnDestroy() {
-    this.stopPolling();
   }
 
   openVideo(evt: MouseEvent) {
     this.stop(evt);
-    this.showVideo.set(true);
-  }
-
-  closeVideo() {
-    this.showVideo.set(false);
-  }
-
-  private startPolling(entryId: string) {
-    this.stopPolling();
-    this.pollInterval = setInterval(() => this.loadJobs(entryId), 1500);
-  }
-
-  private stopPolling() {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = undefined;
+    const yId = this.youtubeId();
+    if (yId) {
+      this.playVideo.emit(yId);
     }
-  }
-
-  private loadJobs(entryId: string) {
-    this.api.listJobs({ entryId, status: ['PENDING', 'RUNNING'] }).subscribe({
-      next: (jobs) => {
-        const prevThumbCount = this.thumbJobs().length;
-        this.jobs.set(jobs || []);
-        const currThumbCount = this.thumbJobs().length;
-        
-        // If thumbnail jobs dropped from >0 to 0, refresh the thumbnail
-        if (prevThumbCount > 0 && currThumbCount === 0) {
-          this.thumbVersion.set(Date.now());
-        }
-      },
-      error: () => {}
-    });
   }
 
   onImgError(evt: Event) {
@@ -156,5 +131,3 @@ export class EntryCardComponent {
     evt.stopPropagation();
   }
 }
-
-

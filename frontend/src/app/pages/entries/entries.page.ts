@@ -3,15 +3,17 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
+import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
 import type { ListResponse, TagSuggestionResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { EntriesStore } from '../../store/entries.store';
 import { ListsStore } from '../../store/lists.store';
+import { JobsStore } from '../../store/jobs.store';
 
 @Component({
   selector: 'app-entries-page',
   standalone: true,
-  imports: [RouterLink, EntryCardComponent, TagChipsInputComponent],
+  imports: [RouterLink, EntryCardComponent, TagChipsInputComponent, VideoModalComponent],
   templateUrl: './entries.page.html',
   styleUrl: './entries.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -22,10 +24,13 @@ export class EntriesPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly lists = inject(ListsStore);
+  readonly jobsStore = inject(JobsStore);
 
   readonly popularTags = signal<TagSuggestionResponse[]>([]);
   readonly popularTagsError = signal<string | null>(null);
   readonly filtersCollapsed = signal(true);
+  readonly activeVideoId = signal<string | null>(null);
+
   readonly filterSummary = computed(() => {
     const parts: string[] = [];
     const q = this.store.query().trim();
@@ -47,15 +52,20 @@ export class EntriesPage {
     });
 
     this.lists.load();
+    this.jobsStore.startPolling(2000);
 
     const tags = this.route.snapshot.queryParamMap.getAll('tags');
     const legacyTag = this.route.snapshot.queryParamMap.get('tag');
     const initial = [...tags, ...(legacyTag ? [legacyTag] : [])]
-      .map((t) => (t ?? '').toString().trim().toLowerCase())
-      .filter((t) => t.length > 0);
+    .map((t) => (t ?? '').toString().trim().toLowerCase())
+    .filter((t) => t.length > 0);
     if (initial.length > 0) {
       this.store.setTagFilter(Array.from(new Set(initial)));
     }
+  }
+
+  ngOnDestroy() {
+    this.jobsStore.stopPolling();
   }
 
   applyPopularTag(tag: string) {
@@ -118,6 +128,14 @@ export class EntriesPage {
     if (evt.kind === 'updated' || evt.kind === 'deleted') {
       this.store.refresh();
     }
+  }
+
+  onPlayVideo(videoId: string) {
+    this.activeVideoId.set(videoId);
+  }
+
+  closeVideo() {
+    this.activeVideoId.set(null);
   }
 }
 

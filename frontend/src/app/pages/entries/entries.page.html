@@ -188,7 +188,7 @@
     } @else {
       <div class="grid">
         @for (e of store.items(); track e.id) {
-          <app-entry-card [entry]="e" (changed)="onCardChanged($event)" />
+          <app-entry-card [entry]="e" (changed)="onCardChanged($event)" (playVideo)="onPlayVideo($event)" />
         }
       </div>
       <div class="pager bottom">
@@ -204,5 +204,9 @@
     }
   </div>
 </section>
+
+@if (activeVideoId()) {
+  <app-video-modal [videoId]="activeVideoId()!" (close)="closeVideo()" />
+}
 
 
