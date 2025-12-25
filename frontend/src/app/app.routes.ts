@@ -28,6 +28,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/queue/queue.page').then((m) => m.QueuePage)
   },
   {
+    path: 'failed-jobs',
+    loadComponent: () =>
+      import('./pages/failed-jobs/failed-jobs.page').then((m) => m.FailedJobsPage)
+  },
+  {
     path: 'entries/new',
     loadComponent: () =>
       import('./pages/create-entry/create-entry.page').then((m) => m.CreateEntryPage)

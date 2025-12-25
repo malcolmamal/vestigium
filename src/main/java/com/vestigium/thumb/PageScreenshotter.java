@@ -45,6 +45,15 @@ public class PageScreenshotter {
                     if (isRedgifs(url)) {
                         dismissRedgifsConsent(page);
                         page.waitForTimeout(400);
+                    } else if (isReddit(url)) {
+                        // Reddit popups can be slow to appear.
+                        page.waitForTimeout(1000);
+                        dismissRedditCookiePopup(page);
+                        page.waitForTimeout(500);
+                        // After clicking popups, Reddit sometimes shifts focus or scroll.
+                        // Ensure we are back at the very top for a clean screenshot.
+                        page.evaluate("window.scrollTo(0, 0)");
+                        page.waitForTimeout(200);
                     }
 
                     return page.screenshot(new Page.ScreenshotOptions()
@@ -60,6 +69,10 @@ public class PageScreenshotter {
 
     private static boolean isRedgifs(String url) {
         return host(url).map(h -> h.endsWith("redgifs.com")).orElse(false);
+    }
+
+    private static boolean isReddit(String url) {
+        return host(url).map(h -> h.contains("reddit.com")).orElse(false);
     }
 
     private static Optional<String> host(String url) {
@@ -82,6 +95,22 @@ public class PageScreenshotter {
         // Some variants use different wording.
         tryClick(page, "button:has-text(\"Accept\")", 1500);
         tryClick(page, "button:has-text(\"Agree\")", 1500);
+    }
+
+    private static void dismissRedditCookiePopup(Page page) {
+        // Reddit's cookie banner often reloads the page if you click "Accept All".
+        // The user wants to click the 'X' button in the corner of the popup.
+        // We try multiple common selectors for the 'X' button or the reject button.
+        tryClick(page, "button[aria-label='Close']", 2000);
+        tryClick(page, "button:has-text('Reject Optional Cookies')", 1000);
+        // Sometimes it's a plain 'X' in a button or a div acting as a button
+        tryClick(page, "button:has-text('X')", 1000);
+        tryClick(page, "div[role='button']:has-text('X')", 1000);
+        // Overlays often have 'close' in their class or ID
+        tryClick(page, "[class*='close']", 1000);
+        // Shreddit (new Reddit) specific selectors
+        tryClick(page, "shreddit-experience-tree button[aria-label='Close']", 1000);
+        tryClick(page, "shreddit-experience-tree button:has-text('Reject')", 1000);
     }
 
     private static void tryClick(Page page, String selector, int timeoutMs) {

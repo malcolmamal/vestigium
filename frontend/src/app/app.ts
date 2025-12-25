@@ -18,4 +18,8 @@ export class App {
     () =>
       this.jobsStore.items().filter((j) => j.status === 'PENDING' || j.status === 'RUNNING').length
   );
+
+  readonly failedCount = computed(
+    () => this.jobsStore.items().filter((j) => j.status === 'FAILED').length
+  );
 }

@@ -55,6 +55,17 @@ public class JobsController {
     }
 
     /**
+     * Retries a FAILED or CANCELLED job.
+     */
+    @PostMapping("/api/jobs/{id}/retry")
+    public void retry(@PathVariable String id) {
+        var updated = jobs.retry(id);
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Job is not failed/cancelled or does not exist.");
+        }
+    }
+
+    /**
      * Removes job record (allowed for everything except RUNNING).
      */
     @DeleteMapping("/api/jobs/{id}")

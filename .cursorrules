@@ -20,4 +20,6 @@
 - Use **Java Records** for DTOs and Domain models.
 - Annotate DTO fields with `@NotNull` to document required fields.
 - New database changes **must** be implemented via Flyway migrations in `src/main/resources/db/migration`.
-- **Testing**: Always run `./gradlew test` (Backend) and `npm test` (Frontend) as the last step of your development workflow to ensure no regressions. Tests are designed to be meaningful and stable; do not create brittle or trivial tests.
+- **Testing**: Always run `./gradlew build` and `./gradlew test` (Backend) and `npm test` (Frontend) as the last step of your development workflow to ensure no regressions.
+- **NEVER** run `./gradlew bootRun` directly unless absolutely necessary. Prefer building and testing. If you must stop a running backend, identify and kill the process.
+

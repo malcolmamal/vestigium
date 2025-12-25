@@ -482,6 +482,26 @@ export class EntryDetailsPage {
     }, 250);
   }
 
+  retryJob(job: JobResponse) {
+    this.jobActionError.set(null);
+    this.jobActionBusy.set(job.id!);
+    this.api
+      .retryJob(job.id!)
+      .pipe(finalize(() => this.jobActionBusy.set(null)))
+      .subscribe({
+        next: () => {
+          this.toasts.info('Job retrying');
+          const id = this.id();
+          if (id) this.loadJobs(id);
+        },
+        error: (e) => {
+          const msg = e?.error?.detail ?? e?.message ?? 'Failed to retry job';
+          this.jobActionError.set(msg);
+          this.toasts.error(msg);
+        }
+      });
+  }
+
   cancelJob(job: JobResponse) {
     this.jobActionError.set(null);
     this.jobActionBusy.set(job.id!);

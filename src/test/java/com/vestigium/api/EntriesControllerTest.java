@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.vestigium.api.dto.EntryResponse;
 import com.vestigium.domain.Entry;
 import com.vestigium.service.EntryService;
 import java.util.List;
@@ -32,12 +33,16 @@ class EntriesControllerTest {
     private EntryService entryService;
 
     @Test
+    @SuppressWarnings("unchecked")
     void list_ShouldReturnEntries() throws Exception {
         var entry = new Entry(
                 "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", List.of("tag1")
         );
+        var response = EntryResponse.from(entry, false);
+        
         when(entryService.search(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt()))
                 .thenReturn(List.of(entry));
+        when(entryService.toResponses(anyList())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/api/entries")
                         .param("q", "test")
@@ -53,10 +58,12 @@ class EntriesControllerTest {
         var entry = new Entry(
                 "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", List.of("tag1")
         );
+        var response = EntryResponse.from(entry, false);
         var created = new EntryService.CreatedEntry(entry, List.of());
         
         when(entryService.create(eq("http://example.com"), any(), any(), any(), anyBoolean(), any()))
                 .thenReturn(created);
+        when(entryService.toResponse(any())).thenReturn(response);
 
         mockMvc.perform(multipart("/api/entries")
                         .param("url", "http://example.com")

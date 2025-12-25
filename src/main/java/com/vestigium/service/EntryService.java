@@ -2,6 +2,7 @@ package com.vestigium.service;
 
 import com.vestigium.domain.Attachment;
 import com.vestigium.domain.Entry;
+import com.vestigium.api.dto.EntryResponse;
 import com.vestigium.enrich.UrlContentFetcher;
 import com.vestigium.enrich.YouTubeMetadataFetcher;
 import com.vestigium.persistence.AttachmentRepository;
@@ -426,6 +427,20 @@ public class EntryService {
 
     public Entry getById(String id) {
         return entries.getById(id).orElseThrow(() -> new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found."));
+    }
+
+    public List<EntryResponse> toResponses(List<Entry> entriesList) {
+        if (entriesList.isEmpty()) return List.of();
+        var ids = entriesList.stream().map(Entry::id).toList();
+        var failedIds = jobs.findEntryIdsWithFailedLatestJob(ids);
+        return entriesList.stream()
+                .map(e -> EntryResponse.from(e, failedIds.contains(e.id())))
+                .toList();
+    }
+
+    public EntryResponse toResponse(Entry e) {
+        var failedIds = jobs.findEntryIdsWithFailedLatestJob(List.of(e.id()));
+        return EntryResponse.from(e, failedIds.contains(e.id()));
     }
 
     public List<Attachment> listAttachments(String entryId) {

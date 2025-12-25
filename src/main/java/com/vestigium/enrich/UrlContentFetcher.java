@@ -43,7 +43,31 @@ public class UrlContentFetcher {
                     doc.select("script,style,noscript").remove();
                     var text = doc.body() == null ? "" : doc.body().text();
 
-                    return new PageContent(truncate(title, 300), truncate(metaDescription, 1000), truncate(text, 15000));
+                    // Specific support for Reddit comments.
+                    var extraText = new StringBuilder();
+                    if (url.contains("reddit.com")) {
+                        // In Reddit's current UI, comments are often in shreddit-comment elements.
+                        // We look for the first one that has a substantial body.
+                        var firstComment = doc.select("shreddit-comment [slot=comment]").first();
+                        if (firstComment != null) {
+                            var commentBody = firstComment.text();
+                            if (commentBody != null && !commentBody.isBlank()) {
+                                extraText.append("\nTop Reddit Comment: ").append(commentBody).append("\n");
+                            }
+                        } else {
+                            // Fallback for older/other Reddit UI variants
+                            var fallbackComment = doc.select(".comment .md").first();
+                            if (fallbackComment != null) {
+                                extraText.append("\nTop Reddit Comment: ").append(fallbackComment.text()).append("\n");
+                            }
+                        }
+                    }
+
+                    return new PageContent(
+                            truncate(title, 300),
+                            truncate(metaDescription, 1000),
+                            truncate(text + extraText.toString(), 20000)
+                    );
                 }).get();
     }
 

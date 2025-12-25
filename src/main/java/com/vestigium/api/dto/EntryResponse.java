@@ -17,11 +17,16 @@ public record EntryResponse(
         boolean important,
         String visitedAt,
         @Schema(requiredMode = REQUIRED) @NotNull String createdAt,
-        @Schema(requiredMode = REQUIRED) @NotNull String updatedAt,
-        @Schema(requiredMode = REQUIRED) @NotNull String thumbnailUrl,
-        @Schema(requiredMode = REQUIRED) @NotNull String thumbnailLargeUrl
+    @Schema(requiredMode = REQUIRED) @NotNull String updatedAt,
+    @Schema(requiredMode = REQUIRED) @NotNull String thumbnailUrl,
+    @Schema(requiredMode = REQUIRED) @NotNull String thumbnailLargeUrl,
+    @Schema(requiredMode = REQUIRED) @NotNull boolean latestJobFailed
 ) {
     public static EntryResponse from(Entry e) {
+        return from(e, false);
+    }
+
+    public static EntryResponse from(Entry e, boolean latestJobFailed) {
         return new EntryResponse(
                 e.id(),
                 e.url(),
@@ -34,7 +39,8 @@ public record EntryResponse(
                 e.createdAt(),
                 e.updatedAt(),
                 "/api/entries/" + e.id() + "/thumbnail",
-                "/api/entries/" + e.id() + "/thumbnail?size=large"
+                "/api/entries/" + e.id() + "/thumbnail?size=large",
+                latestJobFailed
         );
     }
 }

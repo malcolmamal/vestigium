@@ -135,6 +135,16 @@
                         Cancel
                       </button>
                     }
+                    @if (j.status === 'FAILED' || j.status === 'CANCELLED') {
+                      <button
+                        class="button small"
+                        type="button"
+                        (click)="retryJob(j)"
+                        [disabled]="jobActionBusy() === j.id"
+                      >
+                        Retry
+                      </button>
+                    }
                     <button
                       class="button small secondary"
                       type="button"

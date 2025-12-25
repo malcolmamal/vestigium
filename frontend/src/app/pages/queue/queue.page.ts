@@ -29,6 +29,22 @@ export class QueuePage {
     return job.status === 'RUNNING';
   }
 
+  retryJob(job: JobResponse) {
+    this.jobActionError.set(null);
+    this.jobActionBusy.set(job.id!);
+    this.api
+      .retryJob(job.id!)
+      .pipe(finalize(() => this.jobActionBusy.set(null)))
+      .subscribe({
+        next: () => {
+          this.jobs.load();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        error: (e) =>
+          this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to retry job')
+      });
+  }
+
   cancelJob(job: JobResponse) {
     this.jobActionError.set(null);
     this.jobActionBusy.set(job.id!);
@@ -36,7 +52,10 @@ export class QueuePage {
       .cancelJob(job.id!)
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
-        next: () => this.jobs.load(),
+        next: () => {
+          this.jobs.load();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
         error: (e) =>
           this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to cancel job')
       });
@@ -49,7 +68,10 @@ export class QueuePage {
       .deleteJob(job.id!)
       .pipe(finalize(() => this.jobActionBusy.set(null)))
       .subscribe({
-        next: () => this.jobs.load(),
+        next: () => {
+          this.jobs.load();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
         error: (e) =>
           this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete job')
       });

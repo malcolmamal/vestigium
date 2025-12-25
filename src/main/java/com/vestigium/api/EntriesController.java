@@ -54,7 +54,7 @@ public class EntriesController {
                 attachments
         );
         return new EntryDetailsResponse(
-                EntryResponse.from(created.entry()),
+                entryService.toResponse(created.entry()),
                 created.attachments().stream().map(AttachmentResponse::from).toList()
         );
     }
@@ -73,11 +73,8 @@ public class EntriesController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
     ) {
-        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, includeNsfw, page, pageSize)
-                .stream()
-                .map(EntryResponse::from)
-                .toList();
-        return new EntryListResponse(page, pageSize, items);
+        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, includeNsfw, page, pageSize);
+        return new EntryListResponse(page, pageSize, entryService.toResponses(items));
     }
 
     @PostMapping(value = "/api/entries/bulk", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -136,7 +133,7 @@ public class EntriesController {
         var entry = entryService.getById(id);
         var attachments = entryService.listAttachments(id);
         return new EntryDetailsResponse(
-                EntryResponse.from(entry),
+                entryService.toResponse(entry),
                 attachments.stream().map(AttachmentResponse::from).toList()
         );
     }
@@ -154,7 +151,7 @@ public class EntriesController {
     @PatchMapping("/api/entries/{id}")
     public EntryResponse patch(@PathVariable String id, @RequestBody PatchEntryRequest req) {
         var updated = entryService.update(id, req.title(), req.description(), req.detailedDescription(), req.important(), req.tags());
-        return EntryResponse.from(updated);
+        return entryService.toResponse(updated);
     }
 
     @PostMapping("/api/entries/{id}/visited")

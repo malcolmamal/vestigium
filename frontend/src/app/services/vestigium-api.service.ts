@@ -92,6 +92,10 @@ export class VestigiumApiService {
     return apiFn.cancel(this.http, this.api.rootUrl, { id }).pipe(switchMap(unwrapBody));
   }
 
+  retryJob(id: string) {
+    return this.http.post<void>(`${this.api.rootUrl}/api/jobs/${id}/retry`, {});
+  }
+
   deleteJob(id: string) {
     return apiFn.delete1(this.http, this.api.rootUrl, { id }).pipe(switchMap(unwrapBody));
   }

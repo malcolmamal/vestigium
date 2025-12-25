@@ -166,4 +166,31 @@ class EntryServiceTest {
         // IMPORTANT: Even if skipped, lists should be merged
         verify(lists).mergeEntryLists(eq("123"), eq(List.of("L1", "L2")));
     }
+
+    @Test
+    void toResponse_ShouldFlagFailedLatestJob() {
+        var entry = new Entry("123", "url", null, null, null, null, null, null, false, "now", "now", List.of());
+        when(jobs.findEntryIdsWithFailedLatestJob(eq(List.of("123")))).thenReturn(java.util.Set.of("123"));
+
+        var response = service.toResponse(entry);
+
+        assertThat(response.id()).isEqualTo("123");
+        assertThat(response.latestJobFailed()).isTrue();
+    }
+
+    @Test
+    void toResponses_ShouldFlagFailedLatestJobs() {
+        var e1 = new Entry("1", "u1", null, null, null, null, null, null, false, "now", "now", List.of());
+        var e2 = new Entry("2", "u2", null, null, null, null, null, null, false, "now", "now", List.of());
+        
+        when(jobs.findEntryIdsWithFailedLatestJob(eq(List.of("1", "2")))).thenReturn(java.util.Set.of("1"));
+
+        var results = service.toResponses(List.of(e1, e2));
+
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).id()).isEqualTo("1");
+        assertThat(results.get(0).latestJobFailed()).isTrue();
+        assertThat(results.get(1).id()).isEqualTo("2");
+        assertThat(results.get(1).latestJobFailed()).isFalse();
+    }
 }

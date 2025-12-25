@@ -80,10 +80,21 @@ public class JobRepository {
 
     public void markSucceeded(String jobId) {
         var finishedAt = InstantSql.nowIso();
+        var jobOpt = getById(jobId);
+        if (jobOpt.isEmpty()) return;
+        var job = jobOpt.get();
+
         jdbc.update(
                 "UPDATE jobs SET status = 'SUCCEEDED', finished_at = :finishedAt WHERE id = :id",
                 Map.of("id", jobId, "finishedAt", finishedAt)
         );
+
+        // Cleanup: remove older failed jobs of the same type for this entry.
+        jdbc.update(
+                "DELETE FROM jobs WHERE entry_id = :entryId AND type = :type AND status = 'FAILED' AND id != :id",
+                Map.of("entryId", job.entryId(), "type", job.type(), "id", jobId)
+        );
+
         getById(jobId).ifPresent(j -> events.publishEvent(new com.vestigium.events.JobUpdatedEvent(j)));
     }
 
@@ -173,6 +184,49 @@ public class JobRepository {
                 "DELETE FROM jobs WHERE id = :id AND status != 'RUNNING'",
                 Map.of("id", id)
         );
+    }
+
+    /**
+     * Retries a job if it's FAILED or CANCELLED. Returns number of affected rows.
+     */
+    public int retry(String id) {
+        var updated = jdbc.update(
+                """
+                UPDATE jobs
+                SET status = 'PENDING', finished_at = NULL, locked_at = NULL, attempts = 0
+                WHERE id = :id AND status IN ('FAILED', 'CANCELLED')
+                """,
+                Map.of("id", id)
+        );
+        if (updated > 0) {
+            getById(id).ifPresent(j -> events.publishEvent(new com.vestigium.events.JobUpdatedEvent(j)));
+        }
+        return updated;
+    }
+
+    /**
+     * Checks which entry IDs have a latest job of any type in FAILED status.
+     * Returns a set of entry IDs that meet this criteria.
+     */
+    public java.util.Set<String> findEntryIdsWithFailedLatestJob(List<String> entryIds) {
+        if (entryIds == null || entryIds.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+
+        return new java.util.HashSet<>(jdbc.query(
+                """
+                SELECT entry_id
+                FROM (
+                  SELECT entry_id, type, status, MAX(created_at)
+                  FROM jobs
+                  WHERE entry_id IN (:entryIds)
+                  GROUP BY entry_id, type
+                )
+                WHERE status = 'FAILED'
+                """,
+                Map.of("entryIds", entryIds),
+                (rs, rowNum) -> rs.getString("entry_id")
+        ));
     }
 
     public List<Job> listForEntry(String entryId, int limit) {

@@ -1,0 +1,90 @@
+<section class="page">
+  <header class="pageHeader">
+    <div>
+      <h1>Failed Jobs</h1>
+      <p class="muted">Background tasks that encountered errors. Please review and retry or remove them.</p>
+    </div>
+    <button class="button" type="button" (click)="jobs.load()">Refresh</button>
+  </header>
+
+  @if (jobActionError()) {
+    <div class="errorBox">{{ jobActionError() }}</div>
+  }
+
+  @if (jobs.error()) {
+    <div class="errorBox">{{ jobs.error() }}</div>
+  } @else if (jobs.loading() && failedGroups().length === 0) {
+    <div class="muted">Loading…</div>
+  } @else if (failedGroups().length === 0) {
+    <div class="muted">No failed jobs. Everything looks good!</div>
+  } @else {
+    <div class="failedGroups">
+      @for (group of failedGroups(); track group.entryId) {
+        <div class="entryGroup">
+          <header class="groupHeader">
+            <div class="entryInfo">
+              <span class="label">Entry:</span>
+              <a class="entryLink" [routerLink]="['/entries', group.entryId]">{{
+                group.entryId
+              }}</a>
+            </div>
+            <div class="groupActions">
+              <button
+                class="button small"
+                type="button"
+                (click)="retryAll(group)"
+                [disabled]="!!jobActionBusy()"
+              >
+                Retry All
+              </button>
+              <button
+                class="button small secondary"
+                type="button"
+                (click)="deleteAll(group)"
+                [disabled]="!!jobActionBusy()"
+              >
+                Remove All
+              </button>
+            </div>
+          </header>
+
+          <div class="jobsList">
+            @for (j of group.jobs; track j.id) {
+              <div class="jobRow mini">
+                <div class="jobMain">
+                  <div class="jobTop">
+                    <span class="jobType">{{ j.type }}</span>
+                    <span class="jobStatus">{{ j.status }}</span>
+                    <span class="jobMeta">attempt {{ j.attempts }}</span>
+                  </div>
+                  @if (j.lastError) {
+                    <div class="jobErr">{{ j.lastError }}</div>
+                  }
+                </div>
+                <div class="jobActions">
+                  <button
+                    class="button small"
+                    type="button"
+                    (click)="retryJob(j)"
+                    [disabled]="jobActionBusy() === j.id"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    class="button small secondary"
+                    type="button"
+                    (click)="deleteJob(j)"
+                    [disabled]="jobActionBusy() === j.id"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>
+

@@ -1,4 +1,4 @@
-<a class="card" [routerLink]="['/entries', entry().id]">
+<a class="card" [routerLink]="['/entries', entry().id]" [class.hasFailedJob]="hasFailedJob()">
   <div class="thumbCol">
     <div class="thumb">
       <img [src]="thumbnailUrl()" alt="" (error)="onImgError($event)" />

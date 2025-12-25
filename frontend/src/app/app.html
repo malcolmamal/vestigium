@@ -13,6 +13,12 @@
           <span class="queueBadge">{{ queueCount() }}</span>
         }
       </a>
+      <a routerLink="/failed-jobs" routerLinkActive="active" class="failedLink">
+        Failed
+        @if (failedCount() > 0) {
+          <span class="failedBadge">{{ failedCount() }}</span>
+        }
+      </a>
       <a routerLink="/settings" routerLinkActive="active">Settings</a>
     </nav>
   </header>

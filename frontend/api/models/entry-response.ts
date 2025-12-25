@@ -14,4 +14,5 @@ export interface EntryResponse {
   updatedAt?: string;
   url?: string;
   visitedAt?: string;
+  latestJobFailed?: boolean;
 }
