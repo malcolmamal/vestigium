@@ -6,6 +6,7 @@ public record PatchEntryRequest(
         String title,
         String description,
         String detailedDescription,
+        String manualThumbnailUrl,
         Boolean important,
         List<String> tags
 ) {}

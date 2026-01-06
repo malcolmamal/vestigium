@@ -24,6 +24,12 @@
     </label>
 
     <label class="field">
+      <span class="label">Manual thumbnail URL (optional)</span>
+      <input class="textInput" formControlName="thumbnailUrl" placeholder="https://…/image.jpg" />
+      <span class="hint">Will download and use this as thumbnail instead of auto-generation.</span>
+    </label>
+
+    <label class="field">
       <span class="label">Tags (optional)</span>
       <app-tag-chips-input
         [tags]="tags()"

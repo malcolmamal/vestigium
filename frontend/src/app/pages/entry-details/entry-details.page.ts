@@ -114,7 +114,8 @@ export class EntryDetailsPage {
   readonly form = new FormGroup({
     title: new FormControl<string>('', { nonNullable: true }),
     description: new FormControl<string>('', { nonNullable: true }),
-    detailedDescription: new FormControl<string>('', { nonNullable: true })
+    detailedDescription: new FormControl<string>('', { nonNullable: true }),
+    manualThumbnailUrl: new FormControl<string>('', { nonNullable: true })
   });
 
   readonly thumbVersion = signal(Date.now());
@@ -234,6 +235,7 @@ export class EntryDetailsPage {
           this.form.controls.title.setValue(res.entry!.title ?? '');
           this.form.controls.description.setValue(res.entry!.description ?? '');
           this.form.controls.detailedDescription.setValue(res.entry!.detailedDescription ?? '');
+          this.form.controls.manualThumbnailUrl.setValue(res.entry!.manualThumbnailUrl ?? '');
           this.tags.set(res.entry!.tags! ?? []);
           this.loadLists(id);
         },
@@ -251,7 +253,8 @@ export class EntryDetailsPage {
       .patchEntry(id, {
         title: this.form.controls.title.value.trim() || undefined,
         description: this.form.controls.description.value.trim() || undefined,
-        detailedDescription: this.form.controls.detailedDescription.value.trim() || undefined
+        detailedDescription: this.form.controls.detailedDescription.value.trim() || undefined,
+        manualThumbnailUrl: this.form.controls.manualThumbnailUrl.value.trim() || undefined
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({

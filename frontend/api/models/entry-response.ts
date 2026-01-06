@@ -7,6 +7,7 @@ export interface EntryResponse {
   detailedDescription?: string;
   id?: string;
   important?: boolean;
+  manualThumbnailUrl?: string;
   tags?: Array<string>;
   thumbnailLargeUrl?: string;
   thumbnailUrl?: string;

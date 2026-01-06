@@ -14,6 +14,7 @@ public record Entry(
         boolean important,
         String createdAt,
         String updatedAt,
+        String manualThumbnailUrl,
         List<String> tags
 ) {}
 

@@ -2,9 +2,12 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { EntriesStore } from './entries.store';
 import { VestigiumApiService } from '../services/vestigium-api.service';
 import { SettingsStore } from './settings.store';
-import { of, throwError } from 'rxjs';
+import { JobsStore } from './jobs.store';
+import { WebSocketService } from '../services/websocket.service';
+import { of, throwError, Subject } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { Message } from '@stomp/stompjs';
 
 describe('EntriesStore', () => {
   let store: EntriesStore;
@@ -23,21 +26,29 @@ describe('EntriesStore', () => {
   };
 
   beforeEach(() => {
+    const wsSubject = new Subject<Message>();
     const apiMock = {
-      listEntries: jest.fn().mockReturnValue(of({ items: [mockEntry], page: 0, pageSize: 20 }))
+      listEntries: jest.fn().mockReturnValue(of({ items: [mockEntry], page: 0, pageSize: 20 })),
+      listJobs: jest.fn().mockReturnValue(of([]))
     };
 
     const settingsMock = {
       showNsfw: jest.fn().mockReturnValue(false)
     };
 
+    const wsMock = {
+      watch: jest.fn().mockReturnValue(wsSubject.asObservable())
+    };
+
     TestBed.configureTestingModule({
       providers: [
         EntriesStore,
+        JobsStore,
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: VestigiumApiService, useValue: apiMock },
-        { provide: SettingsStore, useValue: settingsMock }
+        { provide: SettingsStore, useValue: settingsMock },
+        { provide: WebSocketService, useValue: wsMock }
       ]
     });
 

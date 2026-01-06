@@ -1,5 +1,6 @@
 package com.vestigium.jobs;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vestigium.persistence.EntryRepository;
 import com.vestigium.storage.FileStorageService;
 import com.vestigium.thumb.ImageThumbs;
@@ -19,17 +20,20 @@ public class RegenerateThumbnailJobProcessor implements JobProcessor {
     private final ThumbnailFetcher fetcher;
     private final PageScreenshotter screenshotter;
     private final FileStorageService fileStorage;
+    private final ObjectMapper objectMapper;
 
     public RegenerateThumbnailJobProcessor(
             EntryRepository entries,
             ThumbnailFetcher fetcher,
             PageScreenshotter screenshotter,
-            FileStorageService fileStorage
+            FileStorageService fileStorage,
+            ObjectMapper objectMapper
     ) {
         this.entries = entries;
         this.fetcher = fetcher;
         this.screenshotter = screenshotter;
         this.fileStorage = fileStorage;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -41,9 +45,32 @@ public class RegenerateThumbnailJobProcessor implements JobProcessor {
     public void process(com.vestigium.domain.Job job) throws Exception {
         var entry = entries.getById(job.entryId()).orElseThrow();
 
-        byte[] sourceImage = tryGetYouTubeThumb(entry.url())
-                .or(() -> tryGetOgImage(entry.url()))
-                .orElseGet(() -> screenshotter.screenshotPng(entry.url()));
+        Optional<String> manualUrl = Optional.empty();
+        if (job.payloadJson() != null && !job.payloadJson().isBlank()) {
+            try {
+                var node = objectMapper.readTree(job.payloadJson());
+                if (node.has("url")) {
+                    manualUrl = Optional.of(node.get("url").asText());
+                }
+            } catch (Exception e) {
+                // Ignore malformed payload
+            }
+        }
+        // Fallback to entry's manualThumbnailUrl if no URL in payload
+        if (manualUrl.isEmpty() && entry.manualThumbnailUrl() != null && !entry.manualThumbnailUrl().isBlank()) {
+            manualUrl = Optional.of(entry.manualThumbnailUrl().trim());
+        }
+
+        byte[] sourceImage;
+        if (manualUrl.isPresent()) {
+            var url = manualUrl.get();
+            sourceImage = fetcher.downloadBytes(url)
+                    .orElseThrow(() -> new RuntimeException("Failed to download manual thumbnail from " + url));
+        } else {
+            sourceImage = tryGetYouTubeThumb(entry.url())
+                    .or(() -> tryGetOgImage(entry.url()))
+                    .orElseGet(() -> screenshotter.screenshotPng(entry.url()));
+        }
 
         var jpegSmall = ImageThumbs.toJpegThumbnail(sourceImage, 360);
         var jpegLarge = ImageThumbs.toJpegThumbnail(sourceImage, 1280);

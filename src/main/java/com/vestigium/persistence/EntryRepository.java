@@ -27,7 +27,7 @@ public class EntryRepository {
         this.nsfwConfig = nsfwConfig;
     }
 
-    public Entry create(String url, String title, String description, boolean important) {
+    public Entry create(String url, String title, String description, String manualThumbnailUrl, boolean important) {
         var id = UUID.randomUUID().toString();
         var now = InstantSql.nowIso();
         var params = new HashMap<String, Object>();
@@ -35,20 +35,21 @@ public class EntryRepository {
         params.put("url", url);
         params.put("title", title);
         params.put("description", description);
+        params.put("manualThumbnailUrl", manualThumbnailUrl);
         params.put("important", important ? 1 : 0);
         params.put("createdAt", now);
         params.put("updatedAt", now);
         jdbc.update(
                 """
-                INSERT INTO entries (id, url, title, description, detailed_description, thumbnail_path, visited_at, important, created_at, updated_at)
-                VALUES (:id, :url, :title, :description, NULL, NULL, NULL, :important, :createdAt, :updatedAt)
+                INSERT INTO entries (id, url, title, description, detailed_description, thumbnail_path, visited_at, important, created_at, updated_at, manual_thumbnail_url)
+                VALUES (:id, :url, :title, :description, NULL, NULL, NULL, :important, :createdAt, :updatedAt, :manualThumbnailUrl)
                 """,
                 params
         );
         return getById(id).orElseThrow();
     }
 
-    public Entry createWithTimestamps(String url, String title, String description, boolean important, String createdAt, String updatedAt) {
+    public Entry createWithTimestamps(String url, String title, String description, String manualThumbnailUrl, boolean important, String createdAt, String updatedAt) {
         var id = UUID.randomUUID().toString();
         var now = InstantSql.nowIso();
         var params = new HashMap<String, Object>();
@@ -56,13 +57,14 @@ public class EntryRepository {
         params.put("url", url);
         params.put("title", title);
         params.put("description", description);
+        params.put("manualThumbnailUrl", manualThumbnailUrl);
         params.put("important", important ? 1 : 0);
         params.put("createdAt", createdAt == null || createdAt.isBlank() ? now : createdAt.trim());
         params.put("updatedAt", updatedAt == null || updatedAt.isBlank() ? now : updatedAt.trim());
         jdbc.update(
                 """
-                INSERT INTO entries (id, url, title, description, detailed_description, thumbnail_path, visited_at, important, created_at, updated_at)
-                VALUES (:id, :url, :title, :description, NULL, NULL, NULL, :important, :createdAt, :updatedAt)
+                INSERT INTO entries (id, url, title, description, detailed_description, thumbnail_path, visited_at, important, created_at, updated_at, manual_thumbnail_url)
+                VALUES (:id, :url, :title, :description, NULL, NULL, NULL, :important, :createdAt, :updatedAt, :manualThumbnailUrl)
                 """,
                 params
         );
@@ -72,7 +74,7 @@ public class EntryRepository {
     public Optional<Entry> getById(String id) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
                 FROM entries
                 WHERE id = :id
                 """,
@@ -91,7 +93,7 @@ public class EntryRepository {
     public Optional<Entry> getByUrl(String url) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
                 FROM entries
                 WHERE url = :url
                 """,
@@ -109,7 +111,7 @@ public class EntryRepository {
     public List<Entry> listAllForExport() {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
                 FROM entries
                 ORDER BY created_at ASC
                 """,
@@ -147,7 +149,7 @@ public class EntryRepository {
 
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
                 FROM entries
                 %s
                 ORDER BY RANDOM()
@@ -271,7 +273,7 @@ public class EntryRepository {
 
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
                 FROM entries
                 %s
                 ORDER BY %s
@@ -295,7 +297,7 @@ public class EntryRepository {
         return out;
     }
 
-    public void updateCore(String id, String title, String description, String detailedDescription, Boolean important) {
+    public void updateCore(String id, String title, String description, String detailedDescription, String manualThumbnailUrl, Boolean important) {
         var sets = new ArrayList<String>();
         var params = new java.util.HashMap<String, Object>();
         params.put("id", id);
@@ -311,6 +313,10 @@ public class EntryRepository {
         if (detailedDescription != null) {
             sets.add("detailed_description = :detailedDescription");
             params.put("detailedDescription", detailedDescription);
+        }
+        if (manualThumbnailUrl != null) {
+            sets.add("manual_thumbnail_url = :manualThumbnailUrl");
+            params.put("manualThumbnailUrl", manualThumbnailUrl);
         }
         if (important != null) {
             sets.add("important = :important");
@@ -444,10 +450,11 @@ public class EntryRepository {
             String visitedAt,
             boolean important,
             String createdAt,
-            String updatedAt
+            String updatedAt,
+            String manualThumbnailUrl
     ) {
         Entry toEntry(List<String> tags) {
-            return new Entry(id, url, title, description, detailedDescription, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, tags);
+            return new Entry(id, url, title, description, detailedDescription, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, manualThumbnailUrl, tags);
         }
     }
 
@@ -465,7 +472,8 @@ public class EntryRepository {
                     rs.getString("visited_at"),
                     rs.getInt("important") != 0,
                     rs.getString("created_at"),
-                    rs.getString("updated_at")
+                    rs.getString("updated_at"),
+                    rs.getString("manual_thumbnail_url")
             );
         }
     }

@@ -41,6 +41,7 @@ public class EntriesController {
             @RequestParam("url") @NotBlank String url,
             @RequestParam(value = "title", required = false) String title,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "manualThumbnailUrl", required = false) String manualThumbnailUrl,
             @RequestParam(value = "tags", required = false) List<String> tags,
             @RequestParam(value = "important", required = false) Boolean important,
             @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments
@@ -49,6 +50,7 @@ public class EntriesController {
                 url,
                 title,
                 description,
+                manualThumbnailUrl,
                 tags,
                 important != null && important,
                 attachments
@@ -150,7 +152,7 @@ public class EntriesController {
 
     @PatchMapping("/api/entries/{id}")
     public EntryResponse patch(@PathVariable String id, @RequestBody PatchEntryRequest req) {
-        var updated = entryService.update(id, req.title(), req.description(), req.detailedDescription(), req.important(), req.tags());
+        var updated = entryService.update(id, req.title(), req.description(), req.detailedDescription(), req.manualThumbnailUrl(), req.important(), req.tags());
         return entryService.toResponse(updated);
     }
 

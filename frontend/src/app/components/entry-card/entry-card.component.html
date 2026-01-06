@@ -65,10 +65,13 @@
   <div class="body">
     <div class="titleRow">
       <div class="title">{{ entry().title || entry().url }}</div>
-      @if (entry().visitedAt) {
-        <span class="pill">Visited</span>
-      }
+      <div class="meta">
+        @if (entry().visitedAt) {
+          <span class="pill">Visited</span>
+        }
+      </div>
     </div>
+    <div class="date">Added {{ entry().createdAt | date:'MMM d, y' }}</div>
     @if (entry().description) {
       <div class="desc">{{ entry().description }}</div>
     }

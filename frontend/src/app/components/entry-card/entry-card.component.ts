@@ -58,6 +58,7 @@ export class EntryCardComponent {
   readonly youtubeId = computed(() => extractYouTubeId(this.entry().url || ''));
 
   private prevThumbCount = 0;
+  private prevUpdatedAt: string | null = null;
 
   constructor() {
     effect(() => {
@@ -66,6 +67,17 @@ export class EntryCardComponent {
         this.thumbVersion.set(Date.now());
       }
       this.prevThumbCount = curr;
+    });
+
+    // Update thumbnail cache-busting when entry data changes (e.g., after job completion)
+    effect(() => {
+      const entry = this.entry();
+      const updatedAt = entry?.updatedAt;
+      if (updatedAt && updatedAt !== this.prevUpdatedAt && this.prevUpdatedAt !== null) {
+        // Entry was updated (likely by a job), refresh thumbnail
+        this.thumbVersion.set(Date.now());
+      }
+      this.prevUpdatedAt = updatedAt ?? null;
     });
   }
 

@@ -162,7 +162,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force) ? metaTitle : null;
             var metaUpdateDesc = shouldUpdate(entry.description(), metaDesc, force) ? metaDesc : null;
             if (metaUpdateTitle != null || metaUpdateDesc != null) {
-                entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null, null);
+                entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null, null, null);
             }
 
             contextText.append("Fetched page content:\n");
@@ -190,7 +190,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
                 : null;
 
         if (newTitle != null || newDescription != null || newDetailedDescription != null) {
-            entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null);
+            entries.updateCore(entry.id(), newTitle, newDescription, newDetailedDescription, null, null);
         }
 
         // Reload entry to get latest state (especially tags) before deciding on tag replacement

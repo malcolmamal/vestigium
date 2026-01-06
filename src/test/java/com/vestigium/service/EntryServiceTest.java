@@ -58,7 +58,7 @@ class EntryServiceTest {
         var url = "http://example.com";
         when(entries.getByUrl(anyString())).thenReturn(Optional.of(mock(Entry.class)));
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.create(url, null, null, null, false, null))
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.create(url, null, null, null, null, false, null))
                 .isInstanceOf(VestigiumException.class)
                 .hasMessageContaining("already exists");
     }
@@ -71,16 +71,16 @@ class EntryServiceTest {
         when(entries.getByUrl(anyString())).thenReturn(Optional.empty());
         
         var mockEntry = new Entry(
-            "123", "http://example.com", "Test Title", "Desc", null, null, null, null, false, "now", "now", List.of()
+            "123", "http://example.com", "Test Title", "Desc", null, null, null, null, false, "now", "now", null, List.of()
         );
-        when(entries.create(anyString(), anyString(), anyString(), anyBoolean()))
+        when(entries.create(anyString(), anyString(), anyString(), any(), anyBoolean()))
             .thenReturn(mockEntry);
         // when(entries.getById("123")).thenReturn(Optional.of(mockEntry)); // Unnecessary: create() returns the entry, and the service uses that return value directly now
 
-        var result = service.create(url, title, "Desc", null, false, null);
+        var result = service.create(url, title, "Desc", null, null, false, null);
 
         assertThat(result.entry().id()).isEqualTo("123");
-        verify(entries).create(eq("http://example.com"), eq("Test Title"), eq("Desc"), eq(false));
+        verify(entries).create(eq("http://example.com"), eq("Test Title"), eq("Desc"), eq((String) null), eq(false));
         verify(jobs).enqueue(eq("ENRICH_ENTRY"), eq("123"), any());
         verify(jobs).enqueue(eq("REGENERATE_THUMBNAIL"), eq("123"), any());
     }
@@ -89,14 +89,14 @@ class EntryServiceTest {
     void create_ShouldNormalizeTags() {
         var url = "http://example.com";
         var mockEntry = new Entry(
-            "123", "http://example.com", null, null, null, null, null, null, false, "now", "now", List.of()
+            "123", "http://example.com", null, null, null, null, null, null, false, "now", "now", null, List.of()
         );
         
         when(entries.getByUrl(anyString())).thenReturn(Optional.empty());
-        when(entries.create(any(), any(), any(), anyBoolean())).thenReturn(mockEntry);
+        when(entries.create(any(), any(), any(), any(), anyBoolean())).thenReturn(mockEntry);
         when(entries.getById("123")).thenReturn(Optional.of(mockEntry));
 
-        service.create(url, null, null, List.of("TAG1", "tag2"), false, null);
+        service.create(url, null, null, null, List.of("TAG1", "tag2"), false, null);
 
         verify(entries).replaceTags(eq("123"), eq(List.of("tag1", "tag2")), eq(tags));
     }
@@ -110,14 +110,14 @@ class EntryServiceTest {
              .thenReturn(new UrlContentFetcher.PageContent("Fetched Title", "Fetched Desc", "Text"));
              
          var mockEntry = new Entry(
-            "123", url, "Fetched Title", "Fetched Desc", null, null, null, null, false, "now", "now", List.of()
+            "123", url, "Fetched Title", "Fetched Desc", null, null, null, null, false, "now", "now", null, List.of()
          );
-         when(entries.create(any(), any(), any(), anyBoolean())).thenReturn(mockEntry);
+         when(entries.create(any(), any(), any(), any(), anyBoolean())).thenReturn(mockEntry);
          // getById is not called
 
-         service.create(url, null, null, null, false, null);
+         service.create(url, null, null, null, null, false, null);
 
-         verify(entries).create(eq(url), eq("Fetched Title"), eq("Fetched Desc"), eq(false));
+         verify(entries).create(eq(url), eq("Fetched Title"), eq("Fetched Desc"), eq((String) null), eq(false));
     }
 
     @Test
@@ -127,8 +127,8 @@ class EntryServiceTest {
         // Mock behaviors
         // 1. ok.com -> success
         when(entries.getByUrl("http://ok.com")).thenReturn(Optional.empty());
-        when(entries.create(eq("http://ok.com"), any(), any(), anyBoolean()))
-            .thenReturn(new Entry("1", "http://ok.com", null, null, null, null, null, null, false, "now", "now", List.of()));
+        when(entries.create(eq("http://ok.com"), any(), any(), any(), anyBoolean()))
+            .thenReturn(new Entry("1", "http://ok.com", null, null, null, null, null, null, false, "now", "now", null, List.of()));
         // getById is not called for bulk create with no tags
 
         // 3. dupe.com -> exists
@@ -151,7 +151,7 @@ class EntryServiceTest {
         );
         
         var existingEntry = new Entry(
-            "123", "http://example.com", "Old Title", "Old Desc", null, null, null, null, false, "now", "now", List.of()
+            "123", "http://example.com", "Old Title", "Old Desc", null, null, null, null, false, "now", "now", null, List.of()
         );
 
         when(entries.getByUrl("http://example.com")).thenReturn(Optional.of(existingEntry));
@@ -169,7 +169,7 @@ class EntryServiceTest {
 
     @Test
     void toResponse_ShouldFlagFailedLatestJob() {
-        var entry = new Entry("123", "url", null, null, null, null, null, null, false, "now", "now", List.of());
+        var entry = new Entry("123", "url", null, null, null, null, null, null, false, "now", "now", null, List.of());
         when(jobs.findEntryIdsWithFailedLatestJob(eq(List.of("123")))).thenReturn(java.util.Set.of("123"));
 
         var response = service.toResponse(entry);
@@ -180,8 +180,8 @@ class EntryServiceTest {
 
     @Test
     void toResponses_ShouldFlagFailedLatestJobs() {
-        var e1 = new Entry("1", "u1", null, null, null, null, null, null, false, "now", "now", List.of());
-        var e2 = new Entry("2", "u2", null, null, null, null, null, null, false, "now", "now", List.of());
+        var e1 = new Entry("1", "u1", null, null, null, null, null, null, false, "now", "now", null, List.of());
+        var e2 = new Entry("2", "u2", null, null, null, null, null, null, false, "now", "now", null, List.of());
         
         when(jobs.findEntryIdsWithFailedLatestJob(eq(List.of("1", "2")))).thenReturn(java.util.Set.of("1"));
 

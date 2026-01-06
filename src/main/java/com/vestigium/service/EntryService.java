@@ -54,6 +54,7 @@ public class EntryService {
             String url,
             String title,
             String description,
+            String manualThumbnailUrl,
             List<String> rawTags,
             boolean important,
             List<MultipartFile> uploadFiles
@@ -65,7 +66,7 @@ public class EntryService {
         }
 
         var inferred = inferMetadata(normalizedUrl, title, description, rawTags);
-        var entry = entries.create(normalizedUrl, inferred.title(), inferred.description(), important);
+        var entry = entries.create(normalizedUrl, inferred.title(), inferred.description(), manualThumbnailUrl, important);
 
         var normalizedTags = TagNormalizer.normalize(inferred.tags());
         if (!normalizedTags.isEmpty()) {
@@ -77,7 +78,12 @@ public class EntryService {
 
         // Always enqueue enrichment; worker decides how to enrich (URL-only vs attachments).
         jobs.enqueue("ENRICH_ENTRY", entry.id(), null);
-        jobs.enqueue("REGENERATE_THUMBNAIL", entry.id(), null);
+        
+        String thumbPayload = null;
+        if (manualThumbnailUrl != null && !manualThumbnailUrl.isBlank()) {
+            thumbPayload = "{\"url\":\"" + manualThumbnailUrl.trim() + "\"}";
+        }
+        jobs.enqueue("REGENERATE_THUMBNAIL", entry.id(), thumbPayload);
 
         return new CreatedEntry(entry, createdAttachments);
     }
@@ -124,14 +130,20 @@ public class EntryService {
 
     private record InferredMetadata(String title, String description, List<String> tags) {}
 
-    public Entry update(String entryId, String title, String description, String detailedDescription, Boolean important, List<String> rawTags) {
+    public Entry update(String entryId, String title, String description, String detailedDescription, String manualThumbnailUrl, Boolean important, List<String> rawTags) {
         var existing = entries.getById(entryId)
                 .orElseThrow(() -> new VestigiumException("ENTRY_NOT_FOUND", HttpStatus.NOT_FOUND, "Entry not found."));
 
-        entries.updateCore(entryId, title, description, detailedDescription, important);
+        entries.updateCore(entryId, title, description, detailedDescription, manualThumbnailUrl, important);
         if (rawTags != null) {
             entries.replaceTags(entryId, TagNormalizer.normalize(rawTags), tags);
         }
+
+        if (manualThumbnailUrl != null && !manualThumbnailUrl.isBlank()) {
+            String thumbPayload = "{\"url\":\"" + manualThumbnailUrl.trim() + "\"}";
+            jobs.enqueue("REGENERATE_THUMBNAIL", entryId, thumbPayload);
+        }
+
         return entries.getById(existing.id()).orElseThrow();
     }
 
@@ -192,7 +204,7 @@ public class EntryService {
                     skipped++;
                     continue;
                 }
-                create(normalized, null, null, null, false, null);
+                create(normalized, null, null, null, null, false, null);
                 created++;
             } catch (Exception e) {
                 errors.add(new BulkCreateError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
@@ -271,7 +283,7 @@ public class EntryService {
                 }
 
                 // Update core fields if present in import
-                entries.updateCore(existing.id(), item.title(), item.description(), item.detailedDescription(), null);
+                entries.updateCore(existing.id(), item.title(), item.description(), item.detailedDescription(), null, null);
                 if (item.tags() != null) {
                     entries.replaceTags(existing.id(), TagNormalizer.normalize(item.tags()), tags);
                 }
@@ -308,9 +320,9 @@ public class EntryService {
         }
         var now = com.vestigium.persistence.InstantSql.nowIso();
         var createdAt = (addedAt == null || addedAt.isBlank()) ? now : addedAt.trim();
-        var entry = entries.createWithTimestamps(normalizedUrl, title, description, false, createdAt, createdAt);
+        var entry = entries.createWithTimestamps(normalizedUrl, title, description, null, false, createdAt, createdAt);
         if (detailedDescription != null && !detailedDescription.isBlank()) {
-            entries.updateCore(entry.id(), null, null, detailedDescription.trim(), null);
+            entries.updateCore(entry.id(), null, null, detailedDescription.trim(), null, null);
             entry = entries.getById(entry.id()).orElseThrow();
         }
 

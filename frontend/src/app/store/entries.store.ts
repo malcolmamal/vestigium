@@ -1,10 +1,11 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
-import { catchError, finalize, of, switchMap, tap } from 'rxjs';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { catchError, filter, finalize, of, switchMap, tap } from 'rxjs';
 
 import type { EntryResponse } from '../models';
 import { VestigiumApiService } from '../services/vestigium-api.service';
 import { SettingsStore } from './settings.store';
+import { JobsStore } from './jobs.store';
 
 export interface EntriesFilter {
   query: string;
@@ -33,6 +34,7 @@ export type EntriesState = EntriesFilter & EntriesResult;
 export class EntriesStore {
   private readonly api = inject(VestigiumApiService);
   private readonly settings = inject(SettingsStore);
+  private readonly jobsStore = inject(JobsStore);
 
   // Split signals to break circular dependency:
   // Updates to results (loading, items) will NOT trigger the filters computed.
@@ -137,6 +139,20 @@ export class EntriesStore {
         if (res.items) {
           this.patchResults({ items: res.items });
         }
+      });
+
+    // Listen for job completions to refresh entries
+    this.jobsStore.jobUpdated$
+      .pipe(
+        takeUntilDestroyed(),
+        // Only care about terminal states
+        filter((job) => job.status === 'SUCCEEDED' || job.status === 'FAILED')
+      )
+      .subscribe(() => {
+        // Refresh the list to see updated metadata/thumbnails/failed status.
+        // We refresh regardless of whether the entry is in the current list,
+        // because it might be a new entry that should now appear.
+        this.refresh();
       });
   }
 

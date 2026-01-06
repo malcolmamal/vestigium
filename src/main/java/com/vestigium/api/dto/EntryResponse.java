@@ -20,7 +20,8 @@ public record EntryResponse(
     @Schema(requiredMode = REQUIRED) @NotNull String updatedAt,
     @Schema(requiredMode = REQUIRED) @NotNull String thumbnailUrl,
     @Schema(requiredMode = REQUIRED) @NotNull String thumbnailLargeUrl,
-    @Schema(requiredMode = REQUIRED) @NotNull boolean latestJobFailed
+    @Schema(requiredMode = REQUIRED) @NotNull boolean latestJobFailed,
+    String manualThumbnailUrl
 ) {
     public static EntryResponse from(Entry e) {
         return from(e, false);
@@ -40,7 +41,8 @@ public record EntryResponse(
                 e.updatedAt(),
                 "/api/entries/" + e.id() + "/thumbnail",
                 "/api/entries/" + e.id() + "/thumbnail?size=large",
-                latestJobFailed
+                latestJobFailed,
+                e.manualThumbnailUrl()
         );
     }
 }

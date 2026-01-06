@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { finalize, Subject } from 'rxjs';
 import { Message } from '@stomp/stompjs';
 
 import type { JobResponse } from '../models';
@@ -22,6 +22,9 @@ export class JobsStore {
     error: null,
     items: []
   });
+
+  private readonly jobUpdatedSubject = new Subject<JobResponse>();
+  readonly jobUpdated$ = this.jobUpdatedSubject.asObservable();
 
   // Selectors
   readonly loading = computed(() => this.state().loading);
@@ -64,6 +67,7 @@ export class JobsStore {
     this.patchState({
       items: this.updateJobList(this.state().items, job)
     });
+    this.jobUpdatedSubject.next(job);
   }
 
   private updateJobList(current: JobResponse[], job: JobResponse): JobResponse[] {

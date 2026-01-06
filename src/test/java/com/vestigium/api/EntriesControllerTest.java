@@ -36,7 +36,7 @@ class EntriesControllerTest {
     @SuppressWarnings("unchecked")
     void list_ShouldReturnEntries() throws Exception {
         var entry = new Entry(
-                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", List.of("tag1")
+                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of("tag1")
         );
         var response = EntryResponse.from(entry, false);
         
@@ -56,12 +56,12 @@ class EntriesControllerTest {
     @Test
     void createEntry_ShouldReturnCreatedEntry() throws Exception {
         var entry = new Entry(
-                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", List.of("tag1")
+                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of("tag1")
         );
         var response = EntryResponse.from(entry, false);
         var created = new EntryService.CreatedEntry(entry, List.of());
         
-        when(entryService.create(eq("http://example.com"), any(), any(), any(), anyBoolean(), any()))
+        when(entryService.create(eq("http://example.com"), any(), any(), any(), any(), anyBoolean(), any()))
                 .thenReturn(created);
         when(entryService.toResponse(any())).thenReturn(response);
 

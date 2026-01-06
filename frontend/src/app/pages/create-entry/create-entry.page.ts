@@ -54,7 +54,8 @@ export class CreateEntryPage {
   readonly form = new FormGroup({
     url: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
     title: new FormControl<string>('', { nonNullable: true }),
-    description: new FormControl<string>('', { nonNullable: true })
+    description: new FormControl<string>('', { nonNullable: true }),
+    thumbnailUrl: new FormControl<string>('', { nonNullable: true })
   });
 
   onFilesSelected(evt: Event) {
@@ -74,6 +75,8 @@ export class CreateEntryPage {
       fd.set('title', this.form.controls.title.value.trim());
     if (this.form.controls.description.value.trim())
       fd.set('description', this.form.controls.description.value.trim());
+    if (this.form.controls.thumbnailUrl.value.trim())
+      fd.set('manualThumbnailUrl', this.form.controls.thumbnailUrl.value.trim());
     for (const t of this.tags()) fd.append('tags', t);
     for (const f of this.files()) fd.append('attachments', f, f.name);
 

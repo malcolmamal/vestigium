@@ -5,6 +5,7 @@ export interface PatchEntryRequest {
   description?: string;
   detailedDescription?: string;
   important?: boolean;
+  manualThumbnailUrl?: string;
   tags?: Array<string>;
   title?: string;
 }

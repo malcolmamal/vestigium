@@ -43,8 +43,8 @@ class EntryRepositoryTest {
 
     @Test
     void search_ShouldFilterByTags() {
-        var e1 = entries.create("http://e1.com", "Entry 1", "Desc", false);
-        var e2 = entries.create("http://e2.com", "Entry 2", "Desc", false);
+        var e1 = entries.create("http://e1.com", "Entry 1", "Desc", null, false);
+        var e2 = entries.create("http://e2.com", "Entry 2", "Desc", null, false);
 
         entries.replaceTags(e1.id(), List.of("tag1", "common"), tags);
         entries.replaceTags(e2.id(), List.of("tag2", "common"), tags);
@@ -66,8 +66,8 @@ class EntryRepositoryTest {
 
     @Test
     void search_ShouldFilterByList() {
-        var e1 = entries.create("http://e1.com", "Entry 1", "Desc", false);
-        var e2 = entries.create("http://e2.com", "Entry 2", "Desc", false);
+        var e1 = entries.create("http://e1.com", "Entry 1", "Desc", null, false);
+        var e2 = entries.create("http://e2.com", "Entry 2", "Desc", null, false);
 
         var listA = lists.create("List A");
         lists.replaceEntryLists(e1.id(), List.of(listA.id()));
@@ -80,8 +80,8 @@ class EntryRepositoryTest {
     @Test
     void search_ShouldExcludeNsfwByDefault() {
         // Assuming "porn" is an NSFW tag (as per EntryRepository impl)
-        var safe = entries.create("http://safe.com", "Safe", "Desc", false);
-        var nsfw = entries.create("http://nsfw.com", "NSFW", "Desc", false);
+        var safe = entries.create("http://safe.com", "Safe", "Desc", null, false);
+        var nsfw = entries.create("http://nsfw.com", "NSFW", "Desc", null, false);
 
         entries.replaceTags(nsfw.id(), List.of("porn"), tags);
 
@@ -97,8 +97,8 @@ class EntryRepositoryTest {
     
     @Test
     void search_ShouldFilterByQuery() {
-        entries.create("http://e1.com", "Apple Pie", "Recipe", false);
-        entries.create("http://e2.com", "Banana Bread", "Delicious bread", false);
+        entries.create("http://e1.com", "Apple Pie", "Recipe", null, false);
+        entries.create("http://e2.com", "Banana Bread", "Delicious bread", null, false);
         
         var res = entries.search("apple", null, null, null, null, null, null, null, true, 0, 10);
         assertThat(res).hasSize(1);
@@ -111,10 +111,10 @@ class EntryRepositoryTest {
 
     @Test
     void listRandomUnvisited_ShouldExcludeVisited() {
-        var visited = entries.create("http://v.com", "Visited", "Desc", false);
+        var visited = entries.create("http://v.com", "Visited", "Desc", null, false);
         entries.setVisitedNow(visited.id());
 
-        var unvisited = entries.create("http://u.com", "Unvisited", "Desc", false);
+        var unvisited = entries.create("http://u.com", "Unvisited", "Desc", null, false);
 
         var res = entries.listRandomUnvisited(10, true);
         assertThat(res).hasSize(1);
