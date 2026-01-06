@@ -34,7 +34,7 @@ export class EntryCardComponent {
 
   readonly busy = computed(() => this.busyAction() !== null);
 
-  readonly hasFailedJob = computed(() => (this.entry() as any).latestJobFailed === true);
+  readonly hasFailedJob = computed(() => this.entry().latestJobFailed === true);
 
   readonly jobs = computed(() => {
     const id = this.entry().id;

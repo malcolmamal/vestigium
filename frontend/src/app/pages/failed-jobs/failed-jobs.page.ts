@@ -26,7 +26,7 @@ export class FailedJobsPage {
 
   readonly failedGroups = computed(() => {
     const failed = this.jobs.items().filter((j) => j.status === 'FAILED');
-    const groups: Map<string, JobResponse[]> = new Map();
+    const groups = new Map<string, JobResponse[]>();
     for (const j of failed) {
       if (!j.entryId) continue;
       if (!groups.has(j.entryId)) {
@@ -70,16 +70,14 @@ export class FailedJobsPage {
     import('rxjs')
       .then((m) => m.forkJoin(obs))
       .then((joined) => {
-        joined
-          .pipe(finalize(() => this.jobActionBusy.set(null)))
-          .subscribe({
-            next: () => {
-              this.jobs.load();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            },
-            error: (e) =>
-              this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to retry some jobs')
-          });
+        joined.pipe(finalize(() => this.jobActionBusy.set(null))).subscribe({
+          next: () => {
+            this.jobs.load();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          },
+          error: (e) =>
+            this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to retry some jobs')
+        });
       });
   }
 
@@ -106,19 +104,14 @@ export class FailedJobsPage {
     import('rxjs')
       .then((m) => m.forkJoin(obs))
       .then((joined) => {
-        joined
-          .pipe(finalize(() => this.jobActionBusy.set(null)))
-          .subscribe({
-            next: () => {
-              this.jobs.load();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            },
-            error: (e) =>
-              this.jobActionError.set(
-                e?.error?.detail ?? e?.message ?? 'Failed to delete some jobs'
-              )
-          });
+        joined.pipe(finalize(() => this.jobActionBusy.set(null))).subscribe({
+          next: () => {
+            this.jobs.load();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          },
+          error: (e) =>
+            this.jobActionError.set(e?.error?.detail ?? e?.message ?? 'Failed to delete some jobs')
+        });
       });
   }
 }
-

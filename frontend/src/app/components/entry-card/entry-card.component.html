@@ -71,7 +71,7 @@
         }
       </div>
     </div>
-    <div class="date">Added {{ entry().createdAt | date:'MMM d, y' }}</div>
+    <div class="date">Added {{ entry().createdAt | date: 'MMM d, y' }}</div>
     @if (entry().description) {
       <div class="desc">{{ entry().description }}</div>
     }

@@ -86,6 +86,24 @@ describe('EntryCardComponent', () => {
     expect(component.thumbVersion()).toBeGreaterThan(initialVersion);
   });
 
+  it('should refresh thumbnail version when entry updatedAt changes', () => {
+    // The effect only triggers when prevUpdatedAt is not null (after initial set)
+    // First establish the baseline - entry is already set in beforeEach
+    const initialVersion = component.thumbVersion();
+
+    // Now change the updatedAt to trigger the effect
+    const updatedEntry: EntryResponse = {
+      ...mockEntry,
+      updatedAt: '2023-01-02T00:00:00Z' // Different from mockEntry's updatedAt
+    };
+
+    fixture.componentRef.setInput('entry', updatedEntry);
+    fixture.detectChanges();
+
+    // The thumbVersion should be updated when updatedAt changes
+    expect(component.thumbVersion()).toBeGreaterThan(initialVersion);
+  });
+
   it('should emit enrich output', () => {
     const spy = jest.spyOn(component.enrich, 'emit');
     component.enqueueEnrich(new MouseEvent('click'));

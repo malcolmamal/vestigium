@@ -142,7 +142,7 @@ export class EntriesPage {
     });
 
     this.lists.load();
-    
+
     const tags = this.route.snapshot.queryParamMap.getAll('tags');
     const legacyTag = this.route.snapshot.queryParamMap.get('tag');
     const initial = [...tags, ...(legacyTag ? [legacyTag] : [])]
