@@ -42,7 +42,20 @@ public class PageScreenshotter {
                     page.waitForTimeout(800);
 
                     // Site-specific dismissals to avoid consent popups covering screenshots.
-                    if (isRedgifs(url)) {
+                    if (isInstagram(url)) {
+                        // Instagram often shows login prompts or requires longer load times.
+                        // Wait longer and try to dismiss login prompts.
+                        page.waitForTimeout(2000);
+                        dismissInstagramLoginPrompt(page);
+                        page.waitForTimeout(1000);
+                        // Try to wait for actual content to appear
+                        try {
+                            page.waitForSelector("article, img[src*='instagram'], [role='main']", 
+                                new Page.WaitForSelectorOptions().setTimeout(3000));
+                        } catch (Exception ignored) {
+                            // Content might not load, continue anyway
+                        }
+                    } else if (isRedgifs(url)) {
                         dismissRedgifsConsent(page);
                         page.waitForTimeout(400);
                     } else if (isReddit(url)) {
@@ -71,6 +84,10 @@ public class PageScreenshotter {
         return host(url).map(h -> h.endsWith("redgifs.com")).orElse(false);
     }
 
+    private static boolean isInstagram(String url) {
+        return host(url).map(h -> h.contains("instagram.com")).orElse(false);
+    }
+
     private static boolean isReddit(String url) {
         return host(url).map(h -> h.contains("reddit.com")).orElse(false);
     }
@@ -95,6 +112,27 @@ public class PageScreenshotter {
         // Some variants use different wording.
         tryClick(page, "button:has-text(\"Accept\")", 1500);
         tryClick(page, "button:has-text(\"Agree\")", 1500);
+    }
+
+    private static void dismissInstagramLoginPrompt(Page page) {
+        // Instagram often shows cookie consent dialogs first.
+        // Accept cookies to allow content to load.
+        tryClick(page, "button:has-text('Allow all cookies')", 2000);
+        tryClick(page, "button:has-text('Allow All Cookies')", 2000);
+        tryClick(page, "button:has-text('Accept all')", 2000);
+        tryClick(page, "button:has-text('Accept All')", 2000);
+        tryClick(page, "button:has-text('Accept')", 1500);
+        
+        // Instagram often shows login prompts or "Not Now" buttons.
+        // Try to dismiss these to see public content.
+        tryClick(page, "button:has-text('Not Now')", 2000);
+        tryClick(page, "button:has-text('Not now')", 2000);
+        tryClick(page, "a[href*='/accounts/login/?next=']", 1000);
+        // Sometimes there's a close button on modals
+        tryClick(page, "button[aria-label='Close']", 1000);
+        tryClick(page, "svg[aria-label='Close']", 1000);
+        // Try to find and click away from login modals
+        tryClick(page, "[role='dialog'] button:has-text('Not Now')", 1500);
     }
 
     private static void dismissRedditCookiePopup(Page page) {

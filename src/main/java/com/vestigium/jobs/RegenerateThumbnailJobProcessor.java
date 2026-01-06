@@ -122,6 +122,12 @@ public class RegenerateThumbnailJobProcessor implements JobProcessor {
         var imgLower = (imgUrl == null ? "" : imgUrl).toLowerCase(Locale.ROOT);
         var pageLower = (pageUrl == null ? "" : pageUrl).toLowerCase(Locale.ROOT);
 
+        // Instagram often shows login prompts in screenshots, so prefer OG images when available.
+        if (pageLower.contains("instagram.com")) {
+            // Instagram OG images are usually good quality profile pictures or post images.
+            return true;
+        }
+
         // Reddit often sets og:image to a small logo; prefer a screenshot for better thumbnails.
         if (pageLower.contains("reddit.com") && (imgLower.contains("redditstatic") || imgLower.contains("logo") || imgLower.contains("icon"))) {
             return false;
