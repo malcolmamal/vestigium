@@ -55,6 +55,20 @@ public class PageScreenshotter {
                         } catch (Exception ignored) {
                             // Content might not load, continue anyway
                         }
+                    } else if (isYouTube(url)) {
+                        // YouTube shows cookie consent dialogs, especially for channel pages.
+                        page.waitForTimeout(1000);
+                        dismissYouTubeCookieConsent(page);
+                        // Wait longer for content to load after accepting cookies
+                        page.waitForTimeout(2000);
+                        // Try to wait for actual content to appear
+                        try {
+                            page.waitForSelector("ytd-channel-name, ytd-video-meta-block, ytd-rich-grid-media, img[src*='ytimg'], [id='content']", 
+                                new Page.WaitForSelectorOptions().setTimeout(5000));
+                        } catch (Exception ignored) {
+                            // Content might not load, continue anyway
+                        }
+                        page.waitForTimeout(1000);
                     } else if (isRedgifs(url)) {
                         dismissRedgifsConsent(page);
                         page.waitForTimeout(400);
@@ -88,6 +102,10 @@ public class PageScreenshotter {
         return host(url).map(h -> h.contains("instagram.com")).orElse(false);
     }
 
+    private static boolean isYouTube(String url) {
+        return host(url).map(h -> h.contains("youtube.com") || h.contains("youtu.be")).orElse(false);
+    }
+
     private static boolean isReddit(String url) {
         return host(url).map(h -> h.contains("reddit.com")).orElse(false);
     }
@@ -112,6 +130,21 @@ public class PageScreenshotter {
         // Some variants use different wording.
         tryClick(page, "button:has-text(\"Accept\")", 1500);
         tryClick(page, "button:has-text(\"Agree\")", 1500);
+    }
+
+    private static void dismissYouTubeCookieConsent(Page page) {
+        // YouTube shows cookie consent dialogs, especially for channel pages.
+        // Accept cookies to allow content to load properly.
+        tryClick(page, "button:has-text('Accept all')", 2000);
+        tryClick(page, "button:has-text('Accept All')", 2000);
+        tryClick(page, "button:has-text('I agree')", 2000);
+        tryClick(page, "button:has-text('I Agree')", 2000);
+        // YouTube sometimes uses different button text
+        tryClick(page, "button[aria-label*='Accept']", 2000);
+        tryClick(page, "ytd-consent-bump-v2-lightbox button", 2000);
+        // Try to find accept button in consent dialog
+        tryClick(page, "[role='dialog'] button:has-text('Accept all')", 1500);
+        tryClick(page, "[role='dialog'] button:has-text('I agree')", 1500);
     }
 
     private static void dismissInstagramLoginPrompt(Page page) {
