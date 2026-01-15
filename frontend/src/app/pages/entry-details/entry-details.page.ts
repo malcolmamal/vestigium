@@ -304,6 +304,14 @@ export class EntryDetailsPage {
     });
   }
 
+  copyUrl() {
+    const entry = this.entry();
+    if (!entry?.url) return;
+    navigator.clipboard.writeText(entry.url).then(() => {
+      this.toasts.success('URL copied to clipboard');
+    });
+  }
+
   enqueueEnrich() {
     const id = this.id();
     if (!id) return;

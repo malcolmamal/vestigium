@@ -10,6 +10,7 @@ public record Job(
         String lockedAt,
         String finishedAt,
         String lastError,
+        String lastResponse,
         String createdAt
 ) {}
 

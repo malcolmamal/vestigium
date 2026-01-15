@@ -53,6 +53,7 @@ public class EntriesController {
                 manualThumbnailUrl,
                 tags,
                 important != null && important,
+                false,
                 attachments
         );
         return new EntryDetailsResponse(
@@ -75,13 +76,22 @@ public class EntriesController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
     ) {
-        var items = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, includeNsfw, page, pageSize);
-        return new EntryListResponse(page, pageSize, entryService.toResponses(items));
+        var result = entryService.search(q, tags, important, visited, addedFrom, addedTo, sort, listIds, includeNsfw, page, pageSize);
+        return new EntryListResponse(page, pageSize, result.totalCount(), entryService.toResponses(result.items()));
     }
 
     @PostMapping(value = "/api/entries/bulk", consumes = MediaType.APPLICATION_JSON_VALUE)
     public BulkCreateEntriesResponse bulkCreate(@RequestBody BulkCreateEntriesRequest req) {
-        var result = entryService.bulkCreate(req == null ? null : req.urls());
+        List<EntryService.BulkCreateItem> items = new java.util.ArrayList<>();
+        if (req != null) {
+            if (req.urls() != null) {
+                req.urls().forEach(url -> items.add(new EntryService.BulkCreateItem(url, null)));
+            }
+            if (req.items() != null) {
+                req.items().forEach(item -> items.add(new EntryService.BulkCreateItem(item.url(), item.title())));
+            }
+        }
+        var result = entryService.bulkCreate(items);
         var errors = result.errors().stream()
                 .map(e -> new BulkCreateEntriesResponse.ErrorItem(e.url(), e.error()))
                 .toList();

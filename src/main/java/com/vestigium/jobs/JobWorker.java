@@ -40,8 +40,25 @@ public class JobWorker {
             jobs.markSucceeded(job.id());
             log.info("Job succeeded id={} type={} entryId={}", job.id(), job.type(), job.entryId());
         } catch (Exception e) {
-            var msg = e.getClass().getSimpleName() + ": " + (e.getMessage() == null ? "" : e.getMessage());
+            Throwable actual = e;
+            if (e.getCause() != null && (e instanceof java.util.concurrent.ExecutionException || e.getClass().getName().endsWith("RuntimeException"))) {
+                actual = e.getCause();
+            }
+
+            var msg = actual.getClass().getSimpleName() + ": " + (actual.getMessage() == null ? "" : actual.getMessage());
             var retry = job.attempts() < maxAttempts;
+            String lastResponse = null;
+
+            // Look for JobParsingException in the chain
+            Throwable t = e;
+            while (t != null) {
+                if (t instanceof JobParsingException jpe) {
+                    lastResponse = jpe.getRawResponse();
+                    break;
+                }
+                t = t.getCause();
+            }
+
             // Don't endlessly retry configuration/logic errors.
             if (msg.contains("Missing GOOGLE_API_KEY")) {
                 retry = false;
@@ -49,7 +66,8 @@ public class JobWorker {
             if (e instanceof IllegalArgumentException) {
                 retry = false;
             }
-            jobs.markFailed(job.id(), msg, retry);
+            
+            jobs.markFailed(job.id(), msg, lastResponse, retry);
             log.error(
                     "Job failed id={} type={} entryId={} retry={} attempts={}/{} msg={}",
                     job.id(), job.type(), job.entryId(), retry, job.attempts(), maxAttempts, msg,

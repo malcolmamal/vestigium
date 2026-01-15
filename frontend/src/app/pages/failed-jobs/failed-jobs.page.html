@@ -62,6 +62,14 @@
                   @if (j.lastError) {
                     <div class="jobErr">{{ j.lastError }}</div>
                   }
+                  @if (j.lastResponse) {
+                    <div class="jobResponseBox">
+                      <details>
+                        <summary>Show LLM Response</summary>
+                        <pre class="rawResponse">{{ j.lastResponse }}</pre>
+                      </details>
+                    </div>
+                  }
                 </div>
                 <div class="jobActions">
                   <button

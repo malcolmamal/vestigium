@@ -57,6 +57,7 @@ public class EntryService {
             String manualThumbnailUrl,
             List<String> rawTags,
             boolean important,
+            boolean titleIsSuggestion,
             List<MultipartFile> uploadFiles
     ) {
         var normalizedUrl = normalizeUrl(url);
@@ -77,7 +78,8 @@ public class EntryService {
         var createdAttachments = saveAttachments(entry.id(), uploadFiles);
 
         // Always enqueue enrichment; worker decides how to enrich (URL-only vs attachments).
-        jobs.enqueue("ENRICH_ENTRY", entry.id(), null);
+        String enrichPayload = titleIsSuggestion ? "{\"isTitleSuggestion\":true}" : null;
+        jobs.enqueue("ENRICH_ENTRY", entry.id(), enrichPayload);
         
         String thumbPayload = null;
         if (manualThumbnailUrl != null && !manualThumbnailUrl.isBlank()) {
@@ -180,8 +182,10 @@ public class EntryService {
         }
     }
 
-    public BulkCreateResult bulkCreate(List<String> urls) {
-        if (urls == null || urls.isEmpty()) {
+    public record BulkCreateItem(String url, String title) {}
+
+    public BulkCreateResult bulkCreate(List<BulkCreateItem> items) {
+        if (items == null || items.isEmpty()) {
             return new BulkCreateResult(0, 0, List.of());
         }
 
@@ -189,25 +193,32 @@ public class EntryService {
         int skipped = 0;
         var errors = new java.util.ArrayList<BulkCreateError>();
 
-        // De-dupe within request (preserve order)
-        var unique = new java.util.LinkedHashSet<String>();
-        for (var u : urls) {
-            if (u == null) continue;
-            var t = u.trim();
-            if (!t.isBlank()) unique.add(t);
+        // De-dupe within request (preserve order), prefer items with titles
+        var unique = new java.util.LinkedHashMap<String, String>();
+        for (var item : items) {
+            if (item == null || item.url() == null) continue;
+            var url = normalizeUrl(item.url().trim());
+            if (url.isBlank()) continue;
+            
+            // If already present, only update title if the new one is not null
+            if (!unique.containsKey(url) || (item.title() != null && !item.title().isBlank())) {
+                unique.put(url, item.title());
+            }
         }
 
-        for (var rawUrl : unique) {
+        for (var entry : unique.entrySet()) {
+            var normalized = entry.getKey();
+            var title = entry.getValue();
             try {
-                var normalized = normalizeUrl(rawUrl);
                 if (entries.getByUrl(normalized).isPresent()) {
                     skipped++;
                     continue;
                 }
-                create(normalized, null, null, null, null, false, null);
+                boolean suggestion = title != null && !title.isBlank();
+                create(normalized, title, null, null, null, false, suggestion, null);
                 created++;
             } catch (Exception e) {
-                errors.add(new BulkCreateError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
+                errors.add(new BulkCreateError(normalized, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
             }
         }
         return new BulkCreateResult(created, skipped, errors);
@@ -380,7 +391,7 @@ public class EntryService {
     public record ImportError(String url, String error) {}
     public record ImportResult(int createdCount, int updatedCount, int skippedCount, List<ImportError> errors) {}
 
-    public List<Entry> search(
+    public EntryRepository.SearchResult search(
             String q,
             List<String> tags,
             Boolean important,

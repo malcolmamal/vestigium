@@ -44,9 +44,12 @@
           }
         </div>
         <div class="meta">
-          <a class="url" [href]="data()!.entry!.url" target="_blank" rel="noreferrer">
-            {{ data()!.entry!.url }}
-          </a>
+          <div class="urlRow">
+            <a class="url" [href]="data()!.entry!.url" target="_blank" rel="noreferrer">
+              {{ data()!.entry!.url }}
+            </a>
+            <button class="iconBtn" type="button" title="Copy URL" (click)="copyUrl()">📋</button>
+          </div>
           <div class="muted">Added: {{ data()!.entry!.createdAt | date: 'short' }}</div>
           <div class="pillRow">
             <span class="pill" [class.on]="data()!.entry!.important">Important</span>

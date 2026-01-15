@@ -57,6 +57,8 @@ export class EntryCardComponent {
 
   readonly youtubeId = computed(() => extractYouTubeId(this.entry().url || ''));
 
+  readonly showAiContext = signal(false);
+
   private prevThumbCount = 0;
   private prevUpdatedAt: string | null = null;
 
@@ -91,6 +93,16 @@ export class EntryCardComponent {
 
   onImgError(evt: Event) {
     (evt.target as HTMLImageElement).style.display = 'none';
+  }
+
+  toggleAiContext(evt: MouseEvent) {
+    this.stop(evt);
+    this.showAiContext.set(!this.showAiContext());
+  }
+
+  openLink(evt: MouseEvent) {
+    this.stop(evt);
+    window.open(this.entry().url, '_blank');
   }
 
   enqueueEnrich(evt: MouseEvent) {

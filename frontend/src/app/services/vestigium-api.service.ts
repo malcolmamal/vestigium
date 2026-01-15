@@ -20,9 +20,9 @@ export class VestigiumApiService {
     return this.http.post<EntryDetailsResponse>('/api/entries', formData);
   }
 
-  bulkCreateEntries(urls: string[]) {
+  bulkCreateEntries(items: { url: string; title: string | null }[]) {
     return apiFn
-      .bulkCreate(this.http, this.api.rootUrl, { body: { urls } })
+      .bulkCreate(this.http, this.api.rootUrl, { body: { items } })
       .pipe(switchMap(unwrapBody));
   }
 
@@ -35,7 +35,7 @@ export class VestigiumApiService {
     includeNsfw?: boolean;
     addedFrom?: string;
     addedTo?: string;
-    sort?: 'added_desc' | 'added_asc' | 'updated_desc' | 'updated_asc';
+    sort?: 'added_desc' | 'added_asc' | 'updated_desc' | 'updated_asc' | 'tags_asc';
     page?: number;
     pageSize?: number;
   }) {

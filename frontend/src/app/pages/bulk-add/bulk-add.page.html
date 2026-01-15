@@ -5,7 +5,7 @@
   </header>
 
   <p class="muted">
-    Paste one URL per line. We’ll create entries and queue enrichment/thumbnail jobs.
+    Paste one URL per line, or pairs of Title and URL. We’ll create entries and queue enrichment/thumbnail jobs.
   </p>
 
   <textarea
@@ -13,7 +13,7 @@
     rows="12"
     [value]="raw()"
     (input)="raw.set(($any($event.target).value ?? '').toString())"
-    placeholder="https://example.com/...\nhttps://www.youtube.com/watch?v=...\n..."
+    placeholder="Title (optional)&#10;https://example.com/&#10;&#10;https://www.youtube.com/watch?v=...&#10;..."
   ></textarea>
 
   <div class="actions">
@@ -21,9 +21,9 @@
       class="button"
       type="button"
       (click)="submit()"
-      [disabled]="saving() || parsedUrls().length === 0"
+      [disabled]="saving() || parsedItems().length === 0"
     >
-      Add {{ parsedUrls().length }} URL(s)
+      Add {{ parsedItems().length }} item(s)
     </button>
     @if (saving()) {
       <span class="muted">Queuing…</span>

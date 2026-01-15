@@ -24,24 +24,44 @@ export class BulkAddPage {
   readonly error = signal<string | null>(null);
   readonly result = signal<BulkCreateEntriesResponse | null>(null);
 
-  parsedUrls() {
+  parsedItems() {
     const lines = this.raw()
       .split(/\r?\n/g)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
-    // de-dupe preserving order
-    return Array.from(new Set(lines));
+
+    const items: { url: string; title: string | null }[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('http://') || line.startsWith('https://')) {
+        items.push({ url: line, title: null });
+      } else {
+        // Title? Only if next line is a URL
+        if (i + 1 < lines.length && (lines[i + 1].startsWith('http://') || lines[i + 1].startsWith('https://'))) {
+          items.push({ url: lines[i + 1], title: line });
+          i++; // Skip the URL line
+        }
+      }
+    }
+
+    // De-dupe by URL, preserving order
+    const seen = new Set<string>();
+    return items.filter((it) => {
+      if (seen.has(it.url)) return false;
+      seen.add(it.url);
+      return true;
+    });
   }
 
   submit() {
-    const urls = this.parsedUrls();
-    if (urls.length === 0) return;
+    const items = this.parsedItems();
+    if (items.length === 0) return;
     this.error.set(null);
     this.result.set(null);
     this.saving.set(true);
 
     this.api
-      .bulkCreateEntries(urls)
+      .bulkCreateEntries(items)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: (res) => {

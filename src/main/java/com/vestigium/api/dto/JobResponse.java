@@ -12,6 +12,7 @@ public record JobResponse(
         String lockedAt,
         String finishedAt,
         String lastError,
+        String lastResponse,
         @NotNull String createdAt
 ) {
     public static JobResponse from(Job j) {
@@ -24,6 +25,7 @@ public record JobResponse(
                 j.lockedAt(),
                 j.finishedAt(),
                 j.lastError(),
+                j.lastResponse(),
                 j.createdAt()
         );
     }

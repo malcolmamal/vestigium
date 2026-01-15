@@ -6,4 +6,5 @@ export interface EntryListResponse {
   items?: Array<EntryResponse>;
   page?: number;
   pageSize?: number;
+  totalCount?: number;
 }

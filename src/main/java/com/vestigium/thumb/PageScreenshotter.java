@@ -72,6 +72,11 @@ public class PageScreenshotter {
                     } else if (isRedgifs(url)) {
                         dismissRedgifsConsent(page);
                         page.waitForTimeout(400);
+                    } else if (isPornhub(url)) {
+                        // Pornhub shows age verification popup
+                        page.waitForTimeout(1000);
+                        dismissPornhubConsent(page);
+                        page.waitForTimeout(1000);
                     } else if (isReddit(url)) {
                         // Reddit popups can be slow to appear.
                         page.waitForTimeout(1000);
@@ -96,6 +101,10 @@ public class PageScreenshotter {
 
     private static boolean isRedgifs(String url) {
         return host(url).map(h -> h.endsWith("redgifs.com")).orElse(false);
+    }
+
+    private static boolean isPornhub(String url) {
+        return host(url).map(h -> h.contains("pornhub.com")).orElse(false);
     }
 
     private static boolean isInstagram(String url) {
@@ -130,6 +139,23 @@ public class PageScreenshotter {
         // Some variants use different wording.
         tryClick(page, "button:has-text(\"Accept\")", 1500);
         tryClick(page, "button:has-text(\"Agree\")", 1500);
+    }
+
+    private static void dismissPornhubConsent(Page page) {
+        // Pornhub's age verification popup.
+        // Usually contains "Enter" or "I am 18" in various languages.
+        tryClick(page, "button:has-text(\"Enter\")", 2000);
+        tryClick(page, "button:has-text(\"Mam ukończone 18 lat\")", 2000);
+        tryClick(page, "#age-verification-container button", 1500);
+        tryClick(page, ".age-verification-wrapper button", 1500);
+
+        // Wait a bit for cookie consent to appear if it's separate
+        page.waitForTimeout(500);
+
+        // Cookie consent
+        tryClick(page, "button:has-text(\"Akceptuj Wszystkie Pliki Cookie\")", 2000);
+        tryClick(page, "button:has-text(\"Accept All Cookies\")", 2000);
+        tryClick(page, "button:has-text(\"Accept All\")", 2000);
     }
 
     private static void dismissYouTubeCookieConsent(Page page) {

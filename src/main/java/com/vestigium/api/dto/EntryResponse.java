@@ -21,7 +21,9 @@ public record EntryResponse(
     @Schema(requiredMode = REQUIRED) @NotNull String thumbnailUrl,
     @Schema(requiredMode = REQUIRED) @NotNull String thumbnailLargeUrl,
     @Schema(requiredMode = REQUIRED) @NotNull boolean latestJobFailed,
-    String manualThumbnailUrl
+    String manualThumbnailUrl,
+    boolean aiSafe,
+    String aiContext
 ) {
     public static EntryResponse from(Entry e) {
         return from(e, false);
@@ -42,7 +44,9 @@ public record EntryResponse(
                 "/api/entries/" + e.id() + "/thumbnail",
                 "/api/entries/" + e.id() + "/thumbnail?size=large",
                 latestJobFailed,
-                e.manualThumbnailUrl()
+                e.manualThumbnailUrl(),
+                e.aiSafe(),
+                e.aiContext()
         );
     }
 }

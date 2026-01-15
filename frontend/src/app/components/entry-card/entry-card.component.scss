@@ -209,3 +209,55 @@
   border: 1px solid rgba(90, 97, 255, 0.20);
   color: rgba(255, 255, 255, 0.86);
 }
+
+.aiBlocked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 59, 48, 0.15);
+  border: 1px dashed rgba(255, 59, 48, 0.4);
+  border-radius: 10px;
+  color: #ff453a;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  cursor: pointer;
+  user-select: none;
+  
+  &:hover {
+    background: rgba(255, 59, 48, 0.2);
+  }
+
+  .warningIcon {
+    font-size: 14px;
+  }
+
+  .expandBtn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+}
+
+.aiContextBox {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.4;
+}

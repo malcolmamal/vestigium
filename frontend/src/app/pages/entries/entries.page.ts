@@ -67,6 +67,13 @@ export class EntriesPage {
     // ...
   });
 
+  readonly totalPages = computed(() => {
+    const total = this.store.totalCount();
+    const size = this.store.pageSize();
+    if (total <= 0) return 0;
+    return Math.ceil(total / size);
+  });
+
   // ... (inside class)
 
   onEnrich(id: string) {
@@ -179,6 +186,19 @@ export class EntriesPage {
 
   prevPage() {
     this.store.setPage(Math.max(0, this.store.page() - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  jumpToFirst() {
+    if (this.store.page() === 0) return;
+    this.store.setPage(0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  jumpToLast() {
+    const last = this.totalPages() - 1;
+    if (last < 0 || this.store.page() === last) return;
+    this.store.setPage(last);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 

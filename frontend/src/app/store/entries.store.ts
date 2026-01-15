@@ -15,7 +15,7 @@ export interface EntriesFilter {
   visitedOnly: boolean | null;
   addedFrom: string | null;
   addedTo: string | null;
-  sort: 'updated_desc' | 'updated_asc' | 'added_desc' | 'added_asc';
+  sort: 'updated_desc' | 'updated_asc' | 'added_desc' | 'added_asc' | 'tags_asc';
   page: number;
   pageSize: number;
   refreshToken: number;
@@ -25,6 +25,7 @@ export interface EntriesResult {
   loading: boolean;
   error: string | null;
   items: EntryResponse[];
+  totalCount: number;
 }
 
 // Combined type for the public patchState API
@@ -55,7 +56,8 @@ export class EntriesStore {
   private readonly results = signal<EntriesResult>({
     loading: false,
     error: null,
-    items: []
+    items: [],
+    totalCount: 0
   });
 
   // Selectors - Filters
@@ -75,6 +77,7 @@ export class EntriesStore {
   readonly loading = computed(() => this.results().loading);
   readonly error = computed(() => this.results().error);
   readonly items = computed(() => this.results().items);
+  readonly totalCount = computed(() => this.results().totalCount);
 
   readonly hasFilters = computed(() => {
     const f = this.filters();
@@ -129,7 +132,7 @@ export class EntriesStore {
             .pipe(
               catchError((err) => {
                 this.patchResults({ error: err?.message ?? 'Failed to load entries' });
-                return of({ items: [] });
+                return of({ items: [], totalCount: 0 });
               }),
               finalize(() => this.patchResults({ loading: false }))
             );
@@ -137,7 +140,7 @@ export class EntriesStore {
       )
       .subscribe((res) => {
         if (res.items) {
-          this.patchResults({ items: res.items });
+          this.patchResults({ items: res.items, totalCount: res.totalCount ?? 0 });
         }
       });
 

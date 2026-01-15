@@ -37,12 +37,12 @@ public class JobRepository {
         params.put("createdAt", now);
         jdbc.update(
                 """
-                INSERT INTO jobs (id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at)
-                VALUES (:id, :type, 'PENDING', :entryId, :payloadJson, 0, NULL, NULL, NULL, :createdAt)
+                INSERT INTO jobs (id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at)
+                VALUES (:id, :type, 'PENDING', :entryId, :payloadJson, 0, NULL, NULL, NULL, NULL, :createdAt)
                 """,
                 params
         );
-        var job = new Job(id, type, "PENDING", entryId, payloadJson, 0, null, null, null, now);
+        var job = new Job(id, type, "PENDING", entryId, payloadJson, 0, null, null, null, null, now);
         events.publishEvent(new com.vestigium.events.JobUpdatedEvent(job));
         return job;
     }
@@ -65,7 +65,7 @@ public class JobRepository {
                   ORDER BY created_at ASC
                   LIMIT 1
                 )
-                RETURNING id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at
+                RETURNING id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at
                 """,
                 Map.of("lockedAt", now),
                 JOB_ROW_MAPPER
@@ -79,14 +79,23 @@ public class JobRepository {
     }
 
     public void markSucceeded(String jobId) {
+        markSucceeded(jobId, null);
+    }
+
+    public void markSucceeded(String jobId, String lastResponse) {
         var finishedAt = InstantSql.nowIso();
         var jobOpt = getById(jobId);
         if (jobOpt.isEmpty()) return;
         var job = jobOpt.get();
 
+        var params = new HashMap<String, Object>();
+        params.put("id", jobId);
+        params.put("finishedAt", finishedAt);
+        params.put("lastResponse", lastResponse);
+
         jdbc.update(
-                "UPDATE jobs SET status = 'SUCCEEDED', finished_at = :finishedAt WHERE id = :id",
-                Map.of("id", jobId, "finishedAt", finishedAt)
+                "UPDATE jobs SET status = 'SUCCEEDED', finished_at = :finishedAt, last_response = :lastResponse WHERE id = :id",
+                params
         );
 
         // Cleanup: remove older failed jobs of the same type for this entry.
@@ -99,23 +108,33 @@ public class JobRepository {
     }
 
     public void markFailed(String jobId, String errorMessage, boolean retry) {
+        markFailed(jobId, errorMessage, null, retry);
+    }
+
+    public void markFailed(String jobId, String errorMessage, String lastResponse, boolean retry) {
+        var params = new HashMap<String, Object>();
+        params.put("id", jobId);
+        params.put("err", errorMessage);
+        params.put("lastResponse", lastResponse);
+
         if (retry) {
             jdbc.update(
                     """
                     UPDATE jobs
-                    SET status = 'PENDING', last_error = :err, locked_at = NULL
+                    SET status = 'PENDING', last_error = :err, last_response = :lastResponse, locked_at = NULL
                     WHERE id = :id
                     """,
-                    Map.of("id", jobId, "err", errorMessage)
+                    params
             );
         } else {
+            params.put("finishedAt", InstantSql.nowIso());
             jdbc.update(
                     """
                     UPDATE jobs
-                    SET status = 'FAILED', last_error = :err, finished_at = :finishedAt
+                    SET status = 'FAILED', last_error = :err, last_response = :lastResponse, finished_at = :finishedAt
                     WHERE id = :id
                     """,
-                    Map.of("id", jobId, "err", errorMessage, "finishedAt", InstantSql.nowIso())
+                    params
             );
         }
         getById(jobId).ifPresent(j -> events.publishEvent(new com.vestigium.events.JobUpdatedEvent(j)));
@@ -124,7 +143,7 @@ public class JobRepository {
     public Optional<Job> getById(String id) {
         var rows = jdbc.query(
                 """
-                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at
+                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at
                 FROM jobs
                 WHERE id = :id
                 """,
@@ -151,7 +170,7 @@ public class JobRepository {
 
         return jdbc.query(
                 """
-                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at
+                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at
                 FROM jobs
                 %s
                 ORDER BY created_at ASC
@@ -232,7 +251,7 @@ public class JobRepository {
     public List<Job> listForEntry(String entryId, int limit) {
         return jdbc.query(
                 """
-                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, created_at
+                SELECT id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at
                 FROM jobs
                 WHERE entry_id = :entryId
                 ORDER BY created_at DESC
@@ -256,6 +275,7 @@ public class JobRepository {
                     rs.getString("locked_at"),
                     rs.getString("finished_at"),
                     rs.getString("last_error"),
+                    rs.getString("last_response"),
                     rs.getString("created_at")
             );
         }

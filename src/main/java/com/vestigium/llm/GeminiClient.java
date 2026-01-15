@@ -82,11 +82,11 @@ public class GeminiClient {
                         JsonNode root = objectMapper.readTree(resp.body());
                         var textNode = root.at("/candidates/0/content/parts/0/text");
                         if (textNode.isMissingNode() || textNode.asText().isBlank()) {
-                            throw new IllegalStateException("Gemini returned empty response.");
+                            throw new IllegalStateException("Gemini returned empty response. Body: " + resp.body());
                         }
                         return textNode.asText();
                     } catch (Exception e) {
-                        throw new RuntimeException("Failed to parse Gemini response", e);
+                        throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage() + (resp.body() != null ? " Body: " + resp.body() : ""), e);
                     }
                 }).get();
     }

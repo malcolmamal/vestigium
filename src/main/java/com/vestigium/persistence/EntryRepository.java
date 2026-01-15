@@ -74,7 +74,7 @@ public class EntryRepository {
     public Optional<Entry> getById(String id) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url, ai_safe, ai_context
                 FROM entries
                 WHERE id = :id
                 """,
@@ -93,7 +93,7 @@ public class EntryRepository {
     public Optional<Entry> getByUrl(String url) {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url, ai_safe, ai_context
                 FROM entries
                 WHERE url = :url
                 """,
@@ -111,7 +111,7 @@ public class EntryRepository {
     public List<Entry> listAllForExport() {
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url, ai_safe, ai_context
                 FROM entries
                 ORDER BY created_at ASC
                 """,
@@ -149,7 +149,7 @@ public class EntryRepository {
 
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url, ai_safe, ai_context
                 FROM entries
                 %s
                 ORDER BY RANDOM()
@@ -173,7 +173,9 @@ public class EntryRepository {
         return out;
     }
 
-    public List<Entry> search(
+    public record SearchResult(List<Entry> items, long totalCount) {}
+
+    public SearchResult search(
             String q,
             List<String> tags,
             Boolean important,
@@ -256,6 +258,13 @@ public class EntryRepository {
         }
 
         var whereSql = where.isEmpty() ? "" : "WHERE " + String.join(" AND ", where);
+
+        long total = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM entries " + whereSql,
+                params,
+                Long.class
+        );
+
         var offset = Math.max(page, 0) * Math.max(pageSize, 1);
         params.put("limit", pageSize);
         params.put("offset", offset);
@@ -267,13 +276,14 @@ public class EntryRepository {
                 case "added_desc" -> "created_at DESC";
                 case "updated_asc" -> "updated_at ASC";
                 case "updated_desc" -> "updated_at DESC";
+                case "tags_asc" -> "(SELECT COUNT(*) FROM entry_tags WHERE entry_id = entries.id) ASC, created_at DESC";
                 default -> "updated_at DESC";
             };
         }
 
         var rows = jdbc.query(
                 """
-                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url
+                SELECT id, url, title, description, detailed_description, thumbnail_path, thumbnail_large_path, visited_at, important, created_at, updated_at, manual_thumbnail_url, ai_safe, ai_context
                 FROM entries
                 %s
                 ORDER BY %s
@@ -284,7 +294,7 @@ public class EntryRepository {
         );
 
         if (rows.isEmpty()) {
-            return List.of();
+            return new SearchResult(List.of(), total);
         }
 
         var entryIds = rows.stream().map(EntryRow::id).toList();
@@ -294,7 +304,7 @@ public class EntryRepository {
         for (var row : rows) {
             out.add(row.toEntry(tagsByEntry.getOrDefault(row.id(), List.of())));
         }
-        return out;
+        return new SearchResult(out, total);
     }
 
     public void updateCore(String id, String title, String description, String detailedDescription, String manualThumbnailUrl, Boolean important) {
@@ -348,6 +358,18 @@ public class EntryRepository {
                 Map.of(
                         "id", id,
                         "thumbnailPath", thumbnailPath,
+                        "updatedAt", InstantSql.nowIso()
+                )
+        );
+    }
+
+    public void setAiSafeInfo(String id, boolean aiSafe, String aiContext) {
+        jdbc.update(
+                "UPDATE entries SET ai_safe = :aiSafe, ai_context = :aiContext, updated_at = :updatedAt WHERE id = :id",
+                Map.of(
+                        "id", id,
+                        "aiSafe", aiSafe ? 1 : 0,
+                        "aiContext", aiContext != null ? aiContext : "",
                         "updatedAt", InstantSql.nowIso()
                 )
         );
@@ -451,10 +473,12 @@ public class EntryRepository {
             boolean important,
             String createdAt,
             String updatedAt,
-            String manualThumbnailUrl
+            String manualThumbnailUrl,
+            boolean aiSafe,
+            String aiContext
     ) {
         Entry toEntry(List<String> tags) {
-            return new Entry(id, url, title, description, detailedDescription, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, manualThumbnailUrl, tags);
+            return new Entry(id, url, title, description, detailedDescription, thumbnailPath, thumbnailLargePath, visitedAt, important, createdAt, updatedAt, manualThumbnailUrl, aiSafe, aiContext, tags);
         }
     }
 
@@ -473,7 +497,9 @@ public class EntryRepository {
                     rs.getInt("important") != 0,
                     rs.getString("created_at"),
                     rs.getString("updated_at"),
-                    rs.getString("manual_thumbnail_url")
+                    rs.getString("manual_thumbnail_url"),
+                    rs.getInt("ai_safe") != 0,
+                    rs.getString("ai_context")
             );
         }
     }

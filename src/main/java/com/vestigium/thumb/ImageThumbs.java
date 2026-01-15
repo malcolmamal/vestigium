@@ -6,14 +6,23 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import javax.imageio.ImageIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ImageThumbs {
+
+    private static final Logger log = LoggerFactory.getLogger(ImageThumbs.class);
 
     private ImageThumbs() {}
 
     public static byte[] toJpegThumbnail(byte[] imageBytes, int targetWidth) throws Exception {
         BufferedImage src = ImageIO.read(new ByteArrayInputStream(imageBytes));
         if (src == null) {
+            String magic = "";
+            if (imageBytes != null && imageBytes.length >= 4) {
+                magic = String.format("%02X %02X %02X %02X", imageBytes[0], imageBytes[1], imageBytes[2], imageBytes[3]);
+            }
+            log.error("Failed to decode image. Size={} Magic=[{}]", (imageBytes == null ? 0 : imageBytes.length), magic);
             throw new IllegalArgumentException("Unsupported image format");
         }
 

@@ -15,6 +15,8 @@ public record Entry(
         String createdAt,
         String updatedAt,
         String manualThumbnailUrl,
+        boolean aiSafe,
+        String aiContext,
         List<String> tags
 ) {}
 

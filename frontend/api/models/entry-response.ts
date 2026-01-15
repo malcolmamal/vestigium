@@ -16,4 +16,6 @@ export interface EntryResponse {
   url?: string;
   visitedAt?: string;
   latestJobFailed?: boolean;
+  aiSafe?: boolean;
+  aiContext?: string;
 }

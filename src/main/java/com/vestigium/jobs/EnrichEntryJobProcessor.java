@@ -77,12 +77,16 @@ public class EnrichEntryJobProcessor implements JobProcessor {
         var attachmentList = attachments.listForEntry(entry.id());
 
         boolean force = payloadForce(job.payloadJson());
+        boolean titleIsSuggestion = payloadBoolean(job.payloadJson(), "isTitleSuggestion");
 
         var images = new ArrayList<GeminiClient.InlineImage>();
         var contextText = new StringBuilder();
         contextText.append("URL: ").append(entry.url()).append("\n");
         if (entry.title() != null && !entry.title().isBlank()) {
             contextText.append("Existing Title: ").append(entry.title()).append("\n");
+            if (titleIsSuggestion) {
+                contextText.append("(Note: the title above is just a suggestion from the user, feel free to generate a better/proper one)\n");
+            }
         }
         if (entry.description() != null && !entry.description().isBlank()) {
             contextText.append("Existing Description: ").append(entry.description()).append("\n");
@@ -159,7 +163,7 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             // Even without LLM, we can often fill missing title/description from HTML metadata.
             var metaTitle = page.title();
             var metaDesc = page.metaDescription();
-            var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force) ? metaTitle : null;
+            var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force || titleIsSuggestion) ? metaTitle : null;
             var metaUpdateDesc = shouldUpdate(entry.description(), metaDesc, force) ? metaDesc : null;
             if (metaUpdateTitle != null || metaUpdateDesc != null) {
                 entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null, null, null);
@@ -179,11 +183,36 @@ public class EnrichEntryJobProcessor implements JobProcessor {
 
         var prompt = buildPrompt(contextText.toString());
         log.info("Requesting LLM enrichment for entryId={}...", entry.id());
-        var modelText = gemini.generateText(prompt, images);
-        var enrichment = enrichmentParser.parseFromModelText(modelText);
+
+        com.vestigium.enrich.EnrichmentResult enrichment;
+        String modelText = null;
+        try {
+            modelText = gemini.generateText(prompt, images);
+            enrichment = enrichmentParser.parseFromModelText(modelText);
+        } catch (Exception e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "";
+            if (errorMsg.contains("PROHIBITED_CONTENT") || errorMsg.contains("SAFETY")) {
+                log.warn("Gemini blocked content for entryId={} url={}: {}", entry.id(), entry.url(), errorMsg);
+                handleProhibitedContent(entry, contextText.toString());
+                return;
+            }
+
+            log.error("Failed LLM enrichment for entryId={}. msg={}", entry.id(), e.getMessage());
+            // If it's already a JobParsingException, rethrow
+            if (e instanceof JobParsingException) {
+                throw (JobParsingException) e;
+            }
+            // Otherwise, try to extract body from exception message if it was added by GeminiClient
+            String raw = modelText;
+            if (raw == null && e.getMessage() != null && e.getMessage().contains(" Body: ")) {
+                raw = e.getMessage().substring(e.getMessage().indexOf(" Body: ") + 7);
+            }
+            throw new JobParsingException(e.getMessage(), raw, e);
+        }
+
         log.info("LLM enrichment received for entryId={}: tags={}", entry.id(), enrichment.tags());
 
-        var newTitle = shouldUpdate(entry.title(), enrichment.title(), force) ? enrichment.title() : null;
+        var newTitle = shouldUpdate(entry.title(), enrichment.title(), force || titleIsSuggestion) ? enrichment.title() : null;
         var newDescription = shouldUpdate(entry.description(), enrichment.description(), force) ? enrichment.description() : null;
         var newDetailedDescription = shouldUpdate(entry.detailedDescription(), enrichment.detailedDescription(), force)
                 ? enrichment.detailedDescription()
@@ -233,12 +262,16 @@ public class EnrichEntryJobProcessor implements JobProcessor {
     }
 
     private boolean payloadForce(String payloadJson) {
+        return payloadBoolean(payloadJson, "force");
+    }
+
+    private boolean payloadBoolean(String payloadJson, String key) {
         if (payloadJson == null || payloadJson.isBlank()) {
             return false;
         }
         try {
             JsonNode node = objectMapper.readTree(payloadJson);
-            return node.path("force").asBoolean(false);
+            return node.path(key).asBoolean(false);
         } catch (Exception ignored) {
             return false;
         }
@@ -252,6 +285,16 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             return true;
         }
         return existing == null || existing.isBlank();
+    }
+
+    private void handleProhibitedContent(com.vestigium.domain.Entry entry, String context) {
+        entries.setAiSafeInfo(entry.id(), false, context);
+        
+        var fallbackTags = new ArrayList<>(UrlTagger.tagsForUrl(entry.url()));
+        fallbackTags.add("prohibited_content");
+        fallbackTags.add("nsfw");
+        
+        entries.replaceTags(entry.id(), TagNormalizer.normalize(fallbackTags), tags);
     }
 
     private static String buildPrompt(String context) {

@@ -66,6 +66,16 @@ public class RegenerateThumbnailJobProcessor implements JobProcessor {
             var url = manualUrl.get();
             sourceImage = fetcher.downloadBytes(url)
                     .orElseThrow(() -> new RuntimeException("Failed to download manual thumbnail from " + url));
+            
+            // Check if readable, if not throw a better error
+            try (var bis = new ByteArrayInputStream(sourceImage)) {
+                if (ImageIO.read(bis) == null) {
+                    throw new RuntimeException("Unsupported image format for manual thumbnail: " + url);
+                }
+            } catch (Exception e) {
+                if (e instanceof RuntimeException re) throw re;
+                throw new RuntimeException("Failed to decode manual thumbnail: " + url, e);
+            }
         } else {
             sourceImage = tryGetYouTubeThumb(entry.url())
                     .or(() -> tryGetOgImage(entry.url()))
@@ -137,8 +147,9 @@ public class RegenerateThumbnailJobProcessor implements JobProcessor {
         try {
             var img = ImageIO.read(new ByteArrayInputStream(bytes));
             if (img == null) {
-                // Unknown format, but it's non-trivial bytes; allow.
-                return true;
+                // If we cannot decode the image (e.g., unsupported format like WebP or AVIF),
+                // we should fallback to a screenshot instead of crashing later.
+                return false;
             }
             int w = img.getWidth();
             int h = img.getHeight();

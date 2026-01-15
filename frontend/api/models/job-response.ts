@@ -8,6 +8,7 @@ export interface JobResponse {
   finishedAt?: string;
   id?: string;
   lastError?: string;
+  lastResponse?: string;
   lockedAt?: string;
   status?: string;
   type?: string;

@@ -9,6 +9,14 @@
     <div class="thumbActions">
       <button
         class="iconBtn"
+        type="button"
+        title="Open link in new tab"
+        (click)="openLink($event)"
+      >
+        <span>↗</span>
+      </button>
+      <button
+        class="iconBtn"
         [class.loading]="enrichJobs().length > 0"
         type="button"
         title="Update via LLM"
@@ -63,6 +71,16 @@
     </div>
   </div>
   <div class="body">
+    @if (entry().aiSafe === false) {
+      <div class="aiBlocked" (click)="toggleAiContext($event)">
+        <span class="warningIcon">⚠️</span> AI Blocked - Content Prohibited
+        <button class="expandBtn">{{ showAiContext() ? 'Hide Context' : 'Show Context' }}</button>
+      </div>
+      @if (showAiContext() && entry().aiContext) {
+        <pre class="aiContextBox">{{ entry().aiContext }}</pre>
+      }
+    }
+
     <div class="titleRow">
       <div class="title">{{ entry().title || entry().url }}</div>
       <div class="meta">
