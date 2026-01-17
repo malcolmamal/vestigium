@@ -37,7 +37,10 @@ export class BulkAddPage {
         items.push({ url: line, title: null });
       } else {
         // Title? Only if next line is a URL
-        if (i + 1 < lines.length && (lines[i + 1].startsWith('http://') || lines[i + 1].startsWith('https://'))) {
+        if (
+          i + 1 < lines.length &&
+          (lines[i + 1].startsWith('http://') || lines[i + 1].startsWith('https://'))
+        ) {
           items.push({ url: lines[i + 1], title: line });
           i++; // Skip the URL line
         }

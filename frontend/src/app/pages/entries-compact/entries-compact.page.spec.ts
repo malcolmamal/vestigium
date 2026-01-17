@@ -20,7 +20,9 @@ describe('EntriesCompactPage', () => {
     component = fixture.componentInstance;
 
     // Avoid the constructor effect from firing real network calls.
-    jest.spyOn(component as any, 'loadAll').mockResolvedValue(undefined);
+    jest
+      .spyOn(component as unknown as { loadAll: () => Promise<void> }, 'loadAll')
+      .mockResolvedValue(undefined);
 
     fixture.detectChanges();
   });

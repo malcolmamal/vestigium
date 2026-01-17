@@ -9,7 +9,7 @@ import {
   untracked
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { finalize, firstValueFrom } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 import type { EntryListResponse, EntryResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
@@ -45,14 +45,35 @@ export class EntriesCompactPage {
   readonly items = signal<EntryResponse[]>([]);
   readonly totalCount = signal<number>(0);
   readonly partial = signal<boolean>(false);
+  readonly searchQuery = signal<string>('');
 
   private readonly loadSeq = signal(0);
+  readonly columnSort = signal<Record<string, 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc'>>(
+    {
+      youtube: 'date_desc',
+      reddit: 'date_desc',
+      x: 'date_desc',
+      github: 'date_desc',
+      other: 'date_desc'
+    }
+  );
 
   readonly columns = computed<SiteColumn[]>(() => {
     console.log('[COMPACT] columns() computed - starting with', this.items().length, 'items');
-    const items = this.items();
+    const allItems = this.items();
+    const query = this.searchQuery().toLowerCase().trim();
+
+    // Filter items based on search query
+    const items = query
+      ? allItems.filter((e) => {
+          const title = (e.title || '').toLowerCase();
+          const url = (e.url || '').toLowerCase();
+          return title.includes(query) || url.includes(query);
+        })
+      : allItems;
+
     if (items.length === 0) {
-      console.log('[COMPACT] columns() - no items, returning empty');
+      console.log('[COMPACT] columns() - no items after filtering, returning empty');
       return [];
     }
 
@@ -81,21 +102,24 @@ export class EntriesCompactPage {
       }
     }
 
+    const sortMap = this.columnSort();
     const cols: SiteColumn[] = topKeys.map((key) => {
       const colItems = bySite.get(key) ?? [];
+      const sorted = this.sortItems(colItems, sortMap[key] ?? 'date_desc');
       return {
         key,
         label: siteLabelFromKey(key),
-        count: colItems.length,
-        items: colItems
+        count: sorted.length,
+        items: sorted
       };
     });
 
+    const sortedOther = this.sortItems(other, sortMap['other'] ?? 'date_desc');
     cols.push({
       key: 'other',
       label: 'Other',
-      count: other.length,
-      items: other
+      count: sortedOther.length,
+      items: sortedOther
     });
 
     console.log('[COMPACT] columns() computed - built', cols.length, 'columns');
@@ -118,10 +142,16 @@ export class EntriesCompactPage {
   faviconUrl(e: EntryResponse): string | null {
     const host = hostnameFromEntry(e);
     if (!host || host.length < 3) return null;
-    const domain = host.replace(/^www\./i, '');
+    let domain = host.replace(/^www\./i, '');
+    // Also handle old.reddit.com by normalizing to reddit.com
+    domain = domain.replace(/^old\./i, '');
     // Skip localhost and invalid domains
     if (domain === 'localhost' || domain.startsWith('localhost:')) return null;
     return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+  }
+
+  siteName(e: EntryResponse): string {
+    return siteLabelFromKey(siteKeyFromEntry(e));
   }
 
   thumbnailUrl(e: EntryResponse): string | null {
@@ -153,12 +183,89 @@ export class EntriesCompactPage {
       this.items.update((curr) => curr.filter((x) => x.id !== id));
       this.totalCount.update((c) => Math.max(0, c - 1));
       this.toasts.success('Entry deleted');
-    } catch (err: any) {
-      this.toasts.error(err?.message ?? 'Failed to delete entry');
+    } catch (err: unknown) {
+      this.toasts.error((err as Error)?.message ?? 'Failed to delete entry');
     }
   }
 
   trackById = (_: number, e: EntryResponse) => e.id ?? e.url ?? '';
+
+  toggleDateSort(colKey: string) {
+    this.columnSort.update((curr) => {
+      const current = curr[colKey];
+      const newSort = current === 'date_desc' ? 'date_asc' : 'date_desc';
+      return { ...curr, [colKey]: newSort };
+    });
+  }
+
+  toggleNameSort(colKey: string) {
+    this.columnSort.update((curr) => {
+      const current = curr[colKey];
+      const newSort = current === 'name_asc' ? 'name_desc' : 'name_asc';
+      return { ...curr, [colKey]: newSort };
+    });
+  }
+
+  isDateSort(colKey: string): boolean {
+    const sort = this.columnSort()[colKey];
+    return sort === 'date_asc' || sort === 'date_desc';
+  }
+
+  isNameSort(colKey: string): boolean {
+    const sort = this.columnSort()[colKey];
+    return sort === 'name_asc' || sort === 'name_desc';
+  }
+
+  getDateSortIcon(colKey: string): string {
+    return this.columnSort()[colKey] === 'date_asc' ? '↑' : '↓';
+  }
+
+  getNameSortIcon(colKey: string): string {
+    return this.columnSort()[colKey] === 'name_asc' ? '↑' : '↓';
+  }
+
+  getDateSortTitle(colKey: string): string {
+    return this.columnSort()[colKey] === 'date_asc'
+      ? 'Sort by date (newest first)'
+      : 'Sort by date (oldest first)';
+  }
+
+  getNameSortTitle(colKey: string): string {
+    return this.columnSort()[colKey] === 'name_asc' ? 'Sort by name (Z-A)' : 'Sort by name (A-Z)';
+  }
+
+  private sortItems(
+    items: EntryResponse[],
+    sort: 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc'
+  ): EntryResponse[] {
+    const copy = [...items];
+    if (sort === 'date_asc') {
+      copy.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateA - dateB;
+      });
+    } else if (sort === 'date_desc') {
+      copy.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+    } else if (sort === 'name_asc') {
+      copy.sort((a, b) => {
+        const nameA = (a.title || a.url || '').toLowerCase();
+        const nameB = (b.title || b.url || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+    } else if (sort === 'name_desc') {
+      copy.sort((a, b) => {
+        const nameA = (a.title || a.url || '').toLowerCase();
+        const nameB = (b.title || b.url || '').toLowerCase();
+        return nameB.localeCompare(nameA);
+      });
+    }
+    return copy;
+  }
 
   private stop(evt: Event) {
     evt.preventDefault();
@@ -227,8 +334,8 @@ export class EntriesCompactPage {
       if ((Number.isFinite(total) && all.length < total) || all.length >= this.maxItemsToRender) {
         this.partial.set(true);
       }
-    } catch (err: any) {
-      this.error.set(err?.message ?? 'Failed to load entries');
+    } catch (err: unknown) {
+      this.error.set((err as Error)?.message ?? 'Failed to load entries');
       this.items.set([]);
       this.totalCount.set(0);
     } finally {

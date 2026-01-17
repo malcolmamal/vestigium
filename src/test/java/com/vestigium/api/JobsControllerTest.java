@@ -35,7 +35,7 @@ class JobsControllerTest {
 
     @Test
     void list_ShouldReturnJobs() throws Exception {
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
 
         when(jobRepository.list(isNull(), eq(List.of("PENDING")), eq(50))).thenReturn(List.of(job));
 
@@ -51,7 +51,7 @@ class JobsControllerTest {
 
     @Test
     void list_ShouldFilterByEntryId() throws Exception {
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
 
         when(jobRepository.list(eq("entry-1"), isNull(), eq(50))).thenReturn(List.of(job));
 
@@ -64,7 +64,7 @@ class JobsControllerTest {
 
     @Test
     void get_ShouldReturnJob() throws Exception {
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
 
         when(jobRepository.getById("job-1")).thenReturn(Optional.of(job));
 

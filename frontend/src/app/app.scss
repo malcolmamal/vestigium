@@ -1,9 +1,13 @@
 .appShell {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; // Prevent body scrollbar
+  display: flex;
+  flex-direction: column;
   color: rgba(255, 255, 255, 0.92);
 }
 
 .appHeader {
+  flex-shrink: 0; // Don't shrink header
   position: sticky;
   top: 0;
   z-index: 10;
@@ -72,6 +76,8 @@
 }
 
 .appMain {
+  flex: 1; // Take remaining space
+  overflow: hidden; // Prevent scrollbar here
   padding: 0;
 }
 

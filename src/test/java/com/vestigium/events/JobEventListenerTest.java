@@ -24,7 +24,7 @@ class JobEventListenerTest {
 
     @Test
     void shouldSendWebSocketMessageOnJobUpdated() {
-        var job = new Job("1", "TYPE", "PENDING", "entry-1", "{}", 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("1", "TYPE", "PENDING", "entry-1", "{}", 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var event = new JobUpdatedEvent(job);
 
         listener.handleJobUpdated(event);

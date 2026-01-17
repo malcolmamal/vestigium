@@ -92,6 +92,8 @@ class EnrichEntryJobProcessorTest {
                 "2023-01-01T00:00:00Z",
                 "2023-01-01T00:00:00Z",
                 null,
+                true,
+                null,
                 List.of()
         );
     }
@@ -103,7 +105,7 @@ class EnrichEntryJobProcessorTest {
 
     @Test
     void process_ShouldUpdateEntryWithLLMEnrichment() throws Exception {
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var pageContent = new UrlContentFetcher.PageContent("Page Title", "Meta Description", "Page text content");
         var enrichment = new EnrichmentResult("LLM Title", "LLM Description", null, List.of("tag1", "tag2"));
 
@@ -122,11 +124,11 @@ class EnrichEntryJobProcessorTest {
 
     @Test
     void process_ShouldUseForceFlagFromPayload() throws Exception {
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", "{\"force\":true}", 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", "{\"force\":true}", 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var entryWithTitle = new Entry(
                 "entry-1", "http://example.com", "Existing Title", "Existing Desc",
                 null, null, null, null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
         var pageContent = new UrlContentFetcher.PageContent("Page Title", "Meta Description", "Page text");
         var enrichment = new EnrichmentResult("New Title", "New Description", null, List.of("tag1"));
@@ -146,11 +148,11 @@ class EnrichEntryJobProcessorTest {
 
     @Test
     void process_ShouldNotUpdateWhenEntryHasContentAndNoForce() throws Exception {
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var entryWithContent = new Entry(
                 "entry-1", "http://example.com", "Existing Title", "Existing Desc",
                 null, null, null, null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
         var pageContent = new UrlContentFetcher.PageContent("Page Title", "Meta Description", "Page text");
         var enrichment = new EnrichmentResult("New Title", "New Description", null, List.of("tag1"));
@@ -183,9 +185,11 @@ class EnrichEntryJobProcessorTest {
                 "2023-01-01T00:00:00Z",
                 "2023-01-01T00:00:00Z",
                 null,
+                true,
+                null,
                 List.of()
         );
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var ytMetadata = new YouTubeMetadataFetcher.YouTubeMetadata("Video Title", "Channel Name", null);
         var enrichment = new EnrichmentResult("LLM Title", "LLM Description", null, List.of("youtube"));
 
@@ -206,7 +210,7 @@ class EnrichEntryJobProcessorTest {
     void process_ShouldHandleAttachments() throws Exception {
         var attachment = new Attachment("att-1", "entry-1", "PDF", "test.pdf", "application/pdf", 1000, "path/to/file.pdf", "2023-01-01T00:00:00Z");
         var resource = mock(Resource.class);
-        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "ENRICH_ENTRY", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var enrichment = new EnrichmentResult("Title", "Description", null, List.of("tag1"));
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(mockEntry));

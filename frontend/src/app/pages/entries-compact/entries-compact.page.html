@@ -6,11 +6,22 @@
         @if (loading()) {
           {{ loadingProgress() || 'Loading…' }}
         } @else {
-          Showing {{ items().length }}@if (partial()) {<span> (partial)</span>} / {{ totalCount() }}
+          Showing {{ items().length }}
+          @if (partial()) {
+            <span> (partial)</span>
+          }
+          / {{ totalCount() }}
         }
       </div>
     </div>
     <div class="headerActions">
+      <input
+        class="searchInput"
+        type="text"
+        placeholder="Search title or URL..."
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+      />
       <a class="button secondary" routerLink="/entries">Back</a>
     </div>
   </header>
@@ -29,6 +40,26 @@
             <div class="colHeader">
               <span class="colTitle">{{ col.label }}</span>
               <span class="colCount">{{ col.count }}</span>
+              <div class="sortButtons">
+                <button
+                  class="sortBtn"
+                  type="button"
+                  [title]="getDateSortTitle(col.key)"
+                  [class.active]="isDateSort(col.key)"
+                  (click)="toggleDateSort(col.key)"
+                >
+                  📅{{ getDateSortIcon(col.key) }}
+                </button>
+                <button
+                  class="sortBtn"
+                  type="button"
+                  [title]="getNameSortTitle(col.key)"
+                  [class.active]="isNameSort(col.key)"
+                  (click)="toggleNameSort(col.key)"
+                >
+                  A{{ getNameSortIcon(col.key) }}
+                </button>
+              </div>
             </div>
 
             <div class="tiles">
@@ -51,6 +82,7 @@
                       <img
                         class="favicon"
                         [src]="faviconUrl(e)!"
+                        [title]="siteName(e)"
                         alt=""
                         (error)="onFaviconError($event)"
                       />
@@ -61,7 +93,7 @@
                     <button
                       class="iconBtn"
                       type="button"
-                      title="Open link"
+                      [title]="'Open link: ' + e.url"
                       (click)="openLink(e, $event)"
                     >
                       ↗

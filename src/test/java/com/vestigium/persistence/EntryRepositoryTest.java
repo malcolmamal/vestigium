@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vestigium.service.NsfwConfigService;
 import com.vestigium.domain.Entry;
+import com.vestigium.persistence.EntryRepository.SearchResult;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,17 +52,17 @@ class EntryRepositoryTest {
 
         // Search for 'tag1' -> only e1
         var res1 = entries.search(null, List.of("tag1"), null, null, null, null, null, null, true, 0, 10);
-        assertThat(res1).hasSize(1);
-        assertThat(res1.getFirst().id()).isEqualTo(e1.id());
+        assertThat(res1).extracting(SearchResult::totalCount).isEqualTo(1L);
+        assertThat(res1.items().getFirst().id()).isEqualTo(e1.id());
 
         // Search for 'common' -> both
         var res2 = entries.search(null, List.of("common"), null, null, null, null, null, null, true, 0, 10);
-        assertThat(res2).hasSize(2);
+        assertThat(res2).extracting(SearchResult::totalCount).isEqualTo(2L);
 
         // Search for 'tag1' AND 'common' -> only e1
         var res3 = entries.search(null, List.of("tag1", "common"), null, null, null, null, null, null, true, 0, 10);
-        assertThat(res3).hasSize(1);
-        assertThat(res3.getFirst().id()).isEqualTo(e1.id());
+        assertThat(res3).extracting(SearchResult::totalCount).isEqualTo(1L);
+        assertThat(res3.items().getFirst().id()).isEqualTo(e1.id());
     }
 
     @Test
@@ -73,8 +74,8 @@ class EntryRepositoryTest {
         lists.replaceEntryLists(e1.id(), List.of(listA.id()));
 
         var res = entries.search(null, null, null, null, null, null, null, List.of(listA.id()), true, 0, 10);
-        assertThat(res).hasSize(1);
-        assertThat(res.getFirst().id()).isEqualTo(e1.id());
+        assertThat(res).extracting(SearchResult::totalCount).isEqualTo(1L);
+        assertThat(res.items().getFirst().id()).isEqualTo(e1.id());
     }
 
     @Test
@@ -87,12 +88,12 @@ class EntryRepositoryTest {
 
         // includeNsfw = false
         var resSafe = entries.search(null, null, null, null, null, null, null, null, false, 0, 10);
-        assertThat(resSafe).hasSize(1);
-        assertThat(resSafe.getFirst().id()).isEqualTo(safe.id());
+        assertThat(resSafe).extracting(SearchResult::totalCount).isEqualTo(1L);
+        assertThat(resSafe.items().getFirst().id()).isEqualTo(safe.id());
 
         // includeNsfw = true
         var resAll = entries.search(null, null, null, null, null, null, null, null, true, 0, 10);
-        assertThat(resAll).hasSize(2);
+        assertThat(resAll).extracting(SearchResult::totalCount).isEqualTo(2L);
     }
     
     @Test
@@ -101,12 +102,12 @@ class EntryRepositoryTest {
         entries.create("http://e2.com", "Banana Bread", "Delicious bread", null, false);
         
         var res = entries.search("apple", null, null, null, null, null, null, null, true, 0, 10);
-        assertThat(res).hasSize(1);
-        assertThat(res.getFirst().title()).isEqualTo("Apple Pie");
+        assertThat(res).extracting(SearchResult::totalCount).isEqualTo(1L);
+        assertThat(res.items().getFirst().title()).isEqualTo("Apple Pie");
         
         var resDesc = entries.search("bread", null, null, null, null, null, null, null, true, 0, 10);
-        assertThat(resDesc).hasSize(1);
-        assertThat(resDesc.getFirst().title()).isEqualTo("Banana Bread");
+        assertThat(resDesc).extracting(SearchResult::totalCount).isEqualTo(1L);
+        assertThat(resDesc.items().getFirst().title()).isEqualTo("Banana Bread");
     }
 
     @Test

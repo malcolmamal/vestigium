@@ -197,12 +197,16 @@ public class EntryService {
         var unique = new java.util.LinkedHashMap<String, String>();
         for (var item : items) {
             if (item == null || item.url() == null) continue;
-            var url = normalizeUrl(item.url().trim());
-            if (url.isBlank()) continue;
-            
-            // If already present, only update title if the new one is not null
-            if (!unique.containsKey(url) || (item.title() != null && !item.title().isBlank())) {
-                unique.put(url, item.title());
+            try {
+                var url = normalizeUrl(item.url().trim());
+                if (url.isBlank()) continue;
+                
+                // If already present, only update title if the new one is not null
+                if (!unique.containsKey(url) || (item.title() != null && !item.title().isBlank())) {
+                    unique.put(url, item.title());
+                }
+            } catch (Exception e) {
+                errors.add(new BulkCreateError(item.url(), e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
             }
         }
 

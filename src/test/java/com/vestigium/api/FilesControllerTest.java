@@ -86,7 +86,7 @@ class FilesControllerTest {
         var entry = new Entry(
                 "entry-1", "http://example.com", "Title", "Desc",
                 null, "thumb/small.jpg", "thumb/large.jpg", null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
         var resource = new ByteArrayResource("image data".getBytes());
 
@@ -103,7 +103,7 @@ class FilesControllerTest {
         var entry = new Entry(
                 "entry-1", "http://example.com", "Title", "Desc",
                 null, "thumb/small.jpg", "thumb/large.jpg", null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
         var resource = new ByteArrayResource("image data".getBytes());
 
@@ -120,7 +120,7 @@ class FilesControllerTest {
         var entry = new Entry(
                 "entry-1", "http://example.com", "Title", "Desc",
                 null, "thumb/small.jpg", null, null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
         var resource = new ByteArrayResource("image data".getBytes());
 
@@ -145,7 +145,7 @@ class FilesControllerTest {
         var entry = new Entry(
                 "entry-1", "http://example.com", "Title", "Desc",
                 null, null, null, null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(entry));
@@ -159,7 +159,7 @@ class FilesControllerTest {
         var entry = new Entry(
                 "entry-1", "http://example.com", "Title", "Desc",
                 null, "thumb/small.jpg", null, null, false,
-                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of()
+                "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of()
         );
         var resource = new ByteArrayResource("image data".getBytes()) {
             @Override

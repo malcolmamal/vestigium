@@ -79,6 +79,8 @@ class RegenerateThumbnailJobProcessorTest {
                 "2023-01-01T00:00:00Z",
                 "2023-01-01T00:00:00Z",
                 null,
+                true,
+                null,
                 List.of()
         );
     }
@@ -90,7 +92,7 @@ class RegenerateThumbnailJobProcessorTest {
 
     @Test
     void process_ShouldUseManualUrlFromPayload() throws Exception {
-        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", "{\"url\":\"https://example.com/image.jpg\"}", 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", "{\"url\":\"https://example.com/image.jpg\"}", 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var imageBytes = createTestImageBytes();
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(mockEntry));
@@ -121,9 +123,11 @@ class RegenerateThumbnailJobProcessorTest {
                 "2023-01-01T00:00:00Z",
                 "2023-01-01T00:00:00Z",
                 "https://example.com/manual.jpg",
+                true,
+                null,
                 List.of()
         );
-        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var imageBytes = createTestImageBytes();
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(entryWithManualUrl));
@@ -139,7 +143,7 @@ class RegenerateThumbnailJobProcessorTest {
 
     @Test
     void process_ShouldFallbackToScreenshotWhenNoManualUrl() throws Exception {
-        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var screenshotBytes = createTestImageBytes();
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(mockEntry));
@@ -156,7 +160,7 @@ class RegenerateThumbnailJobProcessorTest {
 
     @Test
     void process_ShouldThrowWhenEntryNotFound() {
-        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", null, 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", null, 0, null, null, null, null, "2023-01-01T00:00:00Z");
 
         when(entries.getById("entry-1")).thenReturn(Optional.empty());
 
@@ -166,7 +170,7 @@ class RegenerateThumbnailJobProcessorTest {
 
     @Test
     void process_ShouldThrowWhenManualUrlDownloadFails() throws Exception {
-        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", "{\"url\":\"https://example.com/image.jpg\"}", 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", "{\"url\":\"https://example.com/image.jpg\"}", 0, null, null, null, null, "2023-01-01T00:00:00Z");
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(mockEntry));
         when(fetcher.downloadBytes("https://example.com/image.jpg")).thenReturn(Optional.empty());
@@ -178,7 +182,7 @@ class RegenerateThumbnailJobProcessorTest {
 
     @Test
     void process_ShouldIgnoreMalformedPayload() throws Exception {
-        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", "invalid json", 0, null, null, null, "2023-01-01T00:00:00Z");
+        var job = new Job("job-1", "REGENERATE_THUMBNAIL", "PENDING", "entry-1", "invalid json", 0, null, null, null, null, "2023-01-01T00:00:00Z");
         var screenshotBytes = createTestImageBytes();
 
         when(entries.getById("entry-1")).thenReturn(Optional.of(mockEntry));

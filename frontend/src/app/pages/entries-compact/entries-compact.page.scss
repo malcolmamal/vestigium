@@ -1,13 +1,18 @@
 .page {
-  padding: 16px;
+  height: 100%; // Take full height from parent flex container
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // Prevent scrollbar on page level
 }
 
 .pageHeader {
+  flex-shrink: 0; // Don't shrink the header
   display: flex;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  padding: 16px 16px 0 16px; // Move padding from .page to header
 }
 
 .titleBlock {
@@ -32,6 +37,27 @@ h1 {
   align-items: center;
 }
 
+.searchInput {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: white;
+  font-size: 13px;
+  width: 260px;
+  outline: none;
+  transition: all 0.15s;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  &:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -51,7 +77,7 @@ h1 {
 }
 
 .error {
-  margin: 10px 0;
+  margin: 0 16px 10px 16px; // Add horizontal margins since page padding removed
   padding: 10px 12px;
   border-radius: 12px;
   background: rgba(255, 59, 48, 0.12);
@@ -65,12 +91,13 @@ h1 {
 }
 
 .scroller {
+  flex: 1; // Take remaining space
   position: relative;
-  height: calc(100vh - 120px);
   overflow: auto;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.03);
+  margin: 0 16px 16px 16px; // Add margins since page padding removed
 }
 
 .columns {
@@ -90,8 +117,8 @@ h1 {
 
 .colHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: 8px;
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
@@ -106,6 +133,36 @@ h1 {
 .colCount {
   color: rgba(255, 255, 255, 0.7);
   font-size: 12px;
+  margin-right: auto;
+}
+
+.sortButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.sortBtn {
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  &.active {
+    background: rgba(0, 122, 255, 0.18);
+    border-color: rgba(0, 122, 255, 0.3);
+    color: rgb(10, 132, 255);
+    font-weight: 600;
+  }
 }
 
 .tiles {

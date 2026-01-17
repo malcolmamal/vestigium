@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.vestigium.api.dto.EntryResponse;
 import com.vestigium.domain.Entry;
+import com.vestigium.persistence.EntryRepository;
 import com.vestigium.service.EntryService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,12 +37,13 @@ class EntriesControllerTest {
     @SuppressWarnings("unchecked")
     void list_ShouldReturnEntries() throws Exception {
         var entry = new Entry(
-                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of("tag1")
+                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of("tag1")
         );
         var response = EntryResponse.from(entry, false);
+        var searchResult = new EntryRepository.SearchResult(List.of(entry), 1);
         
         when(entryService.search(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt()))
-                .thenReturn(List.of(entry));
+                .thenReturn(searchResult);
         when(entryService.toResponses(anyList())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/api/entries")
@@ -56,12 +58,12 @@ class EntriesControllerTest {
     @Test
     void createEntry_ShouldReturnCreatedEntry() throws Exception {
         var entry = new Entry(
-                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, List.of("tag1")
+                "1", "http://example.com", "Title", "Desc", null, null, null, null, false, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z", null, true, null, List.of("tag1")
         );
         var response = EntryResponse.from(entry, false);
         var created = new EntryService.CreatedEntry(entry, List.of());
         
-        when(entryService.create(eq("http://example.com"), any(), any(), any(), any(), anyBoolean(), any()))
+        when(entryService.create(eq("http://example.com"), any(), any(), any(), any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(created);
         when(entryService.toResponse(any())).thenReturn(response);
 
