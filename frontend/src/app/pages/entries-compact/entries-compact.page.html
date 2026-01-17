@@ -1,0 +1,98 @@
+<section class="page">
+  <header class="pageHeader">
+    <div class="titleBlock">
+      <h1>Compact Entries</h1>
+      <div class="muted">
+        @if (loading()) {
+          {{ loadingProgress() || 'Loading…' }}
+        } @else {
+          Showing {{ items().length }}@if (partial()) {<span> (partial)</span>} / {{ totalCount() }}
+        }
+      </div>
+    </div>
+    <div class="headerActions">
+      <a class="button secondary" routerLink="/entries">Back</a>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
+  }
+
+  <div class="scroller" [class.loading]="loading()">
+    @if (!loading() && items().length === 0 && !error()) {
+      <div class="empty">No entries yet.</div>
+    } @else {
+      <div class="columns">
+        @for (col of columns(); track col.key) {
+          <div class="col">
+            <div class="colHeader">
+              <span class="colTitle">{{ col.label }}</span>
+              <span class="colCount">{{ col.count }}</span>
+            </div>
+
+            <div class="tiles">
+              @for (e of col.items; track trackById($index, e)) {
+                <div class="tile">
+                  <div class="thumb">
+                    @if (thumbnailUrl(e)) {
+                      <img [src]="thumbnailUrl(e)!" alt="" (error)="onThumbError($event)" />
+                    }
+                  </div>
+
+                  <div class="text">
+                    <div class="title" [title]="e.title || e.url || ''">
+                      {{ e.title || e.url || 'Untitled' }}
+                    </div>
+                  </div>
+
+                  <div class="site">
+                    @if (faviconUrl(e)) {
+                      <img
+                        class="favicon"
+                        [src]="faviconUrl(e)!"
+                        alt=""
+                        (error)="onFaviconError($event)"
+                      />
+                    }
+                  </div>
+
+                  <div class="actions">
+                    <button
+                      class="iconBtn"
+                      type="button"
+                      title="Open link"
+                      (click)="openLink(e, $event)"
+                    >
+                      ↗
+                    </button>
+                    <a
+                      class="iconBtn"
+                      title="Go to edit"
+                      [routerLink]="['/entries', e.id]"
+                      (click)="$event.stopPropagation()"
+                    >
+                      ✎
+                    </a>
+                    <button
+                      class="iconBtn danger"
+                      type="button"
+                      title="Delete"
+                      (click)="deleteEntry(e, $event)"
+                    >
+                      ✖
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (loading() && items().length > 0) {
+      <div class="refreshOverlay">Refreshing…</div>
+    }
+  </div>
+</section>

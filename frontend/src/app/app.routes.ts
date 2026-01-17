@@ -47,6 +47,11 @@ export const routes: Routes = [
       import('./pages/import-export/import-export.page').then((m) => m.ImportExportPage)
   },
   {
+    path: 'entries/compact',
+    loadComponent: () =>
+      import('./pages/entries-compact/entries-compact.page').then((m) => m.EntriesCompactPage)
+  },
+  {
     path: 'entries/:id',
     loadComponent: () =>
       import('./pages/entry-details/entry-details.page').then((m) => m.EntryDetailsPage)

@@ -116,14 +116,14 @@ describe('VestigiumApiService', () => {
   });
 
   it('should bulk create entries', (done) => {
-    const urls = ['http://example.com'];
+    const items = [{ url: 'http://example.com', title: null }];
     const mockRes = { createdCount: 1, skippedCount: 0, errors: [] };
     (apiFn.bulkCreate as unknown as jest.Mock).mockReturnValue(mockApiResponse(mockRes));
 
-    service.bulkCreateEntries(urls).subscribe((response) => {
+    service.bulkCreateEntries(items).subscribe((response) => {
       expect(response).toEqual(mockRes);
       expect(apiFn.bulkCreate).toHaveBeenCalledWith(expect.any(Object), expect.any(String), {
-        body: { urls }
+        body: { items }
       });
       done();
     });
