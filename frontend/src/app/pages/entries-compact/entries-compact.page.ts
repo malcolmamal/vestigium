@@ -15,6 +15,9 @@ import type { EntryListResponse, EntryResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsStore } from '../../store/settings.store';
+import { extractYouTubeId } from '../../utils/youtube';
+import { normalizeUrl } from '../../utils/url';
+import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
 
 interface SiteColumn {
   key: string;
@@ -26,14 +29,14 @@ interface SiteColumn {
 @Component({
   selector: 'app-entries-compact-page',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, VideoModalComponent],
   templateUrl: './entries-compact.page.html',
   styleUrl: './entries-compact.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntriesCompactPage {
   private readonly api = inject(VestigiumApiService);
-  private readonly settings = inject(SettingsStore);
+  readonly settings = inject(SettingsStore);
   private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -46,17 +49,22 @@ export class EntriesCompactPage {
   readonly totalCount = signal<number>(0);
   readonly partial = signal<boolean>(false);
   readonly searchQuery = signal<string>('');
+  readonly activeVideoId = signal<string | null>(null);
+  readonly viewMode = signal<'sites' | 'reddit'>('sites');
 
   private readonly loadSeq = signal(0);
-  readonly columnSort = signal<Record<string, 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc'>>(
-    {
-      youtube: 'date_desc',
-      reddit: 'date_desc',
-      x: 'date_desc',
-      github: 'date_desc',
-      other: 'date_desc'
-    }
-  );
+  readonly columnSort = signal<
+    Record<
+      string,
+      'date_asc' | 'date_desc' | 'name_asc' | 'name_desc' | 'domain_asc' | 'domain_desc'
+    >
+  >({
+    youtube: 'date_desc',
+    reddit: 'date_desc',
+    x: 'date_desc',
+    github: 'date_desc',
+    other: 'date_desc'
+  });
 
   readonly columns = computed<SiteColumn[]>(() => {
     console.log('[COMPACT] columns() computed - starting with', this.items().length, 'items');
@@ -77,6 +85,62 @@ export class EntriesCompactPage {
       return [];
     }
 
+    const mode = this.viewMode();
+    const limit = this.settings.compactColumns();
+
+    if (mode === 'reddit') {
+      const redditItems = items.filter((e) => siteKeyFromEntry(e) === 'reddit');
+      const subCounts = new Map<string, number>();
+      for (const e of redditItems) {
+        const sub = extractSubreddit(e.url ?? '');
+        subCounts.set(sub, (subCounts.get(sub) ?? 0) + 1);
+      }
+
+      const topSubs = Array.from(subCounts.entries())
+        .filter(([sub]) => sub !== 'Other')
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([s]) => s);
+
+      const bySub = new Map<string, EntryResponse[]>();
+      const other: EntryResponse[] = [];
+
+      for (const e of redditItems) {
+        const sub = extractSubreddit(e.url ?? '');
+        if (topSubs.includes(sub)) {
+          const arr = bySub.get(sub) ?? [];
+          arr.push(e);
+          bySub.set(sub, arr);
+        } else {
+          other.push(e);
+        }
+      }
+
+      const sortMap = this.columnSort();
+      const cols: SiteColumn[] = topSubs.map((sub) => {
+        const colItems = bySub.get(sub) ?? [];
+        const sorted = this.sortItems(colItems, sortMap[sub] ?? 'date_desc');
+        return {
+          key: sub,
+          label: sub,
+          count: sorted.length,
+          items: sorted
+        };
+      });
+
+      if (other.length > 0) {
+        const sortedOther = this.sortItems(other, sortMap['other'] ?? 'date_desc');
+        cols.push({
+          key: 'other',
+          label: 'Other Subreddits',
+          count: sortedOther.length,
+          items: sortedOther
+        });
+      }
+      return cols;
+    }
+
+    // Default 'sites' mode
     const counts = new Map<string, number>();
     for (const e of items) {
       const key = siteKeyFromEntry(e);
@@ -85,7 +149,7 @@ export class EntriesCompactPage {
 
     const topKeys = Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+      .slice(0, limit)
       .map(([k]) => k);
 
     const bySite = new Map<string, EntryResponse[]>();
@@ -166,10 +230,31 @@ export class EntriesCompactPage {
     (evt.target as HTMLImageElement).style.display = 'none';
   }
 
+  hasYouTubeId(e: EntryResponse): string | null {
+    return e.url ? extractYouTubeId(e.url) : null;
+  }
+
+  onPlayVideo(videoId: string, evt?: Event) {
+    if (evt) this.stop(evt);
+    this.activeVideoId.set(videoId);
+  }
+
+  closeVideo() {
+    this.activeVideoId.set(null);
+  }
+
+  incrementColumns() {
+    this.settings.setCompactColumns(Math.min(20, this.settings.compactColumns() + 1));
+  }
+
+  decrementColumns() {
+    this.settings.setCompactColumns(Math.max(1, this.settings.compactColumns() - 1));
+  }
+
   openLink(e: EntryResponse, evt?: Event) {
     if (evt) this.stop(evt);
     if (!e.url) return;
-    window.open(e.url, '_blank');
+    window.open(normalizeUrl(e.url), '_blank');
   }
 
   async deleteEntry(e: EntryResponse, evt: Event) {
@@ -234,9 +319,34 @@ export class EntriesCompactPage {
     return this.columnSort()[colKey] === 'name_asc' ? 'Sort by name (Z-A)' : 'Sort by name (A-Z)';
   }
 
+  toggleDomainSort(colKey: string) {
+    this.columnSort.update((curr) => {
+      const current = curr[colKey];
+      const newSort = current === 'domain_asc' ? 'domain_desc' : 'domain_asc';
+      return { ...curr, [colKey]: newSort };
+    });
+  }
+
+  isDomainSort(colKey: string): boolean {
+    const sort = this.columnSort()[colKey];
+    return sort === 'domain_asc' || sort === 'domain_desc';
+  }
+
+  getDomainSortIcon(colKey: string): string {
+    return this.columnSort()[colKey] === 'domain_asc' ? '↑' : '↓';
+  }
+
+  getDomainSortTitle(colKey: string): string {
+    const isReddit = this.viewMode() === 'reddit';
+    const label = isReddit ? 'subreddit' : 'domain';
+    return this.columnSort()[colKey] === 'domain_asc'
+      ? `Sort by ${label} (Z-A)`
+      : `Sort by ${label} (A-Z)`;
+  }
+
   private sortItems(
     items: EntryResponse[],
-    sort: 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc'
+    sort: 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc' | 'domain_asc' | 'domain_desc'
   ): EntryResponse[] {
     const copy = [...items];
     if (sort === 'date_asc') {
@@ -262,6 +372,20 @@ export class EntriesCompactPage {
         const nameA = (a.title || a.url || '').toLowerCase();
         const nameB = (b.title || b.url || '').toLowerCase();
         return nameB.localeCompare(nameA);
+      });
+    } else if (sort === 'domain_asc') {
+      const mode = this.viewMode();
+      copy.sort((a, b) => {
+        const keyA = mode === 'reddit' ? extractSubreddit(a.url ?? '') : siteKeyFromEntry(a);
+        const keyB = mode === 'reddit' ? extractSubreddit(b.url ?? '') : siteKeyFromEntry(b);
+        return keyA.localeCompare(keyB);
+      });
+    } else if (sort === 'domain_desc') {
+      const mode = this.viewMode();
+      copy.sort((a, b) => {
+        const keyA = mode === 'reddit' ? extractSubreddit(a.url ?? '') : siteKeyFromEntry(a);
+        const keyB = mode === 'reddit' ? extractSubreddit(b.url ?? '') : siteKeyFromEntry(b);
+        return keyB.localeCompare(keyA);
       });
     }
     return copy;
@@ -385,4 +509,20 @@ function siteLabelFromKey(key: string): string {
   if (key === 'github') return 'GitHub';
   if (key === 'unknown') return 'Unknown';
   return key;
+}
+
+function extractSubreddit(url: string): string {
+  try {
+    const u = new URL(url);
+    const path = u.pathname;
+    const match = path.match(/^\/(r|u|user)\/([^/]+)/i);
+    if (match) {
+      const type = match[1].toLowerCase();
+      const name = match[2];
+      return type === 'r' ? `r/${name}` : `u/${name}`;
+    }
+  } catch {
+    // ignore
+  }
+  return 'Other';
 }

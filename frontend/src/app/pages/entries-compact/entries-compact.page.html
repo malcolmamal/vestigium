@@ -15,6 +15,25 @@
       </div>
     </div>
     <div class="headerActions">
+      <div class="modeToggle">
+        <button
+          type="button"
+          class="modeBtn"
+          [class.active]="viewMode() === 'sites'"
+          (click)="viewMode.set('sites')"
+        >
+          General
+        </button>
+        <button
+          type="button"
+          class="modeBtn"
+          [class.active]="viewMode() === 'reddit'"
+          (click)="viewMode.set('reddit')"
+        >
+          Reddit
+        </button>
+      </div>
+
       <input
         class="searchInput"
         type="text"
@@ -22,6 +41,29 @@
         [value]="searchQuery()"
         (input)="searchQuery.set($any($event.target).value)"
       />
+
+      <div class="columnConfig">
+        <button
+          class="iconBtn square"
+          type="button"
+          title="Fewer columns"
+          [disabled]="settings.compactColumns() <= 1"
+          (click)="decrementColumns()"
+        >
+          −
+        </button>
+        <span class="columnValue">{{ settings.compactColumns() }}</span>
+        <button
+          class="iconBtn square"
+          type="button"
+          title="More columns"
+          [disabled]="settings.compactColumns() >= 20"
+          (click)="incrementColumns()"
+        >
+          +
+        </button>
+      </div>
+
       <a class="button secondary" routerLink="/entries">Back</a>
     </div>
   </header>
@@ -59,6 +101,17 @@
                 >
                   A{{ getNameSortIcon(col.key) }}
                 </button>
+                @if (col.key === 'other') {
+                  <button
+                    class="sortBtn"
+                    type="button"
+                    [title]="getDomainSortTitle(col.key)"
+                    [class.active]="isDomainSort(col.key)"
+                    (click)="toggleDomainSort(col.key)"
+                  >
+                    🌐{{ getDomainSortIcon(col.key) }}
+                  </button>
+                }
               </div>
             </div>
 
@@ -90,6 +143,16 @@
                   </div>
 
                   <div class="actions">
+                    @if (hasYouTubeId(e); as vid) {
+                      <button
+                        class="iconBtn play"
+                        type="button"
+                        [title]="'Play video'"
+                        (click)="onPlayVideo(vid, $event)"
+                      >
+                        ▶
+                      </button>
+                    }
                     <button
                       class="iconBtn"
                       type="button"
@@ -124,7 +187,11 @@
     }
 
     @if (loading() && items().length > 0) {
-      <div class="refreshOverlay">Refreshing…</div>
+      <div class="refreshOverlay">Refreshing...</div>
     }
   </div>
 </section>
+
+@if (activeVideoId()) {
+  <app-video-modal [videoId]="activeVideoId()!" (closeModal)="closeVideo()" />
+}

@@ -24,6 +24,7 @@ import { ToastService } from '../../services/toast.service';
 import { WebSocketService } from '../../services/websocket.service';
 import { EntriesStore } from '../../store/entries.store';
 import { extractYouTubeId } from '../../utils/youtube';
+import { normalizeUrl } from '../../utils/url';
 import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
 
 @Component({
@@ -121,6 +122,7 @@ export class EntryDetailsPage {
   readonly thumbVersion = signal(Date.now());
 
   readonly entry = computed(() => this.data()?.entry ?? null);
+  readonly normalizedUrl = computed(() => normalizeUrl(this.entry()?.url));
   readonly youtubeId = computed(() => {
     const e = this.entry();
     return e ? extractYouTubeId(e.url || '') : null;
@@ -307,7 +309,7 @@ export class EntryDetailsPage {
   copyUrl() {
     const entry = this.entry();
     if (!entry?.url) return;
-    navigator.clipboard.writeText(entry.url).then(() => {
+    navigator.clipboard.writeText(normalizeUrl(entry.url)).then(() => {
       this.toasts.success('URL copied to clipboard');
     });
   }

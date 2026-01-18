@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 
 import type { EntryResponse, JobResponse } from '../../models';
 import { extractYouTubeId } from '../../utils/youtube';
+import { normalizeUrl } from '../../utils/url';
 
 @Component({
   selector: 'app-entry-card',
@@ -102,7 +103,7 @@ export class EntryCardComponent {
 
   openLink(evt: MouseEvent) {
     this.stop(evt);
-    window.open(this.entry().url, '_blank');
+    window.open(normalizeUrl(this.entry().url), '_blank');
   }
 
   enqueueEnrich(evt: MouseEvent) {

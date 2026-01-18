@@ -37,6 +37,37 @@ h1 {
   align-items: center;
 }
 
+.modeToggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 2px;
+  margin-right: 4px;
+}
+
+.modeBtn {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    color: white;
+  }
+
+  &.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
 .searchInput {
   padding: 8px 12px;
   border-radius: 10px;
@@ -250,6 +281,45 @@ h1 {
 .iconBtn.danger {
   border-color: rgba(255, 59, 48, 0.22);
   background: rgba(255, 59, 48, 0.10);
+}
+
+.columnConfig {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.columnValue {
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 16px;
+  text-align: center;
+}
+
+.iconBtn.square {
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+  border: none;
+  background: transparent;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.iconBtn.play {
+  color: #ff3b30;
+  font-size: 10px;
 }
 
 .refreshOverlay {
