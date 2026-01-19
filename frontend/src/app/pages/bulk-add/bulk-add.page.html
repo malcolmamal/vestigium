@@ -5,8 +5,8 @@
   </header>
 
   <p class="muted">
-    Paste one URL per line, or pairs of Title and URL. We’ll create entries and queue
-    enrichment/thumbnail jobs.
+    Paste one URL per line, pairs of Title and URL, or URL | Title format. We'll create entries and
+    queue enrichment/thumbnail jobs.
   </p>
 
   <textarea
@@ -14,7 +14,7 @@
     rows="12"
     [value]="raw()"
     (input)="raw.set(($any($event.target).value ?? '').toString())"
-    placeholder="Title (optional)&#10;https://example.com/&#10;&#10;https://www.youtube.com/watch?v=...&#10;..."
+    placeholder="https://example.com/&#10;&#10;Title (optional)&#10;https://example.com/&#10;&#10;https://example.com/ | Title here"
   ></textarea>
 
   <div class="actions">

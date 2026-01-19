@@ -23,6 +23,64 @@ h1 {
   margin: 6px 0 0 0;
 }
 
+.activeJobs {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.activeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.activeHeader h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.activeCount {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.activeGroups {
+  display: grid;
+  gap: 10px;
+}
+
+.activeGroup {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.activeGroupHeader {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.activeList {
+  display: grid;
+  gap: 6px;
+}
+
+.activeItem {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -104,6 +162,12 @@ h1 {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.85);
+}
+
+.jobStatus.llmBadge {
+  background: rgba(90, 97, 255, 0.18);
+  border-color: rgba(90, 97, 255, 0.4);
+  color: rgba(210, 218, 255, 0.95);
 }
 
 .jobEntry {

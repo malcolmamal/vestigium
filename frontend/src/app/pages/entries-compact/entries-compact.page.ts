@@ -9,12 +9,14 @@ import {
   untracked
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter, firstValueFrom } from 'rxjs';
 
 import type { EntryListResponse, EntryResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsStore } from '../../store/settings.store';
+import { JobsStore } from '../../store/jobs.store';
 import { extractYouTubeId } from '../../utils/youtube';
 import { normalizeUrl } from '../../utils/url';
 import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
@@ -39,6 +41,7 @@ export class EntriesCompactPage {
   readonly settings = inject(SettingsStore);
   private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly jobsStore = inject(JobsStore);
 
   private readonly maxItemsToRender = 500;
 
@@ -201,6 +204,16 @@ export class EntriesCompactPage {
       });
     });
     console.log('[COMPACT] constructor - effect registered');
+
+    this.jobsStore.jobUpdated$
+      .pipe(
+        takeUntilDestroyed(),
+        filter((job) => job.status === 'SUCCEEDED' || job.status === 'FAILED')
+      )
+      .subscribe(() => {
+        const includeNsfw = this.settings.showNsfw();
+        void this.loadAll(includeNsfw);
+      });
   }
 
   faviconUrl(e: EntryResponse): string | null {
@@ -219,7 +232,13 @@ export class EntriesCompactPage {
   }
 
   thumbnailUrl(e: EntryResponse): string | null {
-    return e.thumbnailUrl ?? null;
+    const updatedAt = e.updatedAt ?? '';
+    return e.thumbnailUrl ? `${e.thumbnailUrl}?u=${encodeURIComponent(updatedAt)}` : null;
+  }
+
+  thumbnailLargeUrl(e: EntryResponse): string | null {
+    const updatedAt = e.updatedAt ?? '';
+    return e.thumbnailLargeUrl ? `${e.thumbnailLargeUrl}?u=${encodeURIComponent(updatedAt)}` : null;
   }
 
   onThumbError(evt: Event) {

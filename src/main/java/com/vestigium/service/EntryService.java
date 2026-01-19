@@ -265,6 +265,9 @@ public class EntryService {
         int skipped = 0;
         var errors = new java.util.ArrayList<ImportError>();
 
+        // De-dupe within request (preserve order) and merge data from duplicates.
+        var unique = new java.util.LinkedHashMap<String, ExportItem>();
+        int duplicateCount = 0;
         for (var item : items) {
             if (item == null || item.url() == null || item.url().isBlank()) {
                 continue;
@@ -272,6 +275,23 @@ public class EntryService {
             var rawUrl = item.url().trim();
             try {
                 var normalized = normalizeUrl(rawUrl);
+                var existing = unique.get(normalized);
+                if (existing == null) {
+                    unique.put(normalized, item);
+                } else {
+                    unique.put(normalized, mergeImportItem(existing, item));
+                    duplicateCount++;
+                }
+            } catch (Exception e) {
+                errors.add(new ImportError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
+            }
+        }
+
+        for (var entry : unique.entrySet()) {
+            var normalized = entry.getKey();
+            var item = entry.getValue();
+            var rawUrl = item.url() == null ? normalized : item.url().trim();
+            try {
                 var existingOpt = entries.getByUrl(normalized);
                 if (existingOpt.isEmpty()) {
                     createImported(
@@ -316,7 +336,48 @@ public class EntryService {
             }
         }
 
+        skipped += duplicateCount;
+
         return new ImportResult(created, updated, skipped, errors);
+    }
+
+    private ExportItem mergeImportItem(ExportItem base, ExportItem other) {
+        return new ExportItem(
+                firstNonBlank(base.id(), other.id()),
+                firstNonBlank(base.url(), other.url()),
+                firstNonBlank(base.addedAt(), other.addedAt()),
+                firstNonBlank(base.thumbnailPath(), other.thumbnailPath()),
+                firstNonBlank(base.thumbnailLargePath(), other.thumbnailLargePath()),
+                firstNonBlank(base.title(), other.title()),
+                firstNonBlank(base.description(), other.description()),
+                firstNonBlank(base.detailedDescription(), other.detailedDescription()),
+                mergeDistinct(base.lists(), other.lists()),
+                mergeDistinct(base.tags(), other.tags())
+        );
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) return a;
+        if (b != null && !b.isBlank()) return b;
+        return a != null ? a : b;
+    }
+
+    private static List<String> mergeDistinct(List<String> a, List<String> b) {
+        if ((a == null || a.isEmpty()) && (b == null || b.isEmpty())) {
+            return a == null ? b : a;
+        }
+        var set = new java.util.LinkedHashSet<String>();
+        if (a != null) {
+            for (var it : a) {
+                if (it != null && !it.isBlank()) set.add(it.trim());
+            }
+        }
+        if (b != null) {
+            for (var it : b) {
+                if (it != null && !it.isBlank()) set.add(it.trim());
+            }
+        }
+        return new java.util.ArrayList<>(set);
     }
 
     private void createImported(

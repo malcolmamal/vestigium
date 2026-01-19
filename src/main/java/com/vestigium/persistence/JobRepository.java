@@ -78,6 +78,97 @@ public class JobRepository {
         return Optional.of(job);
     }
 
+    public Optional<Job> claimNextPendingByTypes(List<String> types) {
+        if (types == null || types.isEmpty()) {
+            return claimNextPending();
+        }
+        var now = InstantSql.nowIso();
+        var rows = jdbc.query(
+                """
+                UPDATE jobs
+                SET status = 'RUNNING', locked_at = :lockedAt, attempts = attempts + 1
+                WHERE id = (
+                  SELECT id
+                  FROM jobs
+                  WHERE status = 'PENDING' AND type IN (:types)
+                  ORDER BY created_at ASC
+                  LIMIT 1
+                )
+                RETURNING id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at
+                """,
+                Map.of("lockedAt", now, "types", types),
+                JOB_ROW_MAPPER
+        );
+        if (rows.isEmpty()) {
+            return Optional.empty();
+        }
+        var job = rows.getFirst();
+        events.publishEvent(new com.vestigium.events.JobUpdatedEvent(job));
+        return Optional.of(job);
+    }
+
+    public Optional<Job> claimNextPendingExcludingTypes(List<String> types) {
+        if (types == null || types.isEmpty()) {
+            return claimNextPending();
+        }
+        var now = InstantSql.nowIso();
+        var rows = jdbc.query(
+                """
+                UPDATE jobs
+                SET status = 'RUNNING', locked_at = :lockedAt, attempts = attempts + 1
+                WHERE id = (
+                  SELECT id
+                  FROM jobs
+                  WHERE status = 'PENDING' AND type NOT IN (:types)
+                  ORDER BY created_at ASC
+                  LIMIT 1
+                )
+                RETURNING id, type, status, entry_id, payload_json, attempts, locked_at, finished_at, last_error, last_response, created_at
+                """,
+                Map.of("lockedAt", now, "types", types),
+                JOB_ROW_MAPPER
+        );
+        if (rows.isEmpty()) {
+            return Optional.empty();
+        }
+        var job = rows.getFirst();
+        events.publishEvent(new com.vestigium.events.JobUpdatedEvent(job));
+        return Optional.of(job);
+    }
+
+    public int countRunningByTypes(List<String> types) {
+        if (types == null || types.isEmpty()) {
+            return countRunningAll();
+        }
+        var count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM jobs WHERE status = 'RUNNING' AND type IN (:types)",
+                Map.of("types", types),
+                Integer.class
+        );
+        return count == null ? 0 : count;
+    }
+
+    public int countRunningExcludingTypes(List<String> types) {
+        if (types == null || types.isEmpty()) {
+            return countRunningAll();
+        }
+        var count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM jobs WHERE status = 'RUNNING' AND type NOT IN (:types)",
+                Map.of("types", types),
+                Integer.class
+        );
+        return count == null ? 0 : count;
+    }
+
+    private int countRunningAll() {
+        var count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM jobs WHERE status = 'RUNNING'",
+                Map.of(),
+                Integer.class
+        );
+        return count == null ? 0 : count;
+    }
+
     public void markSucceeded(String jobId) {
         markSucceeded(jobId, null);
     }

@@ -1,10 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import type { JobResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { JobsStore } from '../../store/jobs.store';
+
+interface RunningGroup {
+  type: string;
+  jobs: JobResponse[];
+}
 
 @Component({
   selector: 'app-queue-page',
@@ -21,12 +26,29 @@ export class QueuePage {
   readonly jobActionBusy = signal<string | null>(null);
   readonly jobActionError = signal<string | null>(null);
 
+  readonly runningJobs = computed(() => this.jobs.items().filter((j) => j.status === 'RUNNING'));
+
+  readonly runningGroups = computed<RunningGroup[]>(() => {
+    const groups = new Map<string, JobResponse[]>();
+    for (const job of this.runningJobs()) {
+      const type = job.type ?? 'UNKNOWN';
+      const list = groups.get(type) ?? [];
+      list.push(job);
+      groups.set(type, list);
+    }
+    return Array.from(groups.entries()).map(([type, jobs]) => ({ type, jobs }));
+  });
+
   constructor() {
     this.jobs.load();
   }
 
   isRunning(job: JobResponse) {
     return job.status === 'RUNNING';
+  }
+
+  isLlmType(type: string) {
+    return type === 'ENRICH_ENTRY';
   }
 
   retryJob(job: JobResponse) {

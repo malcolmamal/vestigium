@@ -54,7 +54,14 @@ export class EntryCardComponent {
     )
   );
   readonly thumbVersion = signal(Date.now());
-  readonly thumbnailUrl = computed(() => `${this.entry().thumbnailUrl}?v=${this.thumbVersion()}`);
+  readonly thumbnailUrl = computed(() => {
+    const updatedAt = this.entry().updatedAt ?? '';
+    return `${this.entry().thumbnailUrl}?v=${this.thumbVersion()}&u=${encodeURIComponent(updatedAt)}`;
+  });
+  readonly thumbnailLargeUrl = computed(() => {
+    const updatedAt = this.entry().updatedAt ?? '';
+    return `${this.entry().thumbnailLargeUrl}?v=${this.thumbVersion()}&u=${encodeURIComponent(updatedAt)}`;
+  });
 
   readonly youtubeId = computed(() => extractYouTubeId(this.entry().url || ''));
 
@@ -62,6 +69,7 @@ export class EntryCardComponent {
 
   private prevThumbCount = 0;
   private prevUpdatedAt: string | null = null;
+  private lastThumbSuccessId: string | null = null;
 
   constructor() {
     effect(() => {
@@ -81,6 +89,23 @@ export class EntryCardComponent {
         this.thumbVersion.set(Date.now());
       }
       this.prevUpdatedAt = updatedAt ?? null;
+    });
+
+    // If we missed the RUNNING state, refresh when a thumbnail job succeeds for this entry.
+    effect(() => {
+      const latestSuccess = this.jobs()
+        .filter((j) => j.type === 'REGENERATE_THUMBNAIL' && j.status === 'SUCCEEDED')
+        .sort((a, b) => {
+          const timeA = new Date(a.finishedAt ?? a.createdAt ?? 0).getTime();
+          const timeB = new Date(b.finishedAt ?? b.createdAt ?? 0).getTime();
+          return timeB - timeA;
+        })[0];
+
+      const nextId = latestSuccess?.id ?? null;
+      if (nextId && nextId !== this.lastThumbSuccessId) {
+        this.thumbVersion.set(Date.now());
+        this.lastThumbSuccessId = nextId;
+      }
     });
   }
 

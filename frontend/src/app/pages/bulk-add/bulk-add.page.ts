@@ -33,10 +33,24 @@ export class BulkAddPage {
     const items: { url: string; title: string | null }[] = [];
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+
+      // Format 3: URL | Title (pipe-separated on same line)
+      // Check for ' |' (pipe with leading space) - line is already trimmed
+      const pipeIndex = line.indexOf(' |');
+      if (pipeIndex >= 0) {
+        const url = line.substring(0, pipeIndex).trim();
+        const title = line.substring(pipeIndex + 2).trim(); // +2 to skip ' |'
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          items.push({ url, title: title || null });
+          continue;
+        }
+      }
+
+      // Format 1: URL only
       if (line.startsWith('http://') || line.startsWith('https://')) {
         items.push({ url: line, title: null });
       } else {
-        // Title? Only if next line is a URL
+        // Format 2: Title? Only if next line is a URL
         if (
           i + 1 < lines.length &&
           (lines[i + 1].startsWith('http://') || lines[i + 1].startsWith('https://'))

@@ -6,6 +6,9 @@
         <button class="playBtn" type="button" (click)="openVideo($event)">▶</button>
       }
     </div>
+    <div class="thumbPreview">
+      <img [src]="thumbnailLargeUrl()" alt="" (error)="onImgError($event)" />
+    </div>
     <div class="thumbActions">
       <button class="iconBtn" type="button" title="Open link in new tab" (click)="openLink($event)">
         <span>↗</span>

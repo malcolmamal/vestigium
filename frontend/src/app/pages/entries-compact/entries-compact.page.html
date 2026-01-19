@@ -123,6 +123,11 @@
                       <img [src]="thumbnailUrl(e)!" alt="" (error)="onThumbError($event)" />
                     }
                   </div>
+                  @if (thumbnailLargeUrl(e)) {
+                    <div class="thumbPreview">
+                      <img [src]="thumbnailLargeUrl(e)!" alt="" (error)="onThumbError($event)" />
+                    </div>
+                  }
 
                   <div class="text">
                     <div class="title" [title]="e.title || e.url || ''">

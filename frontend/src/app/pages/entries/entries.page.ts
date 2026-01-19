@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
 import { TagChipsInputComponent } from '../../components/tag-chips-input/tag-chips-input.component';
@@ -158,6 +160,17 @@ export class EntriesPage {
     if (initial.length > 0) {
       this.store.setTagFilter(Array.from(new Set(initial)));
     }
+
+    this.jobsStore.jobUpdated$
+      .pipe(
+        takeUntilDestroyed(),
+        filter((job) => job.type === 'REGENERATE_THUMBNAIL' && job.status === 'SUCCEEDED')
+      )
+      .subscribe((job) => {
+        if (!job.entryId) return;
+        // Trigger thumbnail cache-bust immediately without requiring a full refresh.
+        this.store.updateItem(job.entryId, { updatedAt: new Date().toISOString() });
+      });
   }
 
   applyPopularTag(tag: string) {

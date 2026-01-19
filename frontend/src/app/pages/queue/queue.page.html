@@ -7,6 +7,38 @@
     <button class="button" type="button" (click)="jobs.load()">Refresh</button>
   </header>
 
+  <section class="activeJobs">
+    <div class="activeHeader">
+      <h2>Active jobs</h2>
+      <span class="activeCount">{{ runningJobs().length }} running</span>
+    </div>
+    @if (runningJobs().length === 0) {
+      <div class="muted">No active jobs right now.</div>
+    } @else {
+      <div class="activeGroups">
+        @for (group of runningGroups(); track group.type) {
+          <div class="activeGroup">
+            <div class="activeGroupHeader">
+              <span class="jobType">{{ group.type }}</span>
+              <span class="jobStatus" [class.llmBadge]="isLlmType(group.type)">
+                {{ isLlmType(group.type) ? 'LLM' : 'Worker' }}
+              </span>
+              <span class="jobMeta">{{ group.jobs.length }} running</span>
+            </div>
+            <div class="activeList">
+              @for (j of group.jobs; track j.id) {
+                <div class="activeItem">
+                  <a class="jobEntry" [routerLink]="['/entries', j.entryId]">{{ j.entryId }}</a>
+                  <span class="jobMeta">attempt {{ j.attempts }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
   @if (jobActionError()) {
     <div class="errorBox">{{ jobActionError() }}</div>
   }

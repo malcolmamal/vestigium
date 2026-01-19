@@ -6,6 +6,7 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import com.microsoft.playwright.Frame;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -86,6 +87,18 @@ public class PageScreenshotter {
                         // Ensure we are back at the very top for a clean screenshot.
                         page.evaluate("window.scrollTo(0, 0)");
                         page.waitForTimeout(200);
+                    } else if (isCivitai(url)) {
+                        page.waitForTimeout(1000);
+                        dismissCivitaiConsent(page);
+                        page.waitForTimeout(800);
+                    } else if (isImgur(url)) {
+                        page.waitForTimeout(1000);
+                        dismissImgurConsent(page);
+                        page.waitForTimeout(800);
+                    } else if (isGoogleSearch(url)) {
+                        page.waitForTimeout(800);
+                        dismissGoogleConsent(page);
+                        page.waitForTimeout(800);
                     }
 
                     return page.screenshot(new Page.ScreenshotOptions()
@@ -117,6 +130,19 @@ public class PageScreenshotter {
 
     private static boolean isReddit(String url) {
         return host(url).map(h -> h.contains("reddit.com")).orElse(false);
+    }
+
+    private static boolean isCivitai(String url) {
+        return host(url).map(h -> h.contains("civitai.com")).orElse(false);
+    }
+
+    private static boolean isGoogleSearch(String url) {
+        return host(url).map(h -> h.contains("google.")).orElse(false)
+                && url.contains("/search");
+    }
+
+    private static boolean isImgur(String url) {
+        return host(url).map(h -> h.contains("imgur.com")).orElse(false);
     }
 
     private static Optional<String> host(String url) {
@@ -194,6 +220,69 @@ public class PageScreenshotter {
         tryClick(page, "[role='dialog'] button:has-text('Not Now')", 1500);
     }
 
+    private static void dismissCivitaiConsent(Page page) {
+        // Civitai consent banner often blocks content.
+        waitForAnyVisible(page, new String[] {
+                "button:has-text(\"Accept all & visit the site\")",
+                "#onetrust-accept-btn-handler",
+            "[aria-label=\"Accept all & visit the site\"]",
+            "#sp_message_container",
+            "iframe[id^='sp_message_iframe']"
+        }, 4000);
+        tryClick(page, "button:has-text(\"Accept all & visit the site\")", 3500);
+        tryClick(page, "button:has-text(\"Accept all & visit the site\")", 3500, true);
+        tryClick(page, "button#onetrust-accept-btn-handler", 3000, true);
+        tryClick(page, "button[aria-label=\"Accept all & visit the site\"]", 3000, true);
+        tryClick(page, "[role='dialog'] button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClick(page, ".ot-sdk-container button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClick(page, "#sp_message_container button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClick(page, "#sp_message_container button:has-text(\"Accept all\")", 2500, true);
+        tryClick(page, "text=Accept all & visit the site", 3000, true);
+        tryClick(page, "button:has-text(\"Accept all\")", 2000);
+        tryClick(page, "button:has-text(\"Accept All\")", 2000);
+        tryClick(page, "button:has-text(\"I agree\")", 2000);
+        tryClick(page, "button:has-text(\"I Agree\")", 2000);
+        // Sometimes rendered inside an iframe
+        tryClickInFrames(page, "button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClickInFrames(page, "button#onetrust-accept-btn-handler", 3000, true);
+        tryClickInFrames(page, "button[aria-label=\"Accept all & visit the site\"]", 3000, true);
+        tryClickInFrames(page, "[role='dialog'] button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClickInFrames(page, ".ot-sdk-container button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClickInFrames(page, "#sp_message_container button:has-text(\"Accept all & visit the site\")", 3000, true);
+        tryClickInFrames(page, "#sp_message_container button:has-text(\"Accept all\")", 2500, true);
+        tryClickInFrames(page, "text=Accept all & visit the site", 3000, true);
+        tryClickInFrames(page, "button:has-text(\"Accept all\")", 2000);
+        tryClickInFrames(page, "button:has-text(\"I agree\")", 2000);
+        clickByText(page, "Accept all & visit the site");
+        clickByTextContains(page, "Accept all", "visit the site");
+        clickByTextDeep(page, "Accept all & visit the site");
+        clickByTextDeepInFrames(page, "Accept all & visit the site");
+    }
+
+    private static void dismissGoogleConsent(Page page) {
+        // Google consent dialog on search results (EU/EEA/PL).
+        tryClick(page, "button:has-text(\"Accept all\")", 2000);
+        tryClick(page, "button:has-text(\"I agree\")", 2000);
+        tryClick(page, "button:has-text(\"Zaakceptuj wszystko\")", 2500);
+        tryClick(page, "button:has-text(\"Akceptuj wszystko\")", 2500);
+        tryClick(page, "button:has-text(\"Zaakceptuj wszystko\")", 2500);
+        tryClick(page, "button:has-text(\"Accept all\")", 2000);
+        // Many Google consent dialogs are inside iframes.
+        tryClickInFrames(page, "button:has-text(\"Accept all\")", 2000);
+        tryClickInFrames(page, "button:has-text(\"I agree\")", 2000);
+        tryClickInFrames(page, "button:has-text(\"Zaakceptuj wszystko\")", 2500);
+        tryClickInFrames(page, "button:has-text(\"Akceptuj wszystko\")", 2500);
+    }
+
+    private static void dismissImgurConsent(Page page) {
+        // Imgur consent dialog
+        tryClick(page, "button:has-text(\"Consent\")", 2500);
+        tryClick(page, "button:has-text(\"Accept all\")", 2500);
+        tryClick(page, "button:has-text(\"I agree\")", 2500);
+        tryClickInFrames(page, "button:has-text(\"Consent\")", 2500);
+        tryClickInFrames(page, "button:has-text(\"Accept all\")", 2500);
+    }
+
     private static void dismissRedditCookiePopup(Page page) {
         // Reddit's cookie banner often reloads the page if you click "Accept All".
         // The user wants to click the 'X' button in the corner of the popup.
@@ -211,14 +300,161 @@ public class PageScreenshotter {
     }
 
     private static void tryClick(Page page, String selector, int timeoutMs) {
+        tryClick(page, selector, timeoutMs, false);
+    }
+
+    private static void tryClick(Page page, String selector, int timeoutMs, boolean force) {
         try {
             Locator loc = page.locator(selector).first();
             if (loc.count() == 0) {
                 return;
             }
-            loc.click(new Locator.ClickOptions().setTimeout(timeoutMs));
+            var opts = new Locator.ClickOptions().setTimeout(timeoutMs);
+            if (force) {
+                opts.setForce(true);
+            }
+            loc.click(opts);
         } catch (Exception ignored) {
             // ignore
+        }
+    }
+
+    private static void tryClickInFrames(Page page, String selector, int timeoutMs) {
+        tryClickInFrames(page, selector, timeoutMs, false);
+    }
+
+    private static void tryClickInFrames(Page page, String selector, int timeoutMs, boolean force) {
+        try {
+            for (Frame frame : page.frames()) {
+                try {
+                    Locator loc = frame.locator(selector).first();
+                    if (loc.count() == 0) continue;
+                    var opts = new Locator.ClickOptions().setTimeout(timeoutMs);
+                    if (force) {
+                        opts.setForce(true);
+                    }
+                    loc.click(opts);
+                } catch (Exception ignored) {
+                    // ignore
+                }
+            }
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void clickByText(Page page, String text) {
+        try {
+            page.evaluate(
+                    "(t) => {" +
+                            "const btns = Array.from(document.querySelectorAll('button'))" +
+                            ".filter(b => (b.innerText || '').trim() === t);" +
+                            "if (btns.length > 0) btns[0].click();" +
+                            "}",
+                    text
+            );
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void clickByTextContains(Page page, String part1, String part2) {
+        try {
+            page.evaluate(
+                    "([p1,p2]) => {" +
+                            "const btns = Array.from(document.querySelectorAll('button'))" +
+                            ".filter(b => {" +
+                            "const t=(b.innerText||'').trim();" +
+                            "return t.includes(p1) && t.includes(p2);" +
+                            "});" +
+                            "if (btns.length > 0) btns[0].click();" +
+                            "}",
+                    new String[] { part1, part2 }
+            );
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void clickByTextDeep(Page page, String text) {
+        try {
+            page.evaluate(
+                    "(t) => {" +
+                            "const seen = new Set();" +
+                            "const collect = (root) => {" +
+                            "if (!root || seen.has(root)) return [];" +
+                            "seen.add(root);" +
+                            "let nodes = [];" +
+                            "const tree = root.querySelectorAll ? root.querySelectorAll('*') : [];" +
+                            "for (const el of tree) {" +
+                            "  if (el.tagName === 'BUTTON') nodes.push(el);" +
+                            "  if (el.shadowRoot) nodes = nodes.concat(collect(el.shadowRoot));" +
+                            "}" +
+                            "return nodes;" +
+                            "};" +
+                            "const buttons = collect(document);" +
+                            "for (const b of buttons) {" +
+                            "  const txt = (b.innerText || b.textContent || '').trim();" +
+                            "  if (txt === t) { b.click(); return; }" +
+                            "}" +
+                            "}",
+                    text
+            );
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void clickByTextDeepInFrames(Page page, String text) {
+        try {
+            for (Frame frame : page.frames()) {
+                try {
+                    frame.evaluate(
+                            "(t) => {" +
+                                    "const seen = new Set();" +
+                                    "const collect = (root) => {" +
+                                    "if (!root || seen.has(root)) return [];" +
+                                    "seen.add(root);" +
+                                    "let nodes = [];" +
+                                    "const tree = root.querySelectorAll ? root.querySelectorAll('*') : [];" +
+                                    "for (const el of tree) {" +
+                                    "  const role = (el.getAttribute && el.getAttribute('role')) || '';" +
+                                    "  if (el.tagName === 'BUTTON' || role === 'button' || el.tagName === 'A') nodes.push(el);" +
+                                    "  if (el.shadowRoot) nodes = nodes.concat(collect(el.shadowRoot));" +
+                                    "}" +
+                                    "return nodes;" +
+                                    "};" +
+                                    "const nodes = collect(document);" +
+                                    "for (const n of nodes) {" +
+                                    "  const txt = (n.innerText || n.textContent || '').trim();" +
+                                    "  if (txt === t) { n.click(); return; }" +
+                                    "}" +
+                                    "}",
+                            text
+                    );
+                } catch (Exception ignored) {
+                    // ignore
+                }
+            }
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void waitForAnyVisible(Page page, String[] selectors, int timeoutMs) {
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            for (String selector : selectors) {
+                try {
+                    Locator loc = page.locator(selector).first();
+                    if (loc.count() > 0 && loc.isVisible()) {
+                        return;
+                    }
+                } catch (Exception ignored) {
+                    // ignore
+                }
+            }
+            page.waitForTimeout(200);
         }
     }
 }
