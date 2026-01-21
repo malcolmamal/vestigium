@@ -64,20 +64,18 @@ export class RecommendedPage {
     this.llmItems.set([]);
     this.activeAction.set('random');
 
-    this.api
-      .getRandomRecommendations({ limit: 20, includeNsfw: this.includeNsfw() })
-      .subscribe({
-        next: (res) => {
-          this.items.set(res ?? []);
-          this.loading.set(false);
-          this.activeAction.set(null);
-        },
-        error: (e) => {
-          this.loading.set(false);
-          this.activeAction.set(null);
-          this.setErrorFromHttp(e, 'Failed to get random recommendations');
-        }
-      });
+    this.api.getRandomRecommendations({ limit: 20, includeNsfw: this.includeNsfw() }).subscribe({
+      next: (res) => {
+        this.items.set(res ?? []);
+        this.loading.set(false);
+        this.activeAction.set(null);
+      },
+      error: (e) => {
+        this.loading.set(false);
+        this.activeAction.set(null);
+        this.setErrorFromHttp(e, 'Failed to get random recommendations');
+      }
+    });
   }
 
   // ... (inside class)
@@ -200,12 +198,9 @@ export class RecommendedPage {
     }
   }
 
-  constructor() {
-  }
-
-  private setErrorFromHttp(e: any, fallback: string) {
-    const status = e?.status as number | undefined;
-    const detail = e?.error?.detail ?? e?.message ?? null;
+  private setErrorFromHttp(e: unknown, fallback: string) {
+    const status = (e as { status?: number })?.status;
+    const detail = (e as { error?: { detail?: string }; message?: string })?.error?.detail ?? (e as { message?: string })?.message ?? null;
     let msg = fallback;
     if (status === 0) {
       msg = 'Could not reach the server. Check that the backend is running.';

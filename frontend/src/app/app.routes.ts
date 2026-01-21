@@ -52,6 +52,11 @@ export const routes: Routes = [
       import('./pages/entries-compact/entries-compact.page').then((m) => m.EntriesCompactPage)
   },
   {
+    path: 'entries/shorts',
+    loadComponent: () =>
+      import('./pages/entries-shorts/entries-shorts.page').then((m) => m.EntriesShortsPage)
+  },
+  {
     path: 'entries/:id',
     loadComponent: () =>
       import('./pages/entry-details/entry-details.page').then((m) => m.EntryDetailsPage)
