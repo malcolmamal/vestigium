@@ -43,7 +43,8 @@ export class EntriesCompactPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly jobsStore = inject(JobsStore);
 
-  private readonly maxItemsToRender = 500;
+  readonly maxItemsOptions = [100, 500, 1000, 2000, 5000];
+  readonly maxItems = signal<number>(500);
 
   readonly loading = signal(false);
   readonly loadingProgress = signal<string>('');
@@ -270,6 +271,16 @@ export class EntriesCompactPage {
     this.settings.setCompactColumns(Math.max(1, this.settings.compactColumns() - 1));
   }
 
+  onMaxItemsChange(evt: Event) {
+    const target = evt.target as HTMLSelectElement | null;
+    const raw = (target?.value ?? '').toString();
+    const val = Number.parseInt(raw, 10);
+    if (!Number.isFinite(val)) return;
+    this.maxItems.set(val);
+    const includeNsfw = this.settings.showNsfw();
+    void this.loadAll(includeNsfw);
+  }
+
   openLink(e: EntryResponse, evt?: Event) {
     if (evt) this.stop(evt);
     if (!e.url) return;
@@ -439,7 +450,7 @@ export class EntriesCompactPage {
     const all: EntryResponse[] = [];
 
     try {
-      while (all.length < total && all.length < this.maxItemsToRender && page < maxPages) {
+      while (all.length < total && all.length < this.maxItems() && page < maxPages) {
         if (this.loadSeq() !== seq) return;
 
         this.loadingProgress.set(`Loading page ${page + 1}... (${all.length} entries so far)`);
@@ -461,7 +472,7 @@ export class EntriesCompactPage {
         const items = res.items ?? [];
         total = res.totalCount ?? all.length + items.length;
         for (const it of items) {
-          if (all.length >= this.maxItemsToRender) break;
+          if (all.length >= this.maxItems()) break;
           all.push(it);
         }
 
@@ -474,7 +485,7 @@ export class EntriesCompactPage {
       this.items.set(all);
       console.log('[COMPACT] loadAll() - items set, computing columns...');
       this.totalCount.set(Number.isFinite(total) ? total : all.length);
-      if ((Number.isFinite(total) && all.length < total) || all.length >= this.maxItemsToRender) {
+      if ((Number.isFinite(total) && all.length < total) || all.length >= this.maxItems()) {
         this.partial.set(true);
       }
     } catch (err: unknown) {

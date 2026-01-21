@@ -2,14 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 
 import { EntryCardComponent } from '../../components/entry-card/entry-card.component';
-import type { EntryResponse, LlmRecommendResponse } from '../../models';
+import { VideoModalComponent } from '../../components/video-modal/video-modal.component';
+import type { EntryResponse, LlmRecommendRequest, LlmRecommendResponse } from '../../models';
 import { VestigiumApiService } from '../../services/vestigium-api.service';
 import { SettingsStore } from '../../store/settings.store';
 
 @Component({
   selector: 'app-recommended-page',
   standalone: true,
-  imports: [RouterLink, EntryCardComponent],
+  imports: [RouterLink, EntryCardComponent, VideoModalComponent],
   templateUrl: './recommended.page.html',
   styleUrl: './recommended.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -20,10 +21,17 @@ export class RecommendedPage {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly errorDetail = signal<string | null>(null);
   readonly items = signal<EntryResponse[]>([]);
   readonly llmItems = signal<LlmRecommendResponse['items']>([]);
+  readonly lastLlmRequest = signal<LlmRecommendRequest | null>(null);
 
   readonly includeNsfw = computed(() => this.settings.showNsfw());
+  readonly canRunLlm = computed(() => {
+    if (this.loading()) return false;
+    if (this.promptId() !== 'custom') return true;
+    return this.customPrompt().trim().length > 0;
+  });
 
   readonly mode = signal<'random' | 'llm'>('random');
   readonly promptId = signal<
@@ -45,9 +53,31 @@ export class RecommendedPage {
   readonly busyStates = signal<Record<string, 'enrich' | 'thumb' | 'important' | 'delete' | null>>(
     {}
   );
+  readonly activeVideoId = signal<string | null>(null);
 
   loadRandom() {
-    // ...
+    this.loading.set(true);
+    this.error.set(null);
+    this.errorDetail.set(null);
+    this.mode.set('random');
+    this.items.set([]);
+    this.llmItems.set([]);
+    this.activeAction.set('random');
+
+    this.api
+      .getRandomRecommendations({ limit: 20, includeNsfw: this.includeNsfw() })
+      .subscribe({
+        next: (res) => {
+          this.items.set(res ?? []);
+          this.loading.set(false);
+          this.activeAction.set(null);
+        },
+        error: (e) => {
+          this.loading.set(false);
+          this.activeAction.set(null);
+          this.setErrorFromHttp(e, 'Failed to get random recommendations');
+        }
+      });
   }
 
   // ... (inside class)
@@ -105,38 +135,60 @@ export class RecommendedPage {
     });
   }
 
+  onPlayVideo(videoId: string) {
+    this.activeVideoId.set(videoId);
+  }
+
+  closeVideo() {
+    this.activeVideoId.set(null);
+  }
+
   private updateBusy(id: string, type: 'enrich' | 'thumb' | 'important' | 'delete' | null) {
     this.busyStates.update((s) => ({ ...s, [id]: type }));
   }
 
   runLlm() {
+    const pid = this.promptId();
+    const req: LlmRecommendRequest = {
+      promptId: pid === 'custom' ? undefined : pid,
+      customPrompt: this.customPrompt().trim() || undefined,
+      limit: 10,
+      includeNsfw: this.includeNsfw()
+    };
+    this.runLlmRequest(req);
+  }
+
+  retryLlm() {
+    const req = this.lastLlmRequest();
+    if (!req) {
+      this.runLlm();
+      return;
+    }
+    this.runLlmRequest(req);
+  }
+
+  private runLlmRequest(req: LlmRecommendRequest) {
     this.loading.set(true);
     this.error.set(null);
+    this.errorDetail.set(null);
     this.mode.set('llm');
     this.items.set([]);
     this.llmItems.set([]);
     this.activeAction.set('llm');
+    this.lastLlmRequest.set(req);
 
-    const pid = this.promptId();
-    this.api
-      .getLlmRecommendations({
-        promptId: pid === 'custom' ? undefined : pid,
-        customPrompt: this.customPrompt().trim() || undefined,
-        limit: 10,
-        includeNsfw: this.includeNsfw()
-      })
-      .subscribe({
-        next: (res) => {
-          this.llmItems.set(res?.items ?? []);
-          this.loading.set(false);
-          this.activeAction.set(null);
-        },
-        error: (e) => {
-          this.loading.set(false);
-          this.activeAction.set(null);
-          this.error.set(e?.error?.detail ?? e?.message ?? 'Failed to get LLM recommendation');
-        }
-      });
+    this.api.getLlmRecommendations(req).subscribe({
+      next: (res) => {
+        this.llmItems.set(res?.items ?? []);
+        this.loading.set(false);
+        this.activeAction.set(null);
+      },
+      error: (e) => {
+        this.loading.set(false);
+        this.activeAction.set(null);
+        this.setErrorFromHttp(e, 'Failed to get LLM recommendation');
+      }
+    });
   }
 
   onSuggestionKeydown(evt: KeyboardEvent) {
@@ -149,6 +201,22 @@ export class RecommendedPage {
   }
 
   constructor() {
-    this.loadRandom();
+  }
+
+  private setErrorFromHttp(e: any, fallback: string) {
+    const status = e?.status as number | undefined;
+    const detail = e?.error?.detail ?? e?.message ?? null;
+    let msg = fallback;
+    if (status === 0) {
+      msg = 'Could not reach the server. Check that the backend is running.';
+    } else if (status === 502) {
+      msg = 'LLM service is unavailable or failed to respond.';
+    } else if (status && status >= 500) {
+      msg = 'Server error while requesting recommendations.';
+    } else if (status === 400) {
+      msg = 'Invalid LLM request. Check the prompt and try again.';
+    }
+    this.error.set(msg);
+    this.errorDetail.set(detail && detail !== msg ? String(detail) : null);
   }
 }

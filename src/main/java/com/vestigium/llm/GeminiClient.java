@@ -36,8 +36,30 @@ public class GeminiClient {
     }
 
     public String generateText(String prompt, List<InlineImage> images) throws Exception {
+        var primary = firstNonBlank(System.getenv("GEMINI_MODEL_3"), model);
+        var fallback = firstNonBlank(System.getenv("GEMINI_MODEL"), model);
+        var primaryName = primary == null ? model : primary;
+        var fallbackName = fallback == null ? model : fallback;
+        var primaryErr = (Exception) null;
+
+        try {
+            return generateTextWithModel(primaryName, prompt, images);
+        } catch (Exception e) {
+            primaryErr = e;
+        }
+
+        if (fallbackName != null && !fallbackName.equals(primaryName)) {
+            return generateTextWithModel(fallbackName, prompt, images);
+        }
+
+        throw primaryErr == null
+                ? new IllegalStateException("Gemini request failed with unknown error.")
+                : primaryErr;
+    }
+
+    private String generateTextWithModel(String modelName, String prompt, List<InlineImage> images) throws Exception {
         var key = apiKeyProvider.getGoogleApiKey();
-        var url = URI.create("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key);
+        var url = URI.create("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + key);
 
         var parts = new java.util.ArrayList<Map<String, Object>>();
         parts.add(Map.of("text", prompt));
@@ -75,20 +97,32 @@ public class GeminiClient {
                         if (bodySnippet.length() > 400) {
                             bodySnippet = bodySnippet.substring(0, 400);
                         }
-                        throw new IllegalStateException("Gemini error: HTTP " + resp.statusCode() + " body=" + bodySnippet);
+                        throw new IllegalStateException("Gemini error (" + modelName + "): HTTP " + resp.statusCode() + " body=" + bodySnippet);
                     }
 
                     try {
                         JsonNode root = objectMapper.readTree(resp.body());
                         var textNode = root.at("/candidates/0/content/parts/0/text");
                         if (textNode.isMissingNode() || textNode.asText().isBlank()) {
-                            throw new IllegalStateException("Gemini returned empty response. Body: " + resp.body());
+                            throw new IllegalStateException("Gemini returned empty response (" + modelName + "). Body: " + resp.body());
                         }
                         return textNode.asText();
                     } catch (Exception e) {
-                        throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage() + (resp.body() != null ? " Body: " + resp.body() : ""), e);
+                        throw new RuntimeException("Failed to parse Gemini response (" + modelName + "): " + e.getMessage() + (resp.body() != null ? " Body: " + resp.body() : ""), e);
                     }
                 }).get();
+    }
+
+    private static String firstNonBlank(String preferred, String fallback) {
+        var p = normalize(preferred);
+        if (p != null) return p;
+        return normalize(fallback);
+    }
+
+    private static String normalize(String value) {
+        if (value == null) return null;
+        var v = value.trim();
+        return v.isEmpty() ? null : v;
     }
 
     public record InlineImage(String mimeType, byte[] bytes) {}

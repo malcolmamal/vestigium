@@ -98,6 +98,7 @@ public class PageScreenshotter {
                     } else if (isGoogleSearch(url)) {
                         page.waitForTimeout(800);
                         dismissGoogleConsent(page);
+                        dismissGoogleBotCheck(page);
                         page.waitForTimeout(800);
                     }
 
@@ -274,6 +275,14 @@ public class PageScreenshotter {
         tryClickInFrames(page, "button:has-text(\"Akceptuj wszystko\")", 2500);
     }
 
+    private static void dismissGoogleBotCheck(Page page) {
+        // Best-effort click on reCAPTCHA checkbox when Google blocks automated traffic.
+        tryClick(page, "iframe[src*='recaptcha']", 1500);
+        tryClickRecaptchaCheckbox(page);
+        tryClickInFrames(page, "#recaptcha-anchor", 2000, true);
+        tryClickInFrames(page, "#recaptcha-anchor-label", 2000, true);
+    }
+
     private static void dismissImgurConsent(Page page) {
         // Imgur consent dialog
         tryClick(page, "button:has-text(\"Consent\")", 2500);
@@ -334,6 +343,28 @@ public class PageScreenshotter {
                         opts.setForce(true);
                     }
                     loc.click(opts);
+                } catch (Exception ignored) {
+                    // ignore
+                }
+            }
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void tryClickRecaptchaCheckbox(Page page) {
+        try {
+            for (Frame frame : page.frames()) {
+                try {
+                    String url = frame.url();
+                    if (url == null || !url.contains("recaptcha")) {
+                        continue;
+                    }
+                    Locator loc = frame.locator("#recaptcha-anchor").first();
+                    if (loc.count() == 0) {
+                        continue;
+                    }
+                    loc.click(new Locator.ClickOptions().setTimeout(2000).setForce(true));
                 } catch (Exception ignored) {
                     // ignore
                 }

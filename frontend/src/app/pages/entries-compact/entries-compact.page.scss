@@ -89,6 +89,31 @@ h1 {
   }
 }
 
+.limitControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.limitLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.limitSelect {
+  background: transparent;
+  color: white;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
 .button {
   display: inline-flex;
   align-items: center;

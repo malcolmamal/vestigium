@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,10 @@ import org.springframework.stereotype.Component;
 public class LlmRecommendationParser {
 
     private static final Pattern JSON_OBJECT = Pattern.compile("\\{[\\s\\S]*\\}");
+    private static final Pattern ITEM_PATTERN = Pattern.compile(
+            "\\{[^\\{\\}]*?\"id\"\\s*:\\s*\"([^\"]+)\"[^\\{\\}]*?\"reason\"\\s*:\\s*\"([^\"]*)\"[^\\{\\}]*?\\}",
+            Pattern.DOTALL
+    );
 
     private final ObjectMapper objectMapper;
 
@@ -39,6 +44,27 @@ public class LlmRecommendationParser {
             }
         }
         return new Result(List.copyOf(out));
+    }
+
+    public Result parseLenient(String modelText) throws Exception {
+        try {
+            return parse(modelText);
+        } catch (Exception parseErr) {
+            var out = new ArrayList<Item>();
+            if (modelText != null) {
+                Matcher m = ITEM_PATTERN.matcher(modelText);
+                while (m.find()) {
+                    var id = m.group(1);
+                    var reason = m.group(2);
+                    if (id == null || id.isBlank()) continue;
+                    out.add(new Item(id, reason == null ? "" : reason));
+                }
+            }
+            if (out.isEmpty()) {
+                throw parseErr;
+            }
+            return new Result(List.copyOf(out));
+        }
     }
 
     private static String text(JsonNode node, String field) {

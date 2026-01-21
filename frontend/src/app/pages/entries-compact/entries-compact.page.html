@@ -42,6 +42,15 @@
         (input)="searchQuery.set($any($event.target).value)"
       />
 
+      <div class="limitControl">
+        <span class="limitLabel">Limit</span>
+        <select class="limitSelect" [value]="maxItems()" (change)="onMaxItemsChange($event)">
+          @for (opt of maxItemsOptions; track opt) {
+            <option [value]="opt">{{ opt }}</option>
+          }
+        </select>
+      </div>
+
       <div class="columnConfig">
         <button
           class="iconBtn square"

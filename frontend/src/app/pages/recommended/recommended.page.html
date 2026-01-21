@@ -25,7 +25,7 @@
         class="button secondary"
         type="button"
         (click)="runLlm()"
-        [disabled]="loading()"
+        [disabled]="!canRunLlm()"
         [class.loading]="activeAction() === 'llm'"
       >
         @if (activeAction() === 'llm') {
@@ -69,11 +69,40 @@
         placeholder='e.g. "I want to watch something relaxing"'
       ></textarea>
       <div class="hint muted">Tip: Press Enter to run. Use Shift+Enter for a new line.</div>
+      @if (promptId() === 'custom' && !customPrompt().trim()) {
+        <div class="hint warn">Custom prompt required when using “Custom”.</div>
+      }
     </div>
   </section>
 
+  @if (activeVideoId()) {
+    <app-video-modal [videoId]="activeVideoId()!" (closeModal)="closeVideo()" />
+  }
+
   @if (error()) {
-    <div class="errorBox">{{ error() }}</div>
+    <div class="errorBox">
+      <div class="errorTitle">Recommendation failed</div>
+      <div class="errorMessage">{{ error() }}</div>
+      @if (errorDetail()) {
+        <details class="errorDetail">
+          <summary>Details</summary>
+          <div class="errorDetailBody">{{ errorDetail() }}</div>
+        </details>
+      }
+      <div class="errorActions">
+        <button
+          class="button secondary"
+          type="button"
+          (click)="retryLlm()"
+          [disabled]="loading() || !lastLlmRequest()"
+        >
+          Retry LLM
+        </button>
+        <button class="button secondary" type="button" (click)="loadRandom()" [disabled]="loading()">
+          Use random
+        </button>
+      </div>
+    </div>
   }
 
   @if (loading() && items().length === 0 && llmItems()!.length === 0) {
@@ -90,6 +119,7 @@
           (regenerateThumbnail)="onThumbnail($event)"
           (toggleImportant)="onToggleImportant($event)"
           (delete)="onDelete($event)"
+          (playVideo)="onPlayVideo($event)"
         />
       }
       @for (r of llmItems()!; track r.entry!.id) {
@@ -101,6 +131,7 @@
             (regenerateThumbnail)="onThumbnail($event)"
             (toggleImportant)="onToggleImportant($event)"
             (delete)="onDelete($event)"
+            (playVideo)="onPlayVideo($event)"
           />
           @if (r.reason) {
             <div class="llmReason">{{ r.reason }}</div>
