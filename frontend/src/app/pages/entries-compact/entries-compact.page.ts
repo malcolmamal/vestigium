@@ -527,7 +527,7 @@ function siteKeyFromEntry(e: EntryResponse): string {
   // fallback: "registrable" domain-ish (last two labels)
   const parts = h.split('.').filter(Boolean);
   if (parts.length >= 2) {
-    return `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
+    return `${parts.at(-2)}.${parts.at(-1)}`;
   }
   return h;
 }

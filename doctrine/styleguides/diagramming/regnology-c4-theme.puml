@@ -1,0 +1,67 @@
+' Regnology C4 PlantUML Theme
+' Version: 1.0.0
+' Include this file in any C4-PlantUML diagram:
+'   !include <path>/regnology-c4-theme.puml
+'
+' Requires C4-PlantUML includes to be loaded first.
+
+' ── Colour definitions ──────────────────────────────────────────
+!define REG_GREEN_DARK   #06A74E
+!define REG_GREEN_LIGHT  #3CE55A
+!define REG_PETROL       #012D3F
+!define REG_ICE_BLUE     #1788BE
+!define REG_HAY_YELLOW   #EC9D1C
+!define REG_STONE_GREY   #747A7A
+!define REG_SAND_GREY    #9FA8A9
+!define REG_ICE_GREY     #E1E6E6
+!define REG_BLACK         #000000
+!define REG_WHITE         #FFFFFF
+
+' ── Element styling ─────────────────────────────────────────────
+
+' Person — default Regnology petrol on white text
+AddPersonTag("regnology", $bgColor=REG_PETROL, $fontColor=REG_WHITE, $borderColor=REG_PETROL)
+
+' External person — stone grey
+AddPersonTag("regnology_ext", $bgColor=REG_STONE_GREY, $fontColor=REG_WHITE, $borderColor=REG_STONE_GREY)
+
+' System (internal) — green dark
+AddElementTag("regnology_system", $bgColor=REG_GREEN_DARK, $fontColor=REG_WHITE, $borderColor=REG_GREEN_DARK)
+
+' System (external) — ice blue
+AddElementTag("regnology_system_ext", $bgColor=REG_ICE_BLUE, $fontColor=REG_WHITE, $borderColor=REG_ICE_BLUE)
+
+' Container (internal) — petrol blue
+AddElementTag("regnology_container", $bgColor=REG_PETROL, $fontColor=REG_WHITE, $borderColor=REG_PETROL)
+
+' Container (external) — stone grey
+AddElementTag("regnology_container_ext", $bgColor=REG_STONE_GREY, $fontColor=REG_WHITE, $borderColor=REG_STONE_GREY)
+
+' ── Relationship styling ────────────────────────────────────────
+AddRelTag("regnology_rel", $lineColor=REG_STONE_GREY, $textColor=REG_BLACK)
+
+' ── Global skinparam overrides ──────────────────────────────────
+skinparam backgroundColor REG_WHITE
+skinparam defaultFontName "Regnology Sans"
+skinparam defaultFontColor REG_BLACK
+skinparam shadowing false
+
+' Boundary styling
+skinparam rectangle {
+    StereotypeFontColor REG_PETROL
+    BorderColor REG_ICE_GREY
+    BackgroundColor REG_WHITE
+    FontColor REG_PETROL
+}
+
+' ── Override C4 defaults to apply Regnology colours globally ────
+UpdateElementStyle("person", $bgColor=REG_PETROL, $fontColor=REG_WHITE, $borderColor=REG_PETROL)
+UpdateElementStyle("external_person", $bgColor=REG_STONE_GREY, $fontColor=REG_WHITE, $borderColor=REG_STONE_GREY)
+UpdateElementStyle("system", $bgColor=REG_GREEN_DARK, $fontColor=REG_WHITE, $borderColor=REG_GREEN_DARK)
+UpdateElementStyle("external_system", $bgColor=REG_ICE_BLUE, $fontColor=REG_WHITE, $borderColor=REG_ICE_BLUE)
+UpdateElementStyle("container", $bgColor=REG_PETROL, $fontColor=REG_WHITE, $borderColor=REG_PETROL)
+UpdateElementStyle("external_container", $bgColor=REG_STONE_GREY, $fontColor=REG_WHITE, $borderColor=REG_STONE_GREY)
+
+UpdateBoundaryStyle("", $fontColor=REG_PETROL, $borderColor=REG_ICE_GREY)
+
+UpdateRelStyle("", $lineColor=REG_STONE_GREY, $textColor=REG_BLACK)

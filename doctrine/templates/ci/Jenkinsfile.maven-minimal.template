@@ -1,0 +1,162 @@
+// ============================================================================
+// Regnology Professional Services — Jenkins Pipeline Template
+// Template: maven-minimal (Early-stage / basic quality gates)
+//
+// Use this template for Java/Maven projects that are not yet subject to full
+// AppSec controls. Provides: code style, build + test, coverage, SonarQube.
+//
+// Graduation path → maven-appsec:
+//   1. Add SpotBugs + FindSecBugs to pom.xml (effort: Max, failOnError: true)
+//   2. Add CycloneDX SBOM stages (full + lucy-bom)
+//   3. Register project in DependencyTrack (contact appsec@regnology.net)
+//   4. Enable DependencyTrack upload (SKIP_DEPENDENCY_TRACK = 'false')
+//   5. Switch to Jenkinsfile.maven-appsec.template
+//
+// Required substitutions (search for TODO:):
+//   - TODO: project-name      — repository slug, e.g. my-service
+//   - TODO: CONS-project-name — SonarQube project key, e.g. CONS-my-service
+//
+// Doctrine: doctrine/directives/043_appsec_compliance.md
+// ============================================================================
+
+MAVEN_OPTS = [
+    maven: 'maven-3.8.6',
+    jdk: 'openjdk-21',
+    options: [
+        artifactsPublisher(disabled: true),
+        dependenciesFingerprintPublisher(disabled: true)
+    ]
+]
+
+pipeline {
+    agent {
+        kubernetes {
+            yamlFile 'jenkins-agent.yaml'
+            workspaceVolume(dynamicPVC(storageClassName: 'standard-rwo', requestsSize: '10Gi'))
+        }
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+    }
+
+    environment {
+        PIPELINE_TAG  = "#${BUILD_NUMBER}_${BRANCH}"
+        GIT_TAG       = "$PIPELINE_TAG"
+        GIT_BUILD_TAG = "$BUILD_TAG".replaceAll(' ', '_')
+    }
+
+    stages {
+
+        stage('Initialize') {
+            steps {
+                echo """
+        ████          R E G N O L O G Y
+            ██        Professional Services
+        ████
+            ██        professional_services@regnology.net
+                """
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Enforce Google Java Format via Spotless.
+        // UNSTABLE on failure — visible but non-blocking.
+        // --------------------------------------------------------------------
+        stage('Code Style') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        script {
+                            if (isUnix()) { sh 'mvn spotless:check' }
+                            else          { bat 'mvn spotless:check' }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Compile, unit test, and collect JaCoCo coverage.
+        // SonarQube is PR-aware: decorates PRs and pushes branch analysis.
+        // TODO: CONS-project-name — verify sonar.projectKey in pom.xml.
+        // --------------------------------------------------------------------
+        stage('Build & Test') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    script {
+                        if (isUnix()) { sh 'mvn package -fae -U --batch-mode' }
+                        else          { bat 'mvn package -fae -U --batch-mode' }
+                    }
+                    withSonarQubeEnv('Sonar-ABACUS') {
+                        script {
+                            def branchName = env.BRANCH_NAME ?: 'main'
+                            def sonarArgs = env.CHANGE_ID
+                                ? "-Dsonar.pullrequest.key=${env.CHANGE_ID}" +
+                                  " -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH ?: branchName}" +
+                                  " -Dsonar.pullrequest.base=${env.CHANGE_TARGET ?: 'main'}"
+                                : "-Dsonar.branch.name=${branchName}"
+                            def cmd = "mvn --batch-mode clean install verify ${sonarArgs}"
+                            if (isUnix()) { sh cmd }
+                            else          { bat cmd }
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
+                    recordCoverage tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']]
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Standalone SonarQube analysis.
+        // Security Gate (configured in SonarQube):
+        //   FAIL when: Blocker > 0 OR Critical > 0 OR Vulnerabilities > 0
+        // All new Sonar findings must be resolved before marking work complete.
+        // --------------------------------------------------------------------
+        stage('SonarQube Analysis') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    withSonarQubeEnv('Sonar-ABACUS') {
+                        script {
+                            def branchName = env.BRANCH_NAME ?: 'main'
+                            def sonarArgs = env.CHANGE_ID
+                                ? "-Dsonar.pullrequest.key=${env.CHANGE_ID}" +
+                                  " -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH ?: branchName}" +
+                                  " -Dsonar.pullrequest.base=${env.CHANGE_TARGET ?: 'main'}"
+                                : "-Dsonar.branch.name=${branchName}"
+                            def cmd = "mvn ${env.SONAR_MAVEN_GOAL}" +
+                                " -Dsonar.host.url=${env.SONAR_HOST_URL}" +
+                                " -Dsonar.login=${env.SONAR_AUTH_TOKEN}" +
+                                " ${sonarArgs}"
+                            if (isUnix()) { sh cmd }
+                            else          { bat cmd }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // TODO (graduation): Add the following stages when graduating to
+        // maven-appsec:
+        //   - Javadoc Quality  (recordIssues / javaDoc quality gate)
+        //   - SBOM             (cyclonedx:makeAggregateBom — bom + lucy-bom)
+        //   - DependencyTrack  (dependencyTrackPublisher)
+        // See: doctrine/templates/ci/Jenkinsfile.maven-appsec.template
+        // --------------------------------------------------------------------
+
+    } // end stages
+
+    post {
+        success  { echo 'Build and analysis completed successfully.' }
+        unstable { echo 'Build completed with warnings — review Code Style stage.' }
+        failure  { echo 'Build failed — check the logs above.' }
+    }
+
+}

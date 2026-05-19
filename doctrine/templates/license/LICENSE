@@ -1,0 +1,112 @@
+     +----------------------------------------------------+
+     |████          R E G N O L O G Y                     |
+     |    ██        Professional Services                 |
+     |████                                                |
+     |    ██        professional_services@regnology.net   |
+     +----------------------------------------------------+
+     |                                                    |
+     | LIMITED DISTRIBUTION SOFTWARE - INTERNAL USE ONLY  |
+     |                                                    |
+     | 2026 Regnology Group GmbH,                         |
+     | HANAUER LANDSTR.                                   |
+     | 60314 FRANKFURT AM MAIN,                           |
+     | GERMANY                                            |
+     +----------------------------------------------------+
+
+PROPRIETARY SOFTWARE LICENSE
+All Rights Reserved - Internal Use Only
+
+Copyright (c) 2026 Regnology Group GmbH
+Hanauer Landstr. 121, 60314 Frankfurt am Main, Germany
+https://www.regnology.net
+
+
+1. OWNERSHIP
+
+This software and all associated documentation, source code, and compiled
+executables (the "Software") are the exclusive property of Regnology
+Group GmbH. No title or intellectual property rights in the
+Software are transferred by this license.
+
+
+2. GRANT OF LICENSE
+
+A limited, non-exclusive, non-transferable, non-sublicensable license is
+granted solely to authorized Regnology personnel and contractors for
+internal business purposes, subject to the restrictions below.
+
+
+3. PERMITTED USE
+
+The Software may be used:
+
+(a) Within Regnology internal systems and infrastructure;
+
+(b) On devices provided or explicitly approved by Regnology;
+
+(c) In connection with customer or client engagements, provided the
+    Software (in source and compiled form) remains at all times within
+    the Regnology ecosystem -- meaning Regnology-managed systems,
+    networks, and VPN-secured environments. The Software must not be
+    deployed to, copied onto, or made accessible from systems outside
+    Regnology operational control.
+
+
+4. RESTRICTIONS
+
+The following are strictly prohibited without prior written authorization
+from Regnology Group GmbH:
+
+(a) Distribution, transfer, disclosure, or making available of the
+    Software (in whole or in part, in source or compiled form) to any
+    external party, including but not limited to clients, vendors,
+    partners, or open-source communities;
+
+(b) Use of the Software on systems or devices not provided or approved
+    by Regnology;
+
+(c) Creation of derivative works intended for distribution outside the
+    Regnology ecosystem;
+
+(d) Reverse engineering, decompilation, or disassembly of compiled
+    forms of the Software, except to the extent required by applicable
+    law.
+
+
+5. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. REGNOLOGY
+GROUP GMBH DOES NOT WARRANT THAT THE SOFTWARE WILL BE
+ERROR-FREE OR UNINTERRUPTED.
+
+
+6. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL REGNOLOGY GROUP GMBH, ITS OFFICERS,
+EMPLOYEES, OR AGENTS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES ARISING OUT OF OR IN
+CONNECTION WITH THE USE OF THE SOFTWARE. THIS LIMITATION APPLIES
+REGARDLESS OF THE CAUSE OF ACTION AND EXPRESSLY INCLUDES ANY DAMAGES
+RESULTING FROM UNAUTHORIZED DISTRIBUTION OR USE OF THE SOFTWARE OUTSIDE
+THE SCOPE PERMITTED BY THIS LICENSE.
+
+
+7. TERMINATION
+
+This license is effective until terminated. It terminates automatically
+upon violation of any restriction in Section 4. Upon termination, all
+copies of the Software in the licensee's possession must be destroyed
+or returned to Regnology Group GmbH.
+
+
+8. GOVERNING LAW
+
+This license shall be governed by and construed in accordance with the
+laws of the Federal Republic of Germany. The courts of Frankfurt am
+Main shall have exclusive jurisdiction.
+
+
+For questions regarding this license, contact:
+Regnology Group GmbH, Professional Services — Professional_Services@regnology.net

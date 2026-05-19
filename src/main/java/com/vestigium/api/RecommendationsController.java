@@ -47,7 +47,6 @@ public class RecommendationsController {
             var customPrompt = req == null ? null : req.customPrompt();
 
             var res = recommendationService.recommendWithLlm(promptId, customPrompt, limit, includeNsfw);
-            var entryIds = res.items().stream().map(i -> i.entry().id()).toList();
             var entryResponses = entryService.toResponses(res.items().stream().map(RecommendationService.LlmItem::entry).toList());
             var responsesById = entryResponses.stream().collect(java.util.stream.Collectors.toMap(EntryResponse::id, r -> r));
 

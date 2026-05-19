@@ -265,9 +265,27 @@ public class EntryService {
         int skipped = 0;
         var errors = new java.util.ArrayList<ImportError>();
 
-        // De-dupe within request (preserve order) and merge data from duplicates.
+        var unique = deduplicateImportItems(items, errors);
+
+        for (var entry : unique.entrySet()) {
+            var normalized = entry.getKey();
+            var item = entry.getValue();
+            var rawUrl = item.url() == null ? normalized : item.url().trim();
+            try {
+                var res = processImportedItem(normalized, item, m);
+                if (res == 1) created++;
+                else if (res == 2) updated++;
+                else skipped++;
+            } catch (Exception e) {
+                errors.add(new ImportError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
+            }
+        }
+
+        return new ImportResult(created, updated, skipped, errors);
+    }
+
+    private java.util.Map<String, ExportItem> deduplicateImportItems(List<ExportItem> items, List<ImportError> errors) {
         var unique = new java.util.LinkedHashMap<String, ExportItem>();
-        int duplicateCount = 0;
         for (var item : items) {
             if (item == null || item.url() == null || item.url().isBlank()) {
                 continue;
@@ -280,66 +298,55 @@ public class EntryService {
                     unique.put(normalized, item);
                 } else {
                     unique.put(normalized, mergeImportItem(existing, item));
-                    duplicateCount++;
                 }
             } catch (Exception e) {
                 errors.add(new ImportError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
             }
         }
-
-        for (var entry : unique.entrySet()) {
-            var normalized = entry.getKey();
-            var item = entry.getValue();
-            var rawUrl = item.url() == null ? normalized : item.url().trim();
-            try {
-                var existingOpt = entries.getByUrl(normalized);
-                if (existingOpt.isEmpty()) {
-                    createImported(
-                            normalized,
-                            item.addedAt(),
-                            item.thumbnailPath(),
-                            item.thumbnailLargePath(),
-                            item.title(),
-                            item.description(),
-                            item.detailedDescription(),
-                            item.lists(),
-                            item.tags()
-                    );
-                    created++;
-                    continue;
-                }
-                var existing = existingOpt.get();
-                // Merge lists even in "skip" mode (additive, doesn't remove existing).
-                mergeImportedLists(existing.id(), item.lists());
-
-                if (m.equals("skip")) {
-                    skipped++;
-                    continue;
-                }
-
-                // Update core fields if present in import
-                entries.updateCore(existing.id(), item.title(), item.description(), item.detailedDescription(), null, null);
-                if (item.tags() != null) {
-                    entries.replaceTags(existing.id(), TagNormalizer.normalize(item.tags()), tags);
-                }
-                if ((item.thumbnailPath() != null && !item.thumbnailPath().isBlank())
-                        || (item.thumbnailLargePath() != null && !item.thumbnailLargePath().isBlank())) {
-                    entries.updateThumbnailPaths(
-                            existing.id(),
-                            item.thumbnailPath() == null ? null : item.thumbnailPath().trim(),
-                            item.thumbnailLargePath() == null ? null : item.thumbnailLargePath().trim()
-                    );
-                }
-                updated++;
-            } catch (Exception e) {
-                errors.add(new ImportError(rawUrl, e.getClass().getSimpleName() + ": " + Objects.toString(e.getMessage(), "")));
-            }
-        }
-
-        skipped += duplicateCount;
-
-        return new ImportResult(created, updated, skipped, errors);
+        return unique;
     }
+
+    private int processImportedItem(String normalized, ExportItem item, String mode) {
+        var existingOpt = entries.getByUrl(normalized);
+        if (existingOpt.isEmpty()) {
+            createImported(
+                    normalized,
+                    item.addedAt(),
+                    item.thumbnailPath(),
+                    item.thumbnailLargePath(),
+                    item.title(),
+                    item.description(),
+                    item.detailedDescription(),
+                    item.lists(),
+                    item.tags()
+            );
+            return 1;
+        }
+        var existing = existingOpt.get();
+        // Merge lists even in "skip" mode (additive, doesn't remove existing).
+        mergeImportedLists(existing.id(), item.lists());
+
+        if (mode.equals("skip")) {
+            return 0; // skipped
+        }
+
+        // Update core fields if present in import
+        entries.updateCore(existing.id(), item.title(), item.description(), item.detailedDescription(), null, null);
+        if (item.tags() != null) {
+            entries.replaceTags(existing.id(), TagNormalizer.normalize(item.tags()), tags);
+        }
+        if ((item.thumbnailPath() != null && !item.thumbnailPath().isBlank())
+                || (item.thumbnailLargePath() != null && !item.thumbnailLargePath().isBlank())) {
+            entries.updateThumbnailPaths(
+                    existing.id(),
+                    item.thumbnailPath() == null ? null : item.thumbnailPath().trim(),
+                    item.thumbnailLargePath() == null ? null : item.thumbnailLargePath().trim()
+            );
+        }
+        return 2; // updated
+    }
+
+
 
     private ExportItem mergeImportItem(ExportItem base, ExportItem other) {
         return new ExportItem(

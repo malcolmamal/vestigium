@@ -1,0 +1,73 @@
+# =============================================================================
+# Regnology Professional Services — Jenkins Kubernetes Agent Pod Spec Template
+#
+# Referenced by Jenkinsfile via: yamlFile 'jenkins-agent.yaml'
+# Place this file at the repository root alongside the Jenkinsfile.
+#
+# Variants:
+#   - Java-only project:     remove the 'python' container
+#   - Python-only project:   remove the 'python' container resources section
+#                            is already sized for Python workloads
+#   - Java + Python project: keep both containers (default below)
+#
+# Resource guidance:
+#   - requests: guaranteed allocation — size to normal build load
+#   - limits:   hard ceiling — size to peak (e.g. parallel test execution)
+#   - Increase memory limits for projects with large dependency graphs or
+#     heavy test suites. Decrease for lightweight utility scripts.
+#
+# Security context:
+#   fsGroup: 1000 — non-root filesystem ownership; required for workspace
+#   volume writes from inside containers.
+# =============================================================================
+
+apiVersion: v1
+kind: Pod
+spec:
+  securityContext:
+    # Non-root filesystem group ownership. Required for workspace volume writes.
+    fsGroup: 1000
+
+  containers:
+
+    # -------------------------------------------------------------------------
+    # Python container — used for Python lint, test, SBOM, and uv operations.
+    # Remove if the project has no Python components.
+    # -------------------------------------------------------------------------
+    - name: python
+      image: python:3.12
+      imagePullPolicy: IfNotPresent
+      tty: true
+      command:
+        - "sleep"
+      args:
+        - "99d"
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "1"
+
+    # -------------------------------------------------------------------------
+    # TODO: Add a 'sonar-scanner' container if the project uses the standalone
+    # SonarScanner CLI rather than sonar-maven-plugin. Example:
+    #
+    # - name: sonar-scanner
+    #   image: sonarsource/sonar-scanner-cli:latest
+    #   imagePullPolicy: IfNotPresent
+    #   tty: true
+    #   command: ["sleep"]
+    #   args: ["99d"]
+    #   resources:
+    #     requests:
+    #       memory: "512Mi"
+    #       cpu: "500m"
+    #     limits:
+    #       memory: "1Gi"
+    #       cpu: "1"
+    #
+    # Most Maven projects do not need this — sonar-maven-plugin handles analysis
+    # from within the jnlp (default Maven) container.
+    # -------------------------------------------------------------------------

@@ -1,0 +1,89 @@
+<!--
+████          R E G N O L O G Y
+    ██        Professional Services
+████
+    ██        professional_services@regnology.net
+-->
+
+# Bitbucket CODEOWNERS Template
+#
+# Location in consuming repository: .bitbucket/CODEOWNERS
+# Reference: https://support.atlassian.com/bitbucket-cloud/docs/set-up-and-use-code-owners/
+#
+# ─── SYNTAX OVERVIEW ─────────────────────────────────────────────────────────
+#
+# Pattern matching follows .gitignore rules with the following exceptions
+# (these do NOT work in CODEOWNERS):
+#   - Escaping # with \ (# always starts a comment)
+#   - Negation with !
+#   - Character ranges with [ ]
+#
+# Precedence: the LAST matching pattern wins.
+# More specific rules should therefore appear LOWER in this file.
+#
+# ─── USER REFERENCE FORMATS ──────────────────────────────────────────────────
+#
+#   individual@example.com          Plain email address
+#   @username                       Bitbucket username (@ prefix)
+#   @workspace-slug/group-slug      Workspace group (workspace slug / group slug)
+#   @teams/team-name                Ad-hoc team defined in teams.yaml
+#
+# ─── SELECTION STRATEGIES ────────────────────────────────────────────────────
+#
+#   (default / omitted)             One random user from the group
+#   :random                         Same as :random(1)
+#   :random(N)                      N random users from the group
+#   :least_busy                     Same as :least_busy(1) — fewest open reviews
+#   :least_busy(N)                  N least-busy users from the group
+#   :all                            Every member of the group
+#
+#   Inline strategies override the strategy defined in teams.yaml.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Global fallback owner ────────────────────────────────────────────────────
+# Matches every file not covered by a more specific rule below.
+# Replace with the team/individual responsible for overall repository health.
+#
+* {{global-owner@example.com}}
+
+# ── Source code — by technology ──────────────────────────────────────────────
+# Assign technology-specific teams so reviewers have domain expertise.
+# Adjust extensions and owner references to match your stack.
+#
+*.py        @teams/backend
+*.java      @teams/backend
+*.ts        @teams/frontend
+*.tsx       @teams/frontend
+*.js        @teams/frontend
+*.sql       @teams/dba:least_busy(2)
+
+# ── Application modules ──────────────────────────────────────────────────────
+# More specific path rules take precedence over the extension rules above
+# because they appear lower in the file.
+#
+/src/frontend/*     @teams/frontend
+/src/backend/*      @teams/backend
+/src/database/*     @teams/dba
+
+# ── Critical / high-risk paths ───────────────────────────────────────────────
+# Require all senior reviewers for security-sensitive or high-impact paths.
+#
+/src/security/*         @teams/seniors:all
+/src/auth/*             @teams/seniors:all
+/src/keys/*.pub         @teams/sre {{superuser@example.com}}
+
+# ── Infrastructure and CI ────────────────────────────────────────────────────
+/infra/*            @teams/sre
+/.github/*          @teams/sre
+/.bitbucket/*       {{devops-lead@example.com}}  # meta-owner for VCS config
+
+# ── Documentation ────────────────────────────────────────────────────────────
+/docs/*             {{tech-writer@example.com}}
+*.md                {{tech-writer@example.com}}
+
+# ── Doctrine / agent framework ───────────────────────────────────────────────
+# Restrict changes to the agent governance framework to designated owners.
+/doctrine/*         {{framework-owner@example.com}}
+/.doctrine-config/* {{framework-owner@example.com}}
+/AGENTS.md          {{framework-owner@example.com}}

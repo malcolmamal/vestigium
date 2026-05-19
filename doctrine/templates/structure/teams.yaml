@@ -1,0 +1,60 @@
+# Bitbucket CODEOWNERS — teams.yaml template
+#
+# Location in consuming repository: .bitbucket/teams.yaml
+# Reference: https://support.atlassian.com/bitbucket-cloud/docs/set-up-and-use-code-owners/
+#
+# Purpose:
+#   Define ad-hoc review teams without requiring elevated workspace-group privileges.
+#   Teams defined here are referenced in CODEOWNERS as @teams/<team-name>.
+#
+# Selection strategies:
+#   random      — sort randomly, select N reviewers (default N=1)
+#   least_busy  — sort by fewest open reviews ascending, select N reviewers
+#   all         — include every contributor; no select argument needed
+#
+# Inline strategy in CODEOWNERS (e.g. @teams/frontend:all) overrides the
+# strategy configured here for that specific rule.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+frontend:
+  contributors:
+    - frontend-dev1@example.com
+    - frontend-dev2@example.com
+    - frontend-dev3@example.com
+  reviews:
+    strategy: least_busy
+    select: 1
+
+backend:
+  contributors:
+    - backend-dev1@example.com
+    - backend-dev2@example.com
+    - backend-dev3@example.com
+  reviews:
+    strategy: least_busy
+    select: 1
+
+dba:
+  contributors:
+    - dba1@example.com
+    - dba2@example.com
+  reviews:
+    strategy: random
+    select: 1
+
+sre:
+  contributors:
+    - sre1@example.com
+    - sre2@example.com
+  reviews:
+    strategy: least_busy
+    select: 1
+
+seniors:
+  contributors:
+    - senior1@example.com
+    - senior2@example.com
+  reviews:
+    strategy: all
+    # All seniors are selected; `select` is ignored when strategy is `all`

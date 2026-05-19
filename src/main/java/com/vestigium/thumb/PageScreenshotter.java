@@ -335,18 +335,22 @@ public class PageScreenshotter {
     private static void tryClickInFrames(Page page, String selector, int timeoutMs, boolean force) {
         try {
             for (Frame frame : page.frames()) {
-                try {
-                    Locator loc = frame.locator(selector).first();
-                    if (loc.count() == 0) continue;
-                    var opts = new Locator.ClickOptions().setTimeout(timeoutMs);
-                    if (force) {
-                        opts.setForce(true);
-                    }
-                    loc.click(opts);
-                } catch (Exception ignored) {
-                    // ignore
-                }
+                tryClickInFrame(frame, selector, timeoutMs, force);
             }
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void tryClickInFrame(Frame frame, String selector, int timeoutMs, boolean force) {
+        try {
+            Locator loc = frame.locator(selector).first();
+            if (loc.count() == 0) return;
+            var opts = new Locator.ClickOptions().setTimeout(timeoutMs);
+            if (force) {
+                opts.setForce(true);
+            }
+            loc.click(opts);
         } catch (Exception ignored) {
             // ignore
         }
@@ -355,20 +359,24 @@ public class PageScreenshotter {
     private static void tryClickRecaptchaCheckbox(Page page) {
         try {
             for (Frame frame : page.frames()) {
-                try {
-                    String url = frame.url();
-                    if (url == null || !url.contains("recaptcha")) {
-                        continue;
-                    }
-                    Locator loc = frame.locator("#recaptcha-anchor").first();
-                    if (loc.count() == 0) {
-                        continue;
-                    }
-                    loc.click(new Locator.ClickOptions().setTimeout(2000).setForce(true));
-                } catch (Exception ignored) {
-                    // ignore
-                }
+                tryClickRecaptchaInFrame(frame);
             }
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void tryClickRecaptchaInFrame(Frame frame) {
+        try {
+            String url = frame.url();
+            if (url == null || !url.contains("recaptcha")) {
+                return;
+            }
+            Locator loc = frame.locator("#recaptcha-anchor").first();
+            if (loc.count() == 0) {
+                return;
+            }
+            loc.click(new Locator.ClickOptions().setTimeout(2000).setForce(true));
         } catch (Exception ignored) {
             // ignore
         }
@@ -439,34 +447,38 @@ public class PageScreenshotter {
     private static void clickByTextDeepInFrames(Page page, String text) {
         try {
             for (Frame frame : page.frames()) {
-                try {
-                    frame.evaluate(
-                            "(t) => {" +
-                                    "const seen = new Set();" +
-                                    "const collect = (root) => {" +
-                                    "if (!root || seen.has(root)) return [];" +
-                                    "seen.add(root);" +
-                                    "let nodes = [];" +
-                                    "const tree = root.querySelectorAll ? root.querySelectorAll('*') : [];" +
-                                    "for (const el of tree) {" +
-                                    "  const role = (el.getAttribute && el.getAttribute('role')) || '';" +
-                                    "  if (el.tagName === 'BUTTON' || role === 'button' || el.tagName === 'A') nodes.push(el);" +
-                                    "  if (el.shadowRoot) nodes = nodes.concat(collect(el.shadowRoot));" +
-                                    "}" +
-                                    "return nodes;" +
-                                    "};" +
-                                    "const nodes = collect(document);" +
-                                    "for (const n of nodes) {" +
-                                    "  const txt = (n.innerText || n.textContent || '').trim();" +
-                                    "  if (txt === t) { n.click(); return; }" +
-                                    "}" +
-                                    "}",
-                            text
-                    );
-                } catch (Exception ignored) {
-                    // ignore
-                }
+                clickByTextDeepInFrame(frame, text);
             }
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    private static void clickByTextDeepInFrame(Frame frame, String text) {
+        try {
+            frame.evaluate(
+                    "(t) => {" +
+                            "const seen = new Set();" +
+                            "const collect = (root) => {" +
+                            "if (!root || seen.has(root)) return [];" +
+                            "seen.add(root);" +
+                            "let nodes = [];" +
+                            "const tree = root.querySelectorAll ? root.querySelectorAll('*') : [];" +
+                            "for (const el of tree) {" +
+                            "  const role = (el.getAttribute && el.getAttribute('role')) || '';" +
+                            "  if (el.tagName === 'BUTTON' || role === 'button' || el.tagName === 'A') nodes.push(el);" +
+                            "  if (el.shadowRoot) nodes = nodes.concat(collect(el.shadowRoot));" +
+                            "}" +
+                            "return nodes;" +
+                            "};" +
+                            "const nodes = collect(document);" +
+                            "for (const n of nodes) {" +
+                            "  const txt = (n.innerText || n.textContent || '').trim();" +
+                            "  if (txt === t) { n.click(); return; }" +
+                            "}" +
+                            "}",
+                    text
+            );
         } catch (Exception ignored) {
             // ignore
         }
@@ -476,16 +488,20 @@ public class PageScreenshotter {
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < timeoutMs) {
             for (String selector : selectors) {
-                try {
-                    Locator loc = page.locator(selector).first();
-                    if (loc.count() > 0 && loc.isVisible()) {
-                        return;
-                    }
-                } catch (Exception ignored) {
-                    // ignore
+                if (isSelectorVisible(page, selector)) {
+                    return;
                 }
             }
             page.waitForTimeout(200);
+        }
+    }
+
+    private static boolean isSelectorVisible(Page page, String selector) {
+        try {
+            Locator loc = page.locator(selector).first();
+            return loc.count() > 0 && loc.isVisible();
+        } catch (Exception ignored) {
+            return false;
         }
     }
 }

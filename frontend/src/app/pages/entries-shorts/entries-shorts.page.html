@@ -149,8 +149,18 @@
   </div>
 
   @if (iframeUrl()) {
-    <div class="iframeBackdrop" (click)="closePreview()">
-      <div class="iframeModal" (click)="$event.stopPropagation()">
+    <div
+      class="iframeBackdrop"
+      tabindex="0"
+      (click)="closePreview()"
+      (keydown.enter)="closePreview()"
+    >
+      <div
+        class="iframeModal"
+        tabindex="0"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+      >
         <header class="iframeHeader">
           <div class="iframeTitle">{{ iframeTitle() }}</div>
           <div class="iframeActions">

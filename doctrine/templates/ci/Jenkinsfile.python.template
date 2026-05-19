@@ -1,0 +1,194 @@
+// ============================================================================
+// Regnology Professional Services — Jenkins Pipeline Template
+// Template: python (Python project with AppSec controls)
+//
+// Use this template for Python projects using uv as the package manager.
+// Provides: ruff lint, pytest, CycloneDX SBOM, optional DependencyTrack upload.
+//
+// Assumes the project uses uv for dependency management (pyproject.toml /
+// uv.lock). For pip-based projects adjust the install commands accordingly.
+//
+// For mixed Java+Python projects: combine this with maven-appsec and add a
+// SBOM aggregate merge stage (scripts/merge-sboms.py pattern).
+//
+// Required substitutions (search for TODO:):
+//   - TODO: project-name      — repository slug, e.g. my-python-service
+//   - TODO: CONS-project-name — SonarQube project key, e.g. CONS-my-python-service
+//   - TODO: DT-PROJECT-UUID   — DependencyTrack project UUID (from AppSec team)
+//   - TODO: python-src-dir    — directory containing the Python source, e.g. src/
+//
+// AppSec contacts: appsec@regnology.net
+// Doctrine: doctrine/directives/043_appsec_compliance.md
+// Conventions: doctrine/guidelines/python-conventions.md
+// ============================================================================
+
+pipeline {
+    agent {
+        kubernetes {
+            yamlFile 'jenkins-agent.yaml'
+            workspaceVolume(dynamicPVC(storageClassName: 'standard-rwo', requestsSize: '5Gi'))
+        }
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+    }
+
+    environment {
+        PIPELINE_TAG                  = "#${BUILD_NUMBER}_${BRANCH}"
+        GIT_BUILD_TAG                 = "$BUILD_TAG".replaceAll(' ', '_')
+
+        // TODO: DT-PROJECT-UUID — replace with the UUID from DependencyTrack.
+        DEPENDENCY_TRACK_PROJECT_ID   = 'TODO: DT-PROJECT-UUID'
+        DEPENDENCY_TRACK_URL          = 'https://dependencytrack.regnology.net'
+        DEPENDENCY_TRACK_FRONTEND_URL = 'https://dependencytrack.regnology.net'
+
+        // Set to 'false' once registered in DependencyTrack.
+        SKIP_DEPENDENCY_TRACK         = 'true'
+
+        // TODO: python-src-dir — directory containing Python source for ruff/pytest.
+        PYTHON_SRC_DIR                = 'TODO: python-src-dir'
+    }
+
+    stages {
+
+        stage('Initialize') {
+            steps {
+                echo """
+        ████          R E G N O L O G Y
+            ██        Professional Services
+        ████
+            ██        professional_services@regnology.net
+                """
+                container('python') {
+                    // Bootstrap uv — fast Python package manager.
+                    sh 'pip install --quiet uv && uv --version'
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Lint with ruff (replaces flake8 + isort + pycodestyle).
+        // UNSTABLE on failure — style issues visible but non-blocking.
+        // ruff checks: pycodestyle, pyflakes, isort, and security (bandit subset).
+        // For full bandit security scanning add: uv run bandit -r $PYTHON_SRC_DIR
+        // --------------------------------------------------------------------
+        stage('Lint') {
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                    container('python') {
+                        sh "cd ${env.PYTHON_SRC_DIR} && uv run ruff check ."
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Run pytest with JUnit XML output for Jenkins test result tracking.
+        // Coverage is collected via pytest-cov and reported to Jenkins.
+        // The '|| true' prevents a failing test from masking coverage upload —
+        // the junit step below surfaces individual test failures.
+        // --------------------------------------------------------------------
+        stage('Test') {
+            steps {
+                container('python') {
+                    sh """
+                        cd ${env.PYTHON_SRC_DIR} && uv run pytest \
+                            --junitxml=test-results.xml \
+                            --cov=. \
+                            --cov-report=xml:coverage.xml \
+                            || true
+                    """
+                }
+            }
+            post {
+                always {
+                    junit testResults: "${env.PYTHON_SRC_DIR}/test-results.xml",
+                        allowEmptyResults: true
+                    recordCoverage tools: [[parser: 'COBERTURA',
+                        pattern: "${env.PYTHON_SRC_DIR}/coverage.xml"]]
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // SonarQube analysis.
+        // Picks up pytest coverage from coverage.xml.
+        // Security Gate (configured in SonarQube):
+        //   FAIL when: Blocker > 0 OR Critical > 0 OR Vulnerabilities > 0
+        // TODO: CONS-project-name — verify sonar.projectKey in sonar-project.properties.
+        // --------------------------------------------------------------------
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('Sonar-ABACUS') {
+                    script {
+                        def branchName = env.BRANCH_NAME ?: 'main'
+                        def sonarArgs = env.CHANGE_ID
+                            ? "-Dsonar.pullrequest.key=${env.CHANGE_ID}" +
+                              " -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH ?: branchName}" +
+                              " -Dsonar.pullrequest.base=${env.CHANGE_TARGET ?: 'main'}"
+                            : "-Dsonar.branch.name=${branchName}"
+                        // sonar-scanner reads sonar-project.properties from repo root.
+                        sh "sonar-scanner ${sonarArgs}" +
+                           " -Dsonar.python.coverage.reportPaths=${env.PYTHON_SRC_DIR}/coverage.xml"
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Generate CycloneDX SBOM for the Python environment.
+        // This produces bom-python.json covering all installed packages.
+        // The SBOM is archived as a build artifact for traceability.
+        // Note: 'uv run cyclonedx-py environment' scans the active virtual env.
+        // --------------------------------------------------------------------
+        stage('SBOM') {
+            steps {
+                container('python') {
+                    sh """
+                        cd ${env.PYTHON_SRC_DIR} && uv run cyclonedx-py environment \
+                            --output-format JSON \
+                            --output-file bom-python.json
+                    """
+                }
+                archiveArtifacts artifacts: "${env.PYTHON_SRC_DIR}/bom-python.json",
+                    fingerprint: true
+            }
+            post {
+                success {
+                    script {
+                        if (env.SKIP_DEPENDENCY_TRACK == 'true') {
+                            echo '[AppSec] DependencyTrack upload skipped (SKIP_DEPENDENCY_TRACK=true).' +
+                                 ' Register the project with AppSec and set SKIP_DEPENDENCY_TRACK=false to enable.'
+                        } else {
+                            withCredentials([string(credentialsId: 'dependency-track-api-key', variable: 'DT_API_KEY')]) {
+                                dependencyTrackPublisher(
+                                    // TODO: project-name — update projectName.
+                                    artifact:                   "${env.PYTHON_SRC_DIR}/bom-python.json",
+                                    autoCreateProjects:         false,
+                                    dependencyTrackApiKey:      env.DT_API_KEY,
+                                    dependencyTrackFrontendUrl: env.DEPENDENCY_TRACK_FRONTEND_URL,
+                                    dependencyTrackUrl:         env.DEPENDENCY_TRACK_URL,
+                                    projectId:                  env.DEPENDENCY_TRACK_PROJECT_ID,
+                                    projectName:                'CONS-TODO: project-name',
+                                    projectVersion:             env.BRANCH_NAME ?: 'main',
+                                    synchronous:                true
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    } // end stages
+
+    post {
+        success  { echo 'Pipeline completed successfully.' }
+        unstable { echo 'Pipeline completed with warnings — review Lint stage.' }
+        failure  { echo 'Pipeline failed — check logs above.' }
+    }
+
+}

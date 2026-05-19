@@ -29,7 +29,7 @@
       <span class="hint">Will download and use this as thumbnail instead of auto-generation.</span>
     </label>
 
-    <label class="field">
+    <div class="field">
       <span class="label">Tags (optional)</span>
       <app-tag-chips-input
         [tags]="tags()"
@@ -38,7 +38,7 @@
         (tagsChange)="tags.set($event)"
         (searchChange)="onTagSearch($event)"
       />
-    </label>
+    </div>
 
     <label class="field">
       <span class="label">Attachments (PDF/images)</span>

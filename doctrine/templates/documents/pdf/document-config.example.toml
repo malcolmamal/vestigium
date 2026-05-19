@@ -1,0 +1,63 @@
+# document-config.example.toml
+#
+# Example configuration for the Regnology branded PDF generator.
+# Copy this file to your project's build/ directory as config.toml and fill in real values.
+# Do NOT commit config.toml if it contains sensitive personal metadata.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DOCUMENT METADATA
+# Populates the cover page and the running page header/footer.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[document]
+
+# Main document title — large heading on the cover page and in the running header.
+title = "Your Document Title"
+
+# Subtitle — appears below the title on the cover page and alongside the title in the header.
+subtitle = "Document Subtitle or Short Description"
+
+# Full name of the primary author.
+author = "Author Name"
+
+# Author's role or job title (shown in the cover page meta block).
+author_title = "Role / Job Title"
+
+# Organisation string shown in the cover page meta block.
+organisation = "Regnology — Professional Services"
+
+# Document date. ISO 8601 format recommended (YYYY-MM-DD).
+date = "2026-01-01"
+
+# Classification label shown on the cover page.
+# Common values: "FOR INTERNAL USE ONLY", "CONFIDENTIAL", "PUBLIC"
+classification = "FOR INTERNAL USE ONLY"
+
+# Version string shown on the cover page.
+# Common values: "DRAFT", "1.0", "v2.3-rc1"
+version = "DRAFT"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VARIANTS
+# Define one or more named output variants. Each variant produces one PDF file.
+# Paths in `sections` are relative to the project root (the directory above build/).
+# ─────────────────────────────────────────────────────────────────────────────
+
+[variants.full]
+# Output filename written to the output/ directory.
+output = "your-document-full.pdf"
+# Ordered list of Markdown section files to include, relative to the project root.
+sections = [
+    "docs/overview.md",
+    "docs/section-one.md",
+    "docs/section-two.md",
+    "docs/appendix.md",
+]
+
+[variants.summary]
+# A leaner variant — fewer sections, separate output file.
+output = "your-document-summary.pdf"
+sections = [
+    "docs/overview.md",
+    "docs/section-one.md",
+]

@@ -1,0 +1,34 @@
+version: 1.0.0
+project_name: fox_local
+description: Personal workspace for presentations, notes, and documents
+created: "2026-04-01"
+
+doctrine:
+  source: "../agent-doctrine/doctrine"
+  mode: full
+  local_overrides: true
+
+local_guidelines:
+  specific_guidelines: ".doctrine-config/specific_guidelines.md"
+
+audience:
+  primary_persona: "docs/audience/persona_fox_nemhauser.md"
+  persona_id: "fox-ks-001"
+  directive_022: true
+
+workspace:
+  type: personal
+  git_managed: false
+  primary_content:
+    - presentations
+    - notes
+    - documents
+    - drafts
+    - software-dev-artifacts
+
+directories:
+  work: "work/"
+  notes: "work/notes/"
+  reports: "work/reports/"
+  tmp: "work/tmp/"
+  collaboration: "work/collaboration/"

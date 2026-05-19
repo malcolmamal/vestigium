@@ -1,0 +1,42 @@
+<!--
+  cover-template.html — Regnology branded PDF cover page fragment.
+
+  This is an HTML fragment, NOT a full HTML document. It contains only the
+  <div class="cover-page"> block to be injected at the top of the document body
+  by the generate_branded_pdf.py script.
+
+  Template variables use {{variable_name}} syntax and must be replaced at
+  build time by the generator script:
+
+    {{title}}           — Main document title (large white heading)
+    {{subtitle}}        — Document subtitle (green subheading)
+    {{author}}          — Full name of the document author
+    {{author_title}}    — Author's role or job title
+    {{organisation}}    — Organisation name (e.g. "Regnology — Professional Services")
+    {{date}}            — Document date (ISO format recommended: YYYY-MM-DD)
+    {{classification}}  — Classification label (e.g. "FOR INTERNAL USE ONLY")
+    {{version}}         — Version string (e.g. "DRAFT", "1.0", "v2.3")
+    {{logo_neg_path}}   — Absolute file:// URL to the negative (white) logo image
+    {{cover_bg_path}}   — Absolute file:// URL to the cover background photograph
+-->
+
+<div class="cover-page">
+  <div class="cover-content">
+    <div class="logo-bar">
+      <img src="{{logo_neg_path}}" alt="Regnology" />
+    </div>
+    <h1>{{title}}</h1>
+    <div class="subtitle">{{subtitle}}</div>
+    <div class="divider"></div>
+    <div class="meta">
+      <strong>Prepared by</strong> {{author}} — {{author_title}}<br/>
+      <strong>Organisation</strong> {{organisation}}<br/>
+      <strong>Date</strong> {{date}}<br/>
+      <strong>Classification</strong> {{classification}}<br/>
+      <strong>Version</strong> {{version}}
+    </div>
+  </div>
+  <div class="cover-image">
+    <img src="{{cover_bg_path}}" alt="" />
+  </div>
+</div>

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/session-init.sh"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/validate-doctrine-edit.sh"
+      },
+      {
+        "command": ".cursor/hooks/check-work-log.sh"
+      },
+      {
+        "command": ".cursor/hooks/check-markdown-lint.sh"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/warn-sensitive-edit.sh",
+        "matcher": "Write|StrReplace"
+      }
+    ]
+  }
+}

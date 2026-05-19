@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .cursor/hooks/hook-wrapper.js session-init"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node .cursor/hooks/hook-wrapper.js validate-doctrine-edit"
+      },
+      {
+        "command": "node .cursor/hooks/hook-wrapper.js check-work-log"
+      },
+      {
+        "command": "node .cursor/hooks/hook-wrapper.js check-markdown-lint"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node .cursor/hooks/hook-wrapper.js warn-sensitive-edit",
+        "matcher": "Write|StrReplace"
+      }
+    ]
+  }
+}

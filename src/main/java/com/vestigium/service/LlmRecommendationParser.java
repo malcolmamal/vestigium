@@ -4,18 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
 public class LlmRecommendationParser {
-
-    private static final Pattern JSON_OBJECT = Pattern.compile("\\{[\\s\\S]*\\}");
-    private static final Pattern ITEM_PATTERN = Pattern.compile(
-            "\\{[^\\{\\}]*?\"id\"\\s*:\\s*\"([^\"]+)\"[^\\{\\}]*?\"reason\"\\s*:\\s*\"([^\"]*)\"[^\\{\\}]*?\\}",
-            Pattern.DOTALL
-    );
 
     private final ObjectMapper objectMapper;
 
@@ -25,11 +17,12 @@ public class LlmRecommendationParser {
 
     public Result parse(String modelText) throws Exception {
         var trimmed = modelText == null ? "" : modelText.trim();
-        var matcher = JSON_OBJECT.matcher(trimmed);
-        if (!matcher.find()) {
+        int start = trimmed.indexOf('{');
+        int end = trimmed.lastIndexOf('}');
+        if (start == -1 || end == -1 || start > end) {
             throw new IllegalArgumentException("No JSON object found in LLM output.");
         }
-        var json = matcher.group();
+        var json = trimmed.substring(start, end + 1);
         JsonNode root = objectMapper.readTree(json);
         var arr = root.path("recommendations");
         var out = new ArrayList<Item>();
@@ -47,24 +40,7 @@ public class LlmRecommendationParser {
     }
 
     public Result parseLenient(String modelText) throws Exception {
-        try {
-            return parse(modelText);
-        } catch (Exception parseErr) {
-            var out = new ArrayList<Item>();
-            if (modelText != null) {
-                Matcher m = ITEM_PATTERN.matcher(modelText);
-                while (m.find()) {
-                    var id = m.group(1);
-                    var reason = m.group(2);
-                    if (id == null || id.isBlank()) continue;
-                    out.add(new Item(id, reason == null ? "" : reason));
-                }
-            }
-            if (out.isEmpty()) {
-                throw parseErr;
-            }
-            return new Result(List.copyOf(out));
-        }
+        return parse(modelText);
     }
 
     private static String text(JsonNode node, String field) {
