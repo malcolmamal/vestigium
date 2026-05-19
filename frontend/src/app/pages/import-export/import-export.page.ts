@@ -44,17 +44,20 @@ export class ImportExportPage {
     });
   }
 
-  onFileSelected(evt: Event) {
+  async onFileSelected(evt: Event) {
     const input = evt.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     this.fileText.set(null);
     this.importResult.set(null);
     this.error.set(null);
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => this.fileText.set((reader.result ?? '').toString());
-    reader.onerror = () => this.error.set('Failed to read file');
-    reader.readAsText(file);
+
+    try {
+      const text = await file.text();
+      this.fileText.set(text);
+    } catch {
+      this.error.set('Failed to read file');
+    }
   }
 
   importJson() {

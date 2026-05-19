@@ -1,0 +1,290 @@
+@font-face {
+    font-family: 'Regnology Sans';
+    src: url('file:///home/stijn/Documents/_code/CLIENTS/regnology/_local_admin/resources/fonts/RegnologySans-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Regnology Sans';
+    src: url('file:///home/stijn/Documents/_code/CLIENTS/regnology/_local_admin/resources/fonts/RegnologySans-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Regnology Sans';
+    src: url('file:///home/stijn/Documents/_code/CLIENTS/regnology/_local_admin/resources/fonts/RegnologySans-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+@font-face {
+    font-family: 'Regnology Sans';
+    src: url('file:///home/stijn/Documents/_code/CLIENTS/regnology/_local_admin/resources/fonts/RegnologySans-MediumItalic.ttf') format('truetype');
+    font-weight: 500;
+    font-style: italic;
+}
+
+@page {
+    size: A4;
+    margin: 20mm 0 9mm 0;
+
+    @top-center {
+        content: element(page-header);
+        width: 210mm;
+    }
+
+    @bottom-center {
+        content: element(page-footer);
+        width: 210mm;
+    }
+}
+
+@page :first {
+    margin-top: 0;
+    margin-bottom: 0;
+    @top-center { content: none; }
+    @bottom-center { content: none; }
+}
+
+.page-header {
+    position: running(page-header);
+    width: 210mm;
+    display: flex;
+    align-items: center;
+    border-bottom: 1.5px solid #E1E6E6;
+    padding: 0 20mm 2mm 20mm;
+    box-sizing: border-box;
+}
+.page-header img {
+    height: 7mm;
+}
+.page-header .header-title {
+    font-family: 'Regnology Sans', sans-serif;
+    font-size: 7pt;
+    color: #747A7A;
+    margin-left: 8mm;
+    letter-spacing: 0.04em;
+}
+
+.page-footer {
+    position: running(page-footer);
+    width: 210mm;
+    background-color: #012D3F;
+    border-top: 2px solid #011E2B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3mm 20mm;
+    box-sizing: border-box;
+}
+.page-footer .footer-text {
+    font-family: 'Regnology Sans', sans-serif;
+    font-size: 7pt;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    flex: 1;
+}
+.page-footer .footer-page {
+    font-family: 'Regnology Sans', sans-serif;
+    font-size: 7.5pt;
+    color: rgba(255, 255, 255, 0.5);
+}
+.page-footer .footer-page::after {
+    content: counter(page);
+}
+
+body {
+    font-family: 'Regnology Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #000000;
+    margin: 0;
+    padding: 0 20mm;
+}
+
+/* Cover page */
+.cover-page {
+    page-break-after: always;
+    margin: 0 -20mm;
+    min-height: 297mm;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+.cover-content {
+    background-color: #012D3F;
+    border-top: 4px solid #E1E6E6;
+    flex: 1;
+    padding: 30mm 30mm 15mm 30mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.cover-page .logo-bar {
+    margin-bottom: 24mm;
+}
+.cover-page .logo-bar img {
+    height: 36px;
+}
+.cover-page h1 {
+    font-size: 26pt;
+    font-weight: 500;
+    color: #FFFFFF;
+    border: none;
+    border-bottom: none;
+    margin-bottom: 6px;
+    padding-bottom: 0;
+    margin-top: 0;
+}
+.cover-page .subtitle {
+    font-size: 14pt;
+    color: #06A74E;
+    font-weight: 500;
+    margin-bottom: 8mm;
+    letter-spacing: 0.02em;
+}
+.cover-page .divider {
+    width: 60mm;
+    height: 2px;
+    background-color: #EC9D1C;
+    margin-bottom: 8mm;
+}
+.cover-page .meta {
+    font-size: 9.5pt;
+    color: #E1E6E6;
+    line-height: 2;
+}
+.cover-page .meta strong {
+    color: #EC9D1C;
+    font-weight: 500;
+}
+.cover-image {
+    height: 90mm;
+    overflow: hidden;
+    border-bottom: 4px solid #E1E6E6;
+}
+.cover-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+}
+
+/* Headings */
+h1 {
+    font-size: 18pt;
+    font-weight: 500;
+    color: #012D3F;
+    border-bottom: 2px solid #06A74E;
+    padding-bottom: 4px;
+    margin-top: 24pt;
+    page-break-after: avoid;
+}
+h2 {
+    font-size: 14pt;
+    font-weight: 500;
+    color: #012D3F;
+    margin-top: 18pt;
+    page-break-after: avoid;
+}
+h3 {
+    font-size: 11pt;
+    font-weight: 500;
+    color: #012D3F;
+    margin-top: 14pt;
+    page-break-after: avoid;
+}
+h4 {
+    font-size: 10pt;
+    font-weight: 500;
+    color: #012D3F;
+    margin-top: 10pt;
+    page-break-after: avoid;
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 9pt;
+    margin: 10pt 0;
+    page-break-inside: avoid;
+}
+th {
+    background-color: #012D3F;
+    color: #FFFFFF;
+    font-weight: 500;
+    text-align: left;
+    padding: 6px 8px;
+}
+td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #E1E6E6;
+    vertical-align: top;
+}
+tr:nth-child(even) td {
+    background-color: #F5F7F7;
+}
+
+/* Blockquotes */
+blockquote {
+    border-left: 3px solid #06A74E;
+    margin: 12pt 0;
+    padding: 8px 16px;
+    color: #012D3F;
+    background-color: #F5F7F7;
+    font-style: italic;
+}
+blockquote p {
+    margin: 4px 0;
+}
+
+/* Lists */
+ul, ol {
+    margin: 6pt 0;
+    padding-left: 20pt;
+}
+li {
+    margin-bottom: 3pt;
+}
+
+/* Emphasis */
+strong {
+    font-weight: 500;
+}
+
+/* Horizontal rules as section breaks */
+hr {
+    border: none;
+    border-top: 1px solid #E1E6E6;
+    margin: 20pt 0;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Code / pre */
+code {
+    font-size: 9pt;
+    background-color: #F5F7F7;
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+pre {
+    background-color: #F5F7F7;
+    padding: 10px;
+    font-size: 8pt;
+    border-left: 3px solid #012D3F;
+    overflow-x: auto;
+    page-break-inside: avoid;
+}
+
+/* Page breaks */
+.page-break {
+    page-break-before: always;
+}

@@ -2,6 +2,7 @@ package com.vestigium.jobs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vestigium.domain.Entry;
 import com.vestigium.enrich.EnrichmentParser;
 import com.vestigium.enrich.PdfTextExtractor;
 import com.vestigium.enrich.ImdbMetadataFetcher;
@@ -81,6 +82,33 @@ public class EnrichEntryJobProcessor implements JobProcessor {
 
         var images = new ArrayList<GeminiClient.InlineImage>();
         var contextText = new StringBuilder();
+        
+        buildInitialContext(contextText, entry, titleIsSuggestion);
+
+        boolean isYoutube = entry.url().contains("youtube.com") || entry.url().contains("youtu.be");
+        try {
+            log.info("Starting enrichment for entryId={} url={}", entry.id(), entry.url());
+            fetchSiteSpecificMetadata(contextText, entry, isYoutube);
+        } catch (Exception ignored) {
+            // ignore
+        }
+
+        if (!attachmentList.isEmpty()) {
+            processAttachments(contextText, images, attachmentList);
+        } else {
+            fetchPageContent(contextText, entry, force, titleIsSuggestion, isYoutube);
+        }
+
+        var prompt = buildPrompt(contextText.toString());
+        log.info("Requesting LLM enrichment for entryId={}...", entry.id());
+
+        com.vestigium.enrich.EnrichmentResult enrichment = performLlmEnrichment(entry, contextText.toString(), prompt, images);
+        if (enrichment == null) return; // blocked by safety
+
+        applyEnrichment(entry, enrichment, force, titleIsSuggestion);
+    }
+
+    private void buildInitialContext(StringBuilder contextText, Entry entry, boolean titleIsSuggestion) {
         contextText.append("URL: ").append(entry.url()).append("\n");
         if (entry.title() != null && !entry.title().isBlank()) {
             contextText.append("Existing Title: ").append(entry.title()).append("\n");
@@ -92,109 +120,110 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             contextText.append("Existing Description: ").append(entry.description()).append("\n");
         }
         contextText.append("\n");
+    }
 
-        // Site-specific extra metadata (best-effort).
-        boolean isYoutube = entry.url().contains("youtube.com") || entry.url().contains("youtu.be");
-        try {
-            log.info("Starting enrichment for entryId={} url={}", entry.id(), entry.url());
-            if (isYoutube) {
-                youtubeMetadata.fetch(entry.url()).ifPresent(yt -> {
-                    log.info("Fetched YouTube metadata for entryId={}: channel={}", entry.id(), yt.authorName());
-                    contextText.append("YouTube Metadata:\n");
-                    contextText.append("- Title: ").append(yt.title()).append("\n");
-                    if (yt.authorName() != null) {
-                        contextText.append("- Channel: ").append(yt.authorName()).append("\n");
-                    }
-                    contextText.append("\n");
-                });
-            }
-            imdb.fetch(entry.url()).ifPresent(m -> {
-                contextText.append("IMDb metadata:\n");
-                if (m.datePublished() != null && !m.datePublished().isBlank()) {
-                    contextText.append("- Release date: ").append(m.datePublished()).append("\n");
-                }
-                if (m.duration() != null && !m.duration().isBlank()) {
-                    contextText.append("- Runtime: ").append(m.duration()).append("\n");
-                }
-                if (m.stars() != null && !m.stars().isEmpty()) {
-                    var take = m.stars().stream().limit(5).toList();
-                    contextText.append("- Stars: ").append(String.join(", ", take)).append("\n");
+    private void fetchSiteSpecificMetadata(StringBuilder contextText, Entry entry, boolean isYoutube) {
+        if (isYoutube) {
+            youtubeMetadata.fetch(entry.url()).ifPresent(yt -> {
+                log.info("Fetched YouTube metadata for entryId={}: channel={}", entry.id(), yt.authorName());
+                contextText.append("YouTube Metadata:\n");
+                contextText.append("- Title: ").append(yt.title()).append("\n");
+                if (yt.authorName() != null) {
+                    contextText.append("- Channel: ").append(yt.authorName()).append("\n");
                 }
                 contextText.append("\n");
             });
-        } catch (Exception ignored) {
-            // ignore
         }
+        imdb.fetch(entry.url()).ifPresent(m -> {
+            contextText.append("IMDb metadata:\n");
+            if (m.datePublished() != null && !m.datePublished().isBlank()) {
+                contextText.append("- Release date: ").append(m.datePublished()).append("\n");
+            }
+            if (m.duration() != null && !m.duration().isBlank()) {
+                contextText.append("- Runtime: ").append(m.duration()).append("\n");
+            }
+            if (m.stars() != null && !m.stars().isEmpty()) {
+                var take = m.stars().stream().limit(5).toList();
+                contextText.append("- Stars: ").append(String.join(", ", take)).append("\n");
+            }
+            contextText.append("\n");
+        });
+    }
 
-        if (!attachmentList.isEmpty()) {
-            contextText.append("The user provided attachments. Use them to infer a good description and tags.\n");
-            for (var a : attachmentList) {
-                Resource res = fileStorage.loadAsResource(a.storagePath());
-                if (!res.exists()) {
-                    continue;
+    private void processAttachments(StringBuilder contextText, List<GeminiClient.InlineImage> images, List<com.vestigium.domain.Attachment> attachmentList) {
+        contextText.append("The user provided attachments. Use them to infer a good description and tags.\n");
+        for (var a : attachmentList) {
+            Resource res = fileStorage.loadAsResource(a.storagePath());
+            if (!res.exists()) {
+                continue;
+            }
+
+            if ("PDF".equalsIgnoreCase(a.kind())) {
+                try (InputStream in = res.getInputStream()) {
+                    var text = pdfTextExtractor.extractText(in, 15000);
+                    contextText.append("\nPDF: ").append(a.originalName()).append("\n");
+                    contextText.append(text).append("\n");
+                } catch (Exception ignored) {
+                    // Ignoring extraction error to fallback cleanly
                 }
-
-                if ("PDF".equalsIgnoreCase(a.kind())) {
-                    try (InputStream in = res.getInputStream()) {
-                        var text = pdfTextExtractor.extractText(in, 15000);
-                        contextText.append("\nPDF: ").append(a.originalName()).append("\n");
-                        contextText.append(text).append("\n");
-                    }
-                } else if ("IMAGE".equalsIgnoreCase(a.kind())) {
+            } else if ("IMAGE".equalsIgnoreCase(a.kind())) {
+                try {
                     var bytes = res.getContentAsByteArray();
                     images.add(new GeminiClient.InlineImage(a.mimeType(), bytes));
                     contextText.append("\nImage: ").append(a.originalName()).append(" (see attached image)\n");
+                } catch (Exception ignored) {
+                    // Ignoring extraction error to fallback cleanly
                 }
             }
+        }
+    }
+
+    private void fetchPageContent(StringBuilder contextText, Entry entry, boolean force, boolean titleIsSuggestion, boolean isYoutube) {
+        UrlContentFetcher.PageContent page;
+        if (isYoutube) {
+            // Skip generic HTML fetching for YouTube, we already have oEmbed metadata.
+            page = new UrlContentFetcher.PageContent(null, null, "");
         } else {
-            UrlContentFetcher.PageContent page;
-            if (isYoutube) {
-                // Skip generic HTML fetching for YouTube, we already have oEmbed metadata.
+            try {
+                page = urlFetcher.fetchReadableText(entry.url());
+            } catch (Exception e) {
+                // Some pages (or temporary test URLs) can fail; still allow LLM to work on URL-only context.
                 page = new UrlContentFetcher.PageContent(null, null, "");
-            } else {
-                try {
-                    page = urlFetcher.fetchReadableText(entry.url());
-                } catch (Exception e) {
-                    // Some pages (or temporary test URLs) can fail; still allow LLM to work on URL-only context.
-                    page = new UrlContentFetcher.PageContent(null, null, "");
-                }
-            }
-
-            // Even without LLM, we can often fill missing title/description from HTML metadata.
-            var metaTitle = page.title();
-            var metaDesc = page.metaDescription();
-            var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force || titleIsSuggestion) ? metaTitle : null;
-            var metaUpdateDesc = shouldUpdate(entry.description(), metaDesc, force) ? metaDesc : null;
-            if (metaUpdateTitle != null || metaUpdateDesc != null) {
-                entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null, null, null);
-            }
-
-            contextText.append("Fetched page content:\n");
-            if (page.title() != null && !page.title().isBlank()) {
-                contextText.append("Title: ").append(page.title()).append("\n");
-            }
-            if (page.metaDescription() != null && !page.metaDescription().isBlank()) {
-                contextText.append("Meta description: ").append(page.metaDescription()).append("\n");
-            }
-            if (page.text() != null && !page.text().isBlank()) {
-                contextText.append("\nText:\n").append(page.text()).append("\n");
             }
         }
 
-        var prompt = buildPrompt(contextText.toString());
-        log.info("Requesting LLM enrichment for entryId={}...", entry.id());
+        // Even without LLM, we can often fill missing title/description from HTML metadata.
+        var metaTitle = page.title();
+        var metaDesc = page.metaDescription();
+        var metaUpdateTitle = shouldUpdate(entry.title(), metaTitle, force || titleIsSuggestion) ? metaTitle : null;
+        var metaUpdateDesc = shouldUpdate(entry.description(), metaDesc, force) ? metaDesc : null;
+        if (metaUpdateTitle != null || metaUpdateDesc != null) {
+            entries.updateCore(entry.id(), metaUpdateTitle, metaUpdateDesc, null, null, null);
+        }
 
-        com.vestigium.enrich.EnrichmentResult enrichment;
+        contextText.append("Fetched page content:\n");
+        if (page.title() != null && !page.title().isBlank()) {
+            contextText.append("Title: ").append(page.title()).append("\n");
+        }
+        if (page.metaDescription() != null && !page.metaDescription().isBlank()) {
+            contextText.append("Meta description: ").append(page.metaDescription()).append("\n");
+        }
+        if (page.text() != null && !page.text().isBlank()) {
+            contextText.append("\nText:\n").append(page.text()).append("\n");
+        }
+    }
+
+    private com.vestigium.enrich.EnrichmentResult performLlmEnrichment(Entry entry, String contextStr, String prompt, List<GeminiClient.InlineImage> images) throws Exception {
         String modelText = null;
         try {
             modelText = gemini.generateText(prompt, images);
-            enrichment = enrichmentParser.parseFromModelText(modelText);
+            return enrichmentParser.parseFromModelText(modelText);
         } catch (Exception e) {
             String errorMsg = e.getMessage() != null ? e.getMessage() : "";
             if (errorMsg.contains("PROHIBITED_CONTENT") || errorMsg.contains("SAFETY")) {
                 log.warn("Gemini blocked content for entryId={} url={}: {}", entry.id(), entry.url(), errorMsg);
-                handleProhibitedContent(entry, contextText.toString());
-                return;
+                handleProhibitedContent(entry, contextStr);
+                return null;
             }
 
             log.error("Failed LLM enrichment for entryId={}. msg={}", entry.id(), e.getMessage());
@@ -209,6 +238,9 @@ public class EnrichEntryJobProcessor implements JobProcessor {
             }
             throw new JobParsingException(e.getMessage(), raw, e);
         }
+    }
+
+    private void applyEnrichment(Entry entry, com.vestigium.enrich.EnrichmentResult enrichment, boolean force, boolean titleIsSuggestion) {
 
         log.info("LLM enrichment received for entryId={}: tags={}", entry.id(), enrichment.tags());
 

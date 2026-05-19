@@ -1,0 +1,19 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#06A74E",
+    "lineColor": "#747A7A",
+    "textColor": "#000000"
+  },
+  "c4": {
+    "system_bg_color": "#06A74E",
+    "system_border_color": "#06A74E",
+    "external_system_bg_color": "#1788BE",
+    "external_system_border_color": "#1788BE",
+    "container_bg_color": "#012D3F",
+    "container_border_color": "#012D3F",
+    "external_container_bg_color": "#747A7A",
+    "external_container_border_color": "#747A7A",
+    "boundaryFontColor": "#012D3F"
+  }
+}

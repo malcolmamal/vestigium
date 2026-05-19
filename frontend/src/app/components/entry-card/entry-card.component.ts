@@ -121,7 +121,7 @@ export class EntryCardComponent {
     (evt.target as HTMLImageElement).style.display = 'none';
   }
 
-  toggleAiContext(evt: MouseEvent) {
+  toggleAiContext(evt: Event) {
     this.stop(evt);
     this.showAiContext.set(!this.showAiContext());
   }

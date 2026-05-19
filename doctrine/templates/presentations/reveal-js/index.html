@@ -1,0 +1,84 @@
+<!--
++----------------------------------------------------+
+|████          R E G N O L O G Y                     |
+|    ██        Professional Services                 |
+|████                                                |
+|    ██        professional_services@regnology.net   |
+|+----------------------------------------------------+
+
+Property of Regnology Group GmbH - All Rights Reserved
+              FOR INTERNAL USE ONLY
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Regnology AI Initiatives — Example Presentation</title>
+  
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+
+  <!-- Reveal.js 5.2.1 (vendored — see ../vendor/reveal.js/) -->
+  <link rel="stylesheet" href="../vendor/reveal.js/dist/reset.css" />
+  <link rel="stylesheet" href="../vendor/reveal.js/dist/reveal.css" />
+
+  <!-- Regnology custom theme -->
+  <link rel="stylesheet" href="theme/regnology.css" />
+
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="../vendor/reveal.js/plugin/highlight/monokai.css" />
+</head>
+<body>
+
+  <div class="reveal">
+    <div class="slides">
+
+      <!--
+        Slide content is loaded from slides.md.
+
+        Separators:
+          Horizontal slide  →  blank line + --- + blank line
+          Vertical slide    →  blank line + -- + blank line
+          Speaker notes     →  line starting with "Notes:"
+      -->
+      <section
+        data-markdown="slides.md"
+        data-separator="\r?\n---\r?\n"
+        data-separator-vertical="\r?\n--\r?\n"
+        data-separator-notes="^Notes:"
+        data-charset="utf-8">
+      </section>
+
+    </div>
+
+    <!-- Regnology Dark Footer Bar with Negative Logo -->
+    <div class="regnology-footer-bar">
+      <img src="assets/Regnology-logo-negative-PNG.png" alt="Regnology Logo" class="regnology-footer-logo" />
+    </div>
+  </div>
+
+  <script type="module">
+    import Reveal from '../vendor/reveal.js/dist/reveal.esm.js';
+    import Markdown from '../vendor/reveal.js/plugin/markdown/markdown.esm.js';
+    import Highlight from '../vendor/reveal.js/plugin/highlight/highlight.esm.js';
+    import Notes from '../vendor/reveal.js/plugin/notes/notes.esm.js';
+
+    Reveal.initialize({
+      hash: true,
+      slideNumber: 'c/t',
+      transition: 'fade',
+      transitionSpeed: 'fast',
+      backgroundTransition: 'fade',
+
+      // Markdown plugin options
+      markdown: {
+        smartypants: true,
+      },
+
+      plugins: [ Markdown, Highlight, Notes ],
+    });
+  </script>
+
+</body>
+</html>

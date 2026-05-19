@@ -70,7 +70,12 @@
   </div>
   <div class="body">
     @if (entry().aiSafe === false) {
-      <div class="aiBlocked" (click)="toggleAiContext($event)">
+      <div
+        class="aiBlocked"
+        tabindex="0"
+        (click)="toggleAiContext($event)"
+        (keydown.enter)="toggleAiContext($event)"
+      >
         <span class="warningIcon">⚠️</span> AI Blocked - Content Prohibited
         <button class="expandBtn">{{ showAiContext() ? 'Hide Context' : 'Show Context' }}</button>
       </div>

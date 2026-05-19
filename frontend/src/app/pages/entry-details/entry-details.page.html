@@ -5,8 +5,18 @@
   </header>
 
   @if (showThumbModal() && thumbModalUrl()) {
-    <div class="modalBackdrop" (click)="closeThumbModal()">
-      <div class="modal" (click)="$event.stopPropagation()">
+    <div
+      class="modalBackdrop"
+      tabindex="0"
+      (click)="closeThumbModal()"
+      (keydown.enter)="closeThumbModal()"
+    >
+      <div
+        class="modal"
+        tabindex="0"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+      >
         <img [src]="thumbModalUrl()!" alt="" />
         <div class="modalActions">
           <a class="button" [href]="thumbModalUrl()!" target="_blank" rel="noreferrer">Open</a>
@@ -34,10 +44,12 @@
         <div class="thumb">
           <img
             class="clickable"
+            tabindex="0"
             [src]="thumbnailUrl()"
-            alt=""
+            alt="Thumbnail"
             (error)="onImgError($event)"
             (click)="openThumbModal()"
+            (keydown.enter)="openThumbModal()"
           />
           @if (youtubeId()) {
             <button class="playBtn" type="button" (click)="openVideo()">▶</button>
@@ -210,7 +222,7 @@
           }
         </div>
 
-        <label class="field">
+        <div class="field">
           <span class="label">Tags</span>
           <app-tag-chips-input
             [tags]="tags()"
@@ -219,7 +231,7 @@
             (tagsChange)="onTagsChange($event)"
             (searchChange)="onTagSearch($event)"
           />
-        </label>
+        </div>
 
         <div class="actions">
           <button class="button" type="submit" [disabled]="saving()">Save</button>

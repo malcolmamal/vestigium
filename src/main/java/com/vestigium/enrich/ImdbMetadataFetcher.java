@@ -62,14 +62,17 @@ public class ImdbMetadataFetcher {
                 }
 
                 var metaOpt = extractFromNode(nodeOpt.get());
-                if (metaOpt.isPresent()) {
-                    return metaOpt;
-                }
-            }
-            return Optional.empty();
-        } catch (Exception ignored) {
-            return Optional.empty();
-        }
+              if (metaOpt.isPresent()) {
+                  return metaOpt;
+              }
+          }
+          return Optional.empty();
+      } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return Optional.empty();
+      } catch (Exception ignored) {
+          return Optional.empty();
+      }
     }
 
     private Optional<JsonNode> tryParseJson(String raw) {

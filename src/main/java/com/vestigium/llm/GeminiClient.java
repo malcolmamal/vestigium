@@ -40,21 +40,15 @@ public class GeminiClient {
         var fallback = firstNonBlank(System.getenv("GEMINI_MODEL"), model);
         var primaryName = primary == null ? model : primary;
         var fallbackName = fallback == null ? model : fallback;
-        var primaryErr = (Exception) null;
 
         try {
             return generateTextWithModel(primaryName, prompt, images);
         } catch (Exception e) {
-            primaryErr = e;
+            if (fallbackName != null && !fallbackName.equals(primaryName)) {
+                return generateTextWithModel(fallbackName, prompt, images);
+            }
+            throw e;
         }
-
-        if (fallbackName != null && !fallbackName.equals(primaryName)) {
-            return generateTextWithModel(fallbackName, prompt, images);
-        }
-
-        throw primaryErr == null
-                ? new IllegalStateException("Gemini request failed with unknown error.")
-                : primaryErr;
     }
 
     private String generateTextWithModel(String modelName, String prompt, List<InlineImage> images) throws Exception {
@@ -125,7 +119,30 @@ public class GeminiClient {
         return v.isEmpty() ? null : v;
     }
 
-    public record InlineImage(String mimeType, byte[] bytes) {}
+    public record InlineImage(String mimeType, byte[] bytes) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            InlineImage that = (InlineImage) o;
+            return java.util.Objects.equals(mimeType, that.mimeType) && java.util.Arrays.equals(bytes, that.bytes);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = java.util.Objects.hash(mimeType);
+            result = 31 * result + java.util.Arrays.hashCode(bytes);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "InlineImage{" +
+                    "mimeType='" + mimeType + '\'' +
+                    ", bytes=" + java.util.Arrays.toString(bytes) +
+                    '}';
+        }
+    }
 }
 
 

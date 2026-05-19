@@ -1,0 +1,40 @@
+/*
+ * Regnology Professional Services — Brand Variables
+ *
+ * Single source of truth for all brand colors, typography, and spacing.
+ * Import this file first in any Regnology-themed stylesheet.
+ *
+ * Usage:
+ *   @import url('./regnology-brand.css');
+ */
+
+:root {
+  /* ── Primary Palette ─────────────────────────────────────────────────── */
+  --rn-color-bg-primary:     #FFFFFF;   /* Pure white */
+  --rn-color-bg-secondary:   #F5F7F7;   /* Ice grey (light backgrounds) */
+  --rn-color-bg-section:     #012D3F;   /* Petrol blue (section headers, footer) */
+
+  --rn-color-accent:         #06A74E;   /* Regnology green — primary brand color */
+  --rn-color-accent-light:   #3CE55A;   /* Regnology green light */
+  --rn-color-accent-gold:    #FDB913;   /* Regnology gold / highlight */
+
+  --rn-color-text-primary:   #000000;   /* Pure black */
+  --rn-color-text-secondary: #747A7A;   /* Stone grey */
+  --rn-color-text-inverse:   #FFFFFF;   /* White — for use on dark backgrounds */
+
+  --rn-color-heading:        #012D3F;   /* Petrol blue — headings */
+  --rn-color-divider:        #E1E6E6;   /* Ice grey — borders, table rules */
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --rn-font-body:    'Regnology Sans', 'Inter', 'Segoe UI', Helvetica, sans-serif;
+  --rn-font-heading: 'Regnology Sans Medium', 'Inter', 'Segoe UI', Helvetica, sans-serif;
+  --rn-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Spacing & Sizing ────────────────────────────────────────────────── */
+  --rn-slide-padding:       2.5rem;
+  --rn-slide-padding-left:  1rem;
+  --rn-footer-bar-height:   80px;
+  --rn-border-radius-sm:    4px;
+  --rn-border-radius-md:    6px;
+  --rn-border-radius-lg:    12px;
+}

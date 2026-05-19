@@ -118,7 +118,10 @@ public class EntriesController {
 
     @PostMapping(value = "/api/entries/import", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ImportEntriesResponse importEntries(@RequestBody ImportEntriesRequest req) {
-        var in = req == null ? List.<EntryExportItem>of() : (req.items() == null ? List.<EntryExportItem>of() : req.items());
+        var in = List.<EntryExportItem>of();
+        if (req != null && req.items() != null) {
+            in = req.items();
+        }
         var items = in.stream()
                 .map(i -> new EntryService.ExportItem(
                         i.id(),

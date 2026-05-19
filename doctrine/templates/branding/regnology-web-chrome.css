@@ -1,0 +1,85 @@
+/*
+ * Regnology Professional Services — Web Chrome & Reusable Layout
+ *
+ * Shared styles for Regnology web UIs: top banner (logo), form cards, action areas.
+ * Depends on regnology-brand.css and regnology-base.css. Use after both.
+ *
+ * Reference implementation: gdm-mapping-validator Quality Validator UI.
+ */
+
+/* ─── Top banner (Regnology portal pattern: logo top-left) ────────────────── */
+.regnology-header-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 56px;
+  background-color: var(--rn-color-bg-section);
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  padding-left: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.regnology-header-logo {
+  height: 32px;
+  width: auto;
+  opacity: 1;
+  display: block;
+}
+
+body.has-regnology-header {
+  padding-top: 56px;
+}
+
+/* ─── Optional footer bar ────────────────────────────────────────────────── */
+body.has-regnology-footer {
+  padding-bottom: 72px;
+}
+
+/* ─── Form / section cards (grouped inputs, file selection, options) ──────── */
+.form-card {
+  background-color: var(--rn-color-bg-secondary);
+  border: 1px solid var(--rn-color-divider);
+  border-radius: var(--rn-border-radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.form-card-title {
+  font-family: var(--rn-font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--rn-color-heading);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--rn-color-accent);
+  display: block;
+}
+
+.form-card .form-group {
+  margin-bottom: 1rem;
+}
+
+.form-card .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-card input[type="file"] {
+  padding: 0.6rem;
+  background-color: var(--rn-color-bg-primary);
+  border-radius: var(--rn-border-radius-sm);
+}
+
+/* ─── Form actions (submit area) ─────────────────────────────────────────── */
+.form-actions {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rn-color-divider);
+}
+
+.form-actions button {
+  min-width: 10rem;
+}

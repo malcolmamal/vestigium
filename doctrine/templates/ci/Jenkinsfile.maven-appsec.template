@@ -1,0 +1,258 @@
+// ============================================================================
+// Regnology Professional Services — Jenkins Pipeline Template
+// Template: maven-appsec (Full AppSec compliance)
+//
+// Use this template for Java/Maven projects subject to full AppSec controls:
+//   - SonarQube SAST (branch + PR aware)
+//   - SpotBugs + FindSecBugs static security analysis
+//   - CycloneDX SBOM (full aggregate + runtime-only lucy-bom)
+//   - DependencyTrack SCA upload
+//   - Code style (Spotless / Google Java Format)
+//   - JaCoCo coverage
+//   - Javadoc quality gate
+//
+// Required substitutions (search for TODO:):
+//   - TODO: project-name      — repository slug, e.g. my-service
+//   - TODO: CONS-project-name — SonarQube project key, e.g. CONS-my-service
+//   - TODO: DT-PROJECT-UUID   — DependencyTrack project UUID (from AppSec team)
+//   - TODO: artifactory-project — Artifactory generic local repo name
+//
+// AppSec contacts: appsec@regnology.net
+// Doctrine: doctrine/directives/043_appsec_compliance.md
+// Tactic:   doctrine/tactics/appsec-pipeline-setup.tactic.md
+// ============================================================================
+
+MAVEN_OPTS = [
+    maven: 'maven-3.8.6',
+    jdk: 'openjdk-21',
+    options: [
+        artifactsPublisher(disabled: true),
+        dependenciesFingerprintPublisher(disabled: true)
+    ]
+]
+
+pipeline {
+    agent {
+        kubernetes {
+            yamlFile 'jenkins-agent.yaml'
+            workspaceVolume(dynamicPVC(storageClassName: 'standard-rwo', requestsSize: '10Gi'))
+        }
+    }
+
+    options {
+        // Retain only the last 10 builds and 5 artifact sets to control storage.
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
+    environment {
+        PIPELINE_TAG                  = "#${BUILD_NUMBER}_${BRANCH}"
+        GIT_TAG                       = "$PIPELINE_TAG"
+        GIT_BUILD_TAG                 = "$BUILD_TAG".replaceAll(' ', '_')
+
+        // TODO: artifactory-project — set to the Artifactory generic local repo name.
+        ARTIFACTORY_PROJECT           = 'TODO: artifactory-project'
+
+        // DependencyTrack — register the project with AppSec to obtain a UUID.
+        // TODO: DT-PROJECT-UUID — replace with the UUID from DependencyTrack.
+        DEPENDENCY_TRACK_PROJECT_ID   = 'TODO: DT-PROJECT-UUID'
+        DEPENDENCY_TRACK_URL          = 'https://dependencytrack.regnology.net'
+        DEPENDENCY_TRACK_FRONTEND_URL = 'https://dependencytrack.regnology.net'
+
+        // Set to 'false' once the project has been registered in DependencyTrack
+        // and the AppSec team has confirmed the project UUID above.
+        SKIP_DEPENDENCY_TRACK         = 'true'
+    }
+
+    stages {
+
+        // --------------------------------------------------------------------
+        // Branding banner + tool bootstrap.
+        // --------------------------------------------------------------------
+        stage('Initialize') {
+            steps {
+                echo """
+        ████          R E G N O L O G Y
+            ██        Professional Services
+        ████
+            ██        professional_services@regnology.net
+                """
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Enforce Google Java Format via Spotless.
+        // Failure is UNSTABLE (not hard-fail) so formatting issues are visible
+        // without blocking downstream security stages.
+        // --------------------------------------------------------------------
+        stage('Code Style') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        script {
+                            // TODO: project-name — update the -f path if the Maven
+                            // module containing spotless:check is not at the root.
+                            if (isUnix()) { sh 'mvn spotless:check' }
+                            else          { bat 'mvn spotless:check' }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Compile, unit test, and collect coverage.
+        // The compliance profile (-Pcompliance) also triggers CycloneDX SBOM
+        // generation and Javadoc aggregate at package phase.
+        // SonarQube analysis is PR-aware: PR builds decorate the pull request;
+        // branch builds push to the branch analysis in SonarQube.
+        // --------------------------------------------------------------------
+        stage('Build & Test') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    script {
+                        if (isUnix()) { sh 'mvn package -fae -U --batch-mode' }
+                        else          { bat 'mvn package -fae -U --batch-mode' }
+                    }
+                    withSonarQubeEnv('Sonar-ABACUS') {
+                        script {
+                            def branchName = env.BRANCH_NAME ?: 'main'
+                            // Decorate PRs; analyse branches independently.
+                            def sonarArgs = env.CHANGE_ID
+                                ? "-Dsonar.pullrequest.key=${env.CHANGE_ID}" +
+                                  " -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH ?: branchName}" +
+                                  " -Dsonar.pullrequest.base=${env.CHANGE_TARGET ?: 'main'}"
+                                : "-Dsonar.branch.name=${branchName}"
+                            def cmd = "mvn --batch-mode clean install verify -Pcompliance ${sonarArgs}"
+                            if (isUnix()) { sh cmd }
+                            else          { bat cmd }
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
+                    recordCoverage tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']]
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Javadoc quality gate.
+        // One or more normal-level Javadoc warnings → UNSTABLE.
+        // Keeps API documentation quality visible without blocking the build.
+        // --------------------------------------------------------------------
+        stage('Javadoc Quality') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                        script {
+                            if (isUnix()) { sh 'mvn javadoc:aggregate -Dquiet=false' }
+                            else          { bat 'mvn javadoc:aggregate -Dquiet=false' }
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    recordIssues tool: javaDoc(),
+                        qualityGates: [[threshold: 1, type: 'TOTAL_NORMAL', unstable: true]]
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // Standalone SonarQube analysis stage.
+        // Runs after tests so coverage data is available.
+        // Security Gate definition (configured in SonarQube):
+        //   FAIL when: Blocker > 0 OR Critical > 0 OR Vulnerabilities > 0
+        // TODO: CONS-project-name — verify sonar.projectKey in pom.xml matches.
+        // --------------------------------------------------------------------
+        stage('SonarQube Analysis') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    withSonarQubeEnv('Sonar-ABACUS') {
+                        script {
+                            def branchName = env.BRANCH_NAME ?: 'main'
+                            def sonarArgs = env.CHANGE_ID
+                                ? "-Dsonar.pullrequest.key=${env.CHANGE_ID}" +
+                                  " -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH ?: branchName}" +
+                                  " -Dsonar.pullrequest.base=${env.CHANGE_TARGET ?: 'main'}"
+                                : "-Dsonar.branch.name=${branchName}"
+                            def cmd = "mvn ${env.SONAR_MAVEN_GOAL}" +
+                                " -Dsonar.host.url=${env.SONAR_HOST_URL}" +
+                                " -Dsonar.login=${env.SONAR_AUTH_TOKEN}" +
+                                " ${sonarArgs}"
+                            if (isUnix()) { sh cmd }
+                            else          { bat cmd }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // SBOM generation (Java).
+        // The compliance profile produces two CycloneDX BOM variants:
+        //   bom.json / bom.xml      — full aggregate (all dependency scopes)
+        //   lucy-bom.json / lucy-bom.xml — runtime-only (consumed by Lucy for
+        //                                  OSS license compliance scanning)
+        // Both are archived as build artifacts for traceability.
+        // --------------------------------------------------------------------
+        stage('SBOM') {
+            steps {
+                withMaven(MAVEN_OPTS) {
+                    script {
+                        if (isUnix()) { sh 'mvn -Pcompliance cyclonedx:makeAggregateBom' }
+                        else          { bat 'mvn -Pcompliance cyclonedx:makeAggregateBom' }
+                    }
+                }
+                archiveArtifacts artifacts: '**/target/bom.json,**/target/bom.xml,**/target/lucy-bom.json,**/target/lucy-bom.xml',
+                    fingerprint: true
+            }
+            post {
+                success {
+                    script {
+                        if (env.SKIP_DEPENDENCY_TRACK == 'true') {
+                            echo '[AppSec] DependencyTrack upload skipped (SKIP_DEPENDENCY_TRACK=true).' +
+                                 ' Register the project with AppSec and set SKIP_DEPENDENCY_TRACK=false to enable.'
+                        } else {
+                            // Upload the aggregate SBOM to DependencyTrack for CVE monitoring.
+                            // Credential ID is the Jenkins secret for the DependencyTrack API key.
+                            withCredentials([string(credentialsId: 'dependency-track-api-key', variable: 'DT_API_KEY')]) {
+                                dependencyTrackPublisher(
+                                    // TODO: project-name — update projectName to match DependencyTrack registration.
+                                    artifact:                    'bom-aggregate.json',
+                                    autoCreateProjects:          false,
+                                    dependencyTrackApiKey:       env.DT_API_KEY,
+                                    dependencyTrackFrontendUrl:  env.DEPENDENCY_TRACK_FRONTEND_URL,
+                                    dependencyTrackUrl:          env.DEPENDENCY_TRACK_URL,
+                                    projectId:                   env.DEPENDENCY_TRACK_PROJECT_ID,
+                                    projectName:                 'CONS-TODO: project-name',
+                                    projectVersion:              env.BRANCH_NAME ?: 'main',
+                                    synchronous:                 true
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    } // end stages
+
+    post {
+        success {
+            echo 'Pipeline completed successfully — all quality and security gates passed.'
+        }
+        unstable {
+            echo 'Pipeline completed with warnings — review Code Style or Javadoc Quality stages.'
+        }
+        failure {
+            echo 'Pipeline failed — review logs above. Check SonarQube or SpotBugs for security findings.'
+        }
+    }
+
+}

@@ -62,6 +62,9 @@ public class YouTubeMetadataFetcher {
                             return Optional.<YouTubeMetadata>empty();
                         }
                     }).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return Optional.empty();
         } catch (Exception ignored) {
             return Optional.empty();
         }

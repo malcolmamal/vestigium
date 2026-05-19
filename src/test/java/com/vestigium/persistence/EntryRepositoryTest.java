@@ -68,7 +68,7 @@ class EntryRepositoryTest {
     @Test
     void search_ShouldFilterByList() {
         var e1 = entries.create("http://e1.com", "Entry 1", "Desc", null, false);
-        var e2 = entries.create("http://e2.com", "Entry 2", "Desc", null, false);
+        entries.create("http://e2.com", "Entry 2", "Desc", null, false);
 
         var listA = lists.create("List A");
         lists.replaceEntryLists(e1.id(), List.of(listA.id()));

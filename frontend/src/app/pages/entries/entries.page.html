@@ -102,7 +102,7 @@
           />
         </label>
 
-        <label class="field">
+        <div class="field">
           <span class="label">Tags</span>
           <app-tag-chips-input
             [tags]="store.tagFilter()"
@@ -113,7 +113,7 @@
             (tagsChange)="store.setTagFilter($event)"
             (searchChange)="onTagSearch($event)"
           />
-        </label>
+        </div>
 
         <div class="row">
           <label class="field">

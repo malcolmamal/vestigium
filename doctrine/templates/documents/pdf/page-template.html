@@ -1,0 +1,28 @@
+<!--
+  page-template.html — Regnology branded PDF repeating page header and footer.
+
+  This is an HTML fragment, NOT a full HTML document. It contains the
+  .page-header and .page-footer divs to be injected into the document body
+  by the generate_branded_pdf.py script. WeasyPrint's CSS running elements
+  mechanism picks them up via position: running(...) and renders them in the
+  @top-center / @bottom-center margin boxes on every page.
+
+  The first page (cover) suppresses both elements via @page :first in the CSS.
+
+  Template variables use {{variable_name}} syntax and must be replaced at
+  build time by the generator script:
+
+    {{title}}       — Document title displayed in the header bar
+    {{subtitle}}    — Document subtitle displayed alongside the title
+    {{logo_path}}   — Absolute file:// URL to the (colour / dark) logo image
+-->
+
+<div class="page-header">
+  <img src="{{logo_path}}" alt="Regnology" />
+  <span class="header-title">{{title}} — {{subtitle}}</span>
+</div>
+
+<div class="page-footer">
+  <span class="footer-text">Regnology &nbsp;·&nbsp; Professional Services &nbsp;·&nbsp; Confidential</span>
+  <span class="footer-page"></span>
+</div>

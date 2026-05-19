@@ -31,7 +31,8 @@ export class BulkAddPage {
       .filter((s) => s.length > 0);
 
     const items: { url: string; title: string | null }[] = [];
-    for (let i = 0; i < lines.length; i++) {
+    let i = 0;
+    while (i < lines.length) {
       const line = lines[i];
 
       // Format 3: URL | Title (pipe-separated on same line)
@@ -42,6 +43,7 @@ export class BulkAddPage {
         const title = line.substring(pipeIndex + 2).trim(); // +2 to skip ' |'
         if (url.startsWith('http://') || url.startsWith('https://')) {
           items.push({ url, title: title || null });
+          i++;
           continue;
         }
       }
@@ -49,16 +51,15 @@ export class BulkAddPage {
       // Format 1: URL only
       if (line.startsWith('http://') || line.startsWith('https://')) {
         items.push({ url: line, title: null });
-      } else {
+      } else if (
+        i + 1 < lines.length &&
+        (lines[i + 1].startsWith('http://') || lines[i + 1].startsWith('https://'))
+      ) {
         // Format 2: Title? Only if next line is a URL
-        if (
-          i + 1 < lines.length &&
-          (lines[i + 1].startsWith('http://') || lines[i + 1].startsWith('https://'))
-        ) {
-          items.push({ url: lines[i + 1], title: line });
-          i++; // Skip the URL line
-        }
+        items.push({ url: lines[i + 1], title: line });
+        i++; // Skip the URL line
       }
+      i++;
     }
 
     // De-dupe by URL, preserving order

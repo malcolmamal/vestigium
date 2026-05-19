@@ -200,7 +200,10 @@ export class RecommendedPage {
 
   private setErrorFromHttp(e: unknown, fallback: string) {
     const status = (e as { status?: number })?.status;
-    const detail = (e as { error?: { detail?: string }; message?: string })?.error?.detail ?? (e as { message?: string })?.message ?? null;
+    const detail =
+      (e as { error?: { detail?: string }; message?: string })?.error?.detail ??
+      (e as { message?: string })?.message ??
+      null;
     let msg = fallback;
     if (status === 0) {
       msg = 'Could not reach the server. Check that the backend is running.';

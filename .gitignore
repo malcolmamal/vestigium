@@ -15,3 +15,5 @@ frontend/dist/
 frontend/.vscode/
 frontend/.angular/
 !gradle/wrapper/gradle-wrapper.jar
+.sonar.env
+.scannerwork/
